@@ -1,7 +1,0 @@
-setup.py
-Probo2.egg-info/PKG-INFO
-Probo2.egg-info/SOURCES.txt
-Probo2.egg-info/dependency_links.txt
-Probo2.egg-info/entry_points.txt
-Probo2.egg-info/requires.txt
-Probo2.egg-info/top_level.txt
