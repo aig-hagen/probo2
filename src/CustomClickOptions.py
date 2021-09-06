@@ -1,5 +1,6 @@
 """Custom click classes and callbacks"""
 import os
+import ast
 
 import click
 
@@ -45,7 +46,7 @@ class FilterAsDictionary(click.Option):
             for f in value:
                 click.echo(f)
                 f_split = f.split(":")
-                filter_dic[f_split[0]] = f_split[1]
+                filter_dic[f_split[0]] = ast.literal_eval(f_split[1])
             return filter_dic
 
 

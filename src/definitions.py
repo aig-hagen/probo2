@@ -3,6 +3,9 @@ import os
 ROOT_DIR = os.path.abspath(os.curdir)  # Root of project
 DATABASE_DIR = os.path.join(ROOT_DIR, 'databases')
 TEST_DATABASE_PATH = os.path.join(DATABASE_DIR, "probo2.db")
+PLOT_JSON_DEFAULTS = os.path.join(ROOT_DIR, os.path.join("src", "plotting", "defaults.json"))
+
+STATUS_FILE_DIR = os.path.join(ROOT_DIR,"status.json")
 
 
 

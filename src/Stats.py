@@ -32,7 +32,6 @@ def calculate_par_scores(data,penalty):
     copy[col_name] = copy.apply(lambda row : calculate_par_score(row['timed_out'],
                      row['runtime'], penalty,row['cut_off']) * (1/row['instance_count']), axis = 1)
     grouped_df = copy.groupby(['task_id','benchmark_id','solver_id'])
-    
     return grouped_df[col_name].sum().to_frame()
 
 def calculate_coverage(data):
@@ -42,10 +41,6 @@ def calculate_coverage(data):
     solved = copy.loc[copy['timed_out'] == False].groupby(['task_id','benchmark_id','solver_id'])['instance'].count()
     coverage = (solved / inst_count * 100).to_frame() 
     return coverage.rename(columns={"instance": "Coverage"})
-    
-   
-
-     
 
 
 def calculate_par_score(timed_out,runtime,penalty,cut_off):
@@ -59,5 +54,15 @@ def merge_dataframes(data_frames):
     for df_ in data_frames[1:]:
         df = df.merge(df_, left_index=True, right_index=True)
     return df
+
+def prepare_data_seaborn_plot(df):
+    #TODO: Nur Columns auswählen die für das plotten gebraucht werden
+        df_grouped = df.sort_values(['runtime'],ascending=True).groupby('solver_id')
+        group_list = []
+        for key, item in df_grouped:
+            group = df_grouped.get_group(key)
+            group['rank'] = range(1,len(group.index) + 1)
+            group_list.append(group)
+        return pandas.concat(group_list)
     
     

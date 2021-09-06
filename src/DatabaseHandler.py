@@ -1,11 +1,21 @@
+import pandas
+
+
 from sqlalchemy import create_engine
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql.expression import label
 from sqlalchemy.util.langhelpers import symbol
 
-import src.Models as Models
+
+#import src.Models as Models
+from src.database_models.Base import Base, Supported_Tasks
 import src.definitions as Definitions
-from src.Models import Result, Solver, Task, Benchmark
+#from src.Models import Result,Task, Benchmark
+from src.database_models.Solver import Solver
+from src.database_models.Result import Result
+from src.database_models.Task import Task
+from src.database_models.Benchmark import Benchmark
 
 def get_engine():
     engine = None
@@ -16,7 +26,7 @@ def get_engine():
     return engine
 
 def init_database(engine):
-    Models.Base.metadata.create_all(engine)
+    Base.metadata.create_all(engine)
     session = create_session(engine)
     task_objs = []
     for task in Definitions.SUPPORTED_TASKS:
@@ -48,7 +58,7 @@ def add_solver(session, solver, tasks):
         session.query(Solver)
             .filter(
             and_(
-                Solver.name == solver.name, Solver.path == solver.path, Solver.version == solver.version
+                Solver.solver_name == solver.solver_name, Solver.solver_path == solver.solver_path, Solver.solver_version == solver.solver_version
             )
         )
             .one_or_none()
@@ -67,7 +77,6 @@ def add_solver(session, solver, tasks):
         
     else:
         raise ValueError("Solver already in Database!")
-    print(new_solver.supported_tasks)
     return new_solver.id
 
 def add_benchmark(session, benchmark):
@@ -79,7 +88,7 @@ def add_benchmark(session, benchmark):
         session.query(Benchmark)
             .filter(
             and_(
-                Benchmark.name == benchmark.name, Benchmark.path == benchmark.path
+                Benchmark.benchmark_name == benchmark.benchmark_name, Benchmark.benchmark_path == benchmark.benchmark_path
             )
         )
             .one_or_none()
@@ -96,8 +105,6 @@ def add_benchmark(session, benchmark):
     return new_benchmark.id
 
 def add_result(session,result):
-    # print(len(session.query(Result).all()))
-    # print(result.__dict__)
     new_result =  (
         session.query(Result)
             .filter(
@@ -113,16 +120,53 @@ def add_result(session,result):
     else:
          raise ValueError("Result already in Database!")
 
-def get_solver(session, to_get):
-    queried_solver = (session.query(Solver).filter(or_(Solver.id.in_(to_get),Solver.name.in_(to_get)))).all()
+def get_results(session,solver,task, benchmark,tag,filter,only_solved=False) -> pandas.DataFrame:
+
+    res  = session.query(Result,Solver,Benchmark,Task).join(Solver).join(Benchmark).join(Task)
+    if tag:
+        res = res.filter(Result.tag.in_(tag))
+    if solver:
+        res = res.filter(or_(Solver.solver_name.in_(solver), Solver.id.in_(solver)))
+    if benchmark:
+        res = res.filter(or_(Benchmark.benchmark_name.in_(benchmark), Benchmark.id.in_(benchmark)))
+    if task:
+        res = res.filter(or_(Task.symbol.in_(task), Task.id.in_(task)))
+    if filter:
+        res = res.filter_by(**filter)
+    
+    result_df = pandas.read_sql(res.statement,res.session.bind)
+    
+    if only_solved:
+        return result_df[(result_df['timed_out'] == False) & (result_df['exit_with_error'] == False)]
+    else:
+        return result_df
+    
+
+
+def get_solvers(session, to_get):
+    # Get solver by id or name
+    queried_solver = (session.query(Solver).filter(or_(Solver.id.in_(to_get),Solver.solver_name.in_(to_get)))).all()
     return queried_solver
 
-def get_benchmark(session, to_get):
-    queried_benchmark = (session.query(Benchmark).filter(or_(Benchmark.id.in_(to_get),Benchmark.name.in_(to_get)))).all()
+def get_solver(session, to_get):
+    queried_solver = (session.query(Solver).filter(or_(Solver.id == to_get,Solver.solver_name == to_get))).one()
+    return queried_solver
+
+
+def get_benchmarks(session, to_get):
+    queried_benchmark = (session.query(Benchmark).filter(or_(Benchmark.id.in_(to_get),Benchmark.benchmark_name.in_(to_get)))).all()
     return queried_benchmark
 
-def get_task(session, to_get):
+def get_benchmark(session, to_get):
+    queried_benchmark = (session.query(Benchmark).filter(or_(Benchmark.id == to_get,Benchmark.benchmark_name == to_get))).first()
+    return queried_benchmark
+
+def get_tasks(session, to_get):
     queried_task = (session.query(Task).filter(or_(Task.id.in_(to_get),Task.symbol.in_(to_get)))).all()
+    return queried_task
+
+def get_task(session, to_get):
+    queried_task = (session.query(Task).filter(or_(Task.id == to_get,Task.symbol == to_get))).first()
     return queried_task
 
 def insert_results(session,task,benchmark,solver,timeout, tag, results: dict):
@@ -130,7 +174,7 @@ def insert_results(session,task,benchmark,solver,timeout, tag, results: dict):
         result = Result(tag=tag,solver_id=solver.id,benchmark_id = benchmark.id,task_id = task.id,
                             instance=instance,cut_off=timeout, timed_out = data['timed_out'],
                             runtime=data['runtime'], result=data['result'], additional_argument = data['additional_argument'],
-                            benchmark=benchmark, solver=solver, task=task)
+                            benchmark=benchmark, solver=solver, task=task, exit_with_error=data['exit_with_error'], error_code=data['error_code'])
         session.add(result)
         
     session.commit()
@@ -148,6 +192,7 @@ def get_full_name_solver(session,id):
 
 def map_ids_to_name(ids):
     print(ids)
+
 
 
 
