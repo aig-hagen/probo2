@@ -32,7 +32,7 @@ from src.Notification import Notification
 import src.Status as Status
 
 import src.definitions as Definitions
-
+# TEST COMMIT
 @click.group()
 def cli():
     if not os.path.exists(Definitions.DATABASE_DIR):
