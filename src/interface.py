@@ -188,19 +188,24 @@ def add_benchmark(name, path, graph_type,
 @click.option("--save_to", required=False, help="Path for storing results.")
 @click.option("--timeout","-t", required=False, default=600, help="Instance timeout in seconds")
 @click.option("--dry", is_flag=True, help="Print the results to the commandline without saving.")
-#@click.option("--track", cls=CustomClickOptions.TrackToProblemClass, is_eager=True,help="Solve the EE,SE,DC,DS problems for a semantics. Supported: CO,ST,GR,PR" )
+@click.option("--track", cls=CustomClickOptions.TrackToProblemClass,default="",type=click.types.STRING, is_eager=True,help="Solve the EE,SE,DC,DS problems for a semantics. Supported: CO,ST,GR,PR" )
 @click.option("--tag", required=True, help="Specify tag for individual experiments.This tag is used to identify the experiment.")
 @click.option("--notify", "-n",help="Send a notification to the email address provided as soon as the experiments are finished.")
 @click.option("--report", is_flag=True)
 @click.pass_context
 def run(ctx, all, select, benchmark,
         problem, save_to, solver, timeout,
-        dry, tag, notify, report):
+        dry, tag, notify, report,track):
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
     benchmarks = DatabaseHandler.get_benchmarks(session,benchmark)
-    tasks = DatabaseHandler.get_tasks(session,problem)
-    
+    print(track)
+    if track:
+        print(track)
+        tasks = DatabaseHandler.get_tasks(session,track)
+    else:
+        tasks = DatabaseHandler.get_tasks(session,problem)
+    sys.exit()
     if DatabaseHandler.tag_in_database(session,tag):
         print("Tag is already used. Please use another tag.")
         sys.exit()

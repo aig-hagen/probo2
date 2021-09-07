@@ -9,8 +9,12 @@ from src import definitions
 
 class TrackToProblemClass(click.Option):
     def type_cast_value(self, ctx, value):
-        if value in definitions.SUPPORTED_TRACKS.keys():
-            return definitions.SUPPORTED_TRACKS[value]
+        value = value.strip().split(",")
+        tasks = []
+        for track in value:
+            if track in definitions.SUPPORTED_TRACKS.keys():
+             tasks.extend(definitions.SUPPORTED_TRACKS[track])
+        return tasks
 
 
 def command_required_option_from_option(require_name):

@@ -13,3 +13,9 @@ SUPPORTED_TASKS = ["EE-ST", "EE-CO", "EE-PR", "EE-GR", "EE-SST", "EE-STG",
                       "SE-ST", "SE-SST", "SE-STG", "SE-CO", "SE-PR", "SE-GR", "SE-ID",
                       "DC-ST", "DC-SST", "DC-STG", "DC-CO", "DC-PR", "DC-ID", "DC-GR",
                       "DS-ST", "DS-SST", "DS-STG", "DS-CO", "DS-PR", "DS-GR"]
+
+SUPPORTED_TRACKS = {'CO': ['EE-CO', 'SE-CO', 'DC-CO', 'DS-CO'],
+                    'GR': ['EE-GR','SE-GR', 'DC-GR', 'DS-GR'],
+                    'PR': ['EE-PR','SE-PR','DC-PR','DS-PR'],
+                    'ST':  ['EE-ST', 'SE-ST', 'DC-ST', 'DS-ST']
+                    }
