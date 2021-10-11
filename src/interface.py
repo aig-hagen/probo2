@@ -536,8 +536,9 @@ def calculate(par, coverage, average, total, solver, task, benchmark,
               default='png',
               help="Backend to use")
 @click.option("--no_grid", "-ng", is_flag=True, help="Do not show a grid.")
+@click.option("--grid_plot",is_flag=True)
 def plot(ctx, tag, problem, benchmark, solver, save_to, filter, vbs, plot_type,
-         x_max, y_max, alpha, backend, no_grid):
+         x_max, y_max, alpha, backend, no_grid,grid_plot):
     with open(definitions.PLOT_JSON_DEFAULTS, 'r') as fp:
         options = json.load(fp)['settings']
         options['def_path'] = definitions.PLOT_JSON_DEFAULTS
@@ -552,24 +553,27 @@ def plot(ctx, tag, problem, benchmark, solver, save_to, filter, vbs, plot_type,
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
     task = problem
-    grid = True
+
+    og_df =  DatabaseHandler.get_results(session,
+                                        solver,
+                                        task,
+                                        benchmark,
+                                        tag,
+                                        filter,
+                                        only_solved=True)
+    df = pl_util.prepare_data(og_df)
+
+    if vbs:
+        grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
+        vbs_id = df['solver_id'].max() + 1
+        vbs_df = df.groupby(grouping_vbs,as_index=False).apply(lambda df: stats.create_vbs(df,vbs_id))
+        df = df.append(vbs_df)
+
+
     if plot_type == 'cactus':
-        group = pl_util.prepare_data_cactus_plot(
-            DatabaseHandler.get_results(session,
-                                        solver,
-                                        task,
-                                        benchmark,
-                                        tag,
-                                        filter,
-                                        only_solved=True))
-        if grid:
-            grid_data = pl_util.prepare_grid(DatabaseHandler.get_results(session,
-                                        solver,
-                                        task,
-                                        benchmark,
-                                        tag,
-                                        filter,
-                                        only_solved=True))
+        group = pl_util.prepare_data_cactus_plot(df)
+        if grid_plot:
+            grid_data = pl_util.prepare_grid(df)
             grid_data = grid_data.rename(columns={'rank': 'Instance','solver_full_name': 'Solver','task':'Task','runtime':'Runtime'})
             grid_plot = sns.relplot(x="Instance",y="Runtime", hue="Solver", col="Task",
                 data=grid_data, kind="line",markers=True,
@@ -818,7 +822,7 @@ def status():
 @click.option('--export',
               '-e',
               type=click.Choice(
-                  ['json', 'latex', 'excel', 'html', 'heatmap','pie-chart','count-plot' 'csv']),
+                  ['json', 'latex', 'excel', 'html', 'heatmap','pie-chart','count-plot','csv']),
               multiple=True)
 @click.option(
     "--save_to",
@@ -878,14 +882,17 @@ def validate(tag, task, benchmark, solver, filter, reference, pairwise,
         # pdf.output(os.path.join(save_to,'SalesRepot.pdf'), 'F')
 
 
+        if 'count-plot' in export:
+            validation.count_plot(val,save_to,title="Summary",grid=False)
+            val.groupby(['tag', 'task_id', 'benchmark_id']).apply(lambda df: validation.count_plot(df,save_to))
 
-        # validation.count_plot(val,save_to,title="Summary",grid=False)
-        # validation.count_plot(val,save_to,title="Summary-Grid",grid=True)
-        # validation.pie_chart(analyse,save_to,title="Summary")
 
-        # analyse.groupby(['tag', 'task_id', 'benchmark_id']).apply(lambda df: validation.pie_chart(df,save_to))
-        # val.groupby(['tag', 'task_id', 'benchmark_id']).apply(lambda df: validation.count_plot(df,save_to))
-        validation.export_styled_table(analyse[['solver','task','benchmark_name','correct_solved','incorrect_solved','no_reference','total','percentage_validated']],save_to)
+            #validation.count_plot(val,save_to,title="Summary-Grid",grid=True)
+        if "pie-chart" in export:
+            validation.pie_chart(analyse,save_to,title="Summary")
+            analyse.groupby(['tag', 'task_id', 'benchmark_id']).apply(lambda df: validation.pie_chart(df,save_to))
+
+        #validation.export_styled_table(analyse[['solver','task','benchmark_name','correct_solved','incorrect_solved','no_reference','total','percentage_validated']],save_to)
 
 
 

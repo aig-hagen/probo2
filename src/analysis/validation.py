@@ -250,7 +250,7 @@ def pie_chart(df: pd.DataFrame, save_to,title=None):
     total_incorrect = df['incorrect_solved'].sum()
     total_no_ref = df['no_reference'].sum()
     data = [total_correct,total_incorrect,total_no_ref]
-    print(data)
+
     if total_correct == 0:
        del data[0]
        del labels[0]
@@ -258,7 +258,6 @@ def pie_chart(df: pd.DataFrame, save_to,title=None):
        del data[len(data)-2]
        del labels[len(labels)-2]
     if total_no_ref == 0:
-       print(data)
        del data[len(data)-1]
        del labels[len(labels) -1]
 
@@ -401,7 +400,6 @@ def validate_instance(df, references):
     Returns:
         [type]: [description]
     """
-    print(references)
     reference_path = references[(df['benchmark_id'].iloc[0])]
     if not os.path.exists(reference_path):
         raise click.BadParameter("Reference path not found!")
