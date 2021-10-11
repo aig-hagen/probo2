@@ -2,10 +2,7 @@ import json
 import os
 import glob
 
-
-
-from src import definitions
-
+from src.utils import definitions
 
 
 def init_status_file(tasks, benchmarks, tag):
@@ -20,7 +17,7 @@ def init_status_file(tasks, benchmarks, tag):
                 file_count = len(glob.glob1(benchmark.benchmark_path,"*.{}".format(solver.solver_format)))
                 total_num_instances += file_count
 
-            status_dict['tasks'][task.symbol]['solvers'][solver.id] = {'name': solver.solver_name, 'version': solver.solver_version,
+            status_dict['tasks'][task.symbol]['solvers'][solver.solver_id] = {'name': solver.solver_name, 'version': solver.solver_version,
                                                                         'solved': 0, 'total': total_num_instances}
     if os.path.exists(definitions.STATUS_FILE_DIR):
         os.remove(definitions.STATUS_FILE_DIR)

@@ -4,7 +4,7 @@ import ast
 
 import click
 
-from src import definitions
+from src.utils import definitions
 
 
 class TrackToProblemClass(click.Option):

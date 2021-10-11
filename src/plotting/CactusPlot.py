@@ -47,7 +47,7 @@ class Cactus(Plot, object):
         # turning the grid on
         if not self.no_grid:
             plt.grid(True, color=self.grid_color, ls=self.grid_style, lw=self.grid_width, zorder=1)
-
+        print(self.title)
         plt.suptitle(self.title)
 
         # axes labels

@@ -17,7 +17,7 @@ import numpy as np
 from src.plotting.Plot import Plot
 import six
 from six.moves import range
-import src.Stats as Stats
+import src.analysis.statistics as Stats
 import os
 #
 #==============================================================================

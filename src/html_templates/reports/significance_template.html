@@ -1,0 +1,45 @@
+<style>
+
+    #democontainer {
+        max-width: 100% ;
+        margin-left: auto ;
+        margin-right: auto ;
+
+
+    }
+    #heatmap {
+        float: left ;
+    }
+    #description {
+         float: left ;
+    }
+
+    .text {
+      font: "DejaVu Sans"
+    }
+  </style>
+
+<html>
+    <head>
+        <title>"Test"</title>
+    </head>
+    <body>
+        <div>
+            <h1> Significance testing report</h1>
+        </div>
+
+        {% for kind_test,results in result_dict.items(): %}
+            <h2> {{ kind_test}}</h2>
+            {% for res in results %}
+            <div id="democontainer" align="left">
+                <img id="heatmap" src="\\wsl$\Ubuntu-20.04\home\jklein\new_dev\Probo2_1.0\src\test_image.png">
+                <ul id="description">
+                    <li>{{ res['Test']}}</li>
+                </ul>
+                <br style="clear: both;">
+            </div>
+
+            {% endfor %}
+        {% endfor %}
+    </body>
+</html>

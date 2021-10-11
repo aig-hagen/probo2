@@ -8,10 +8,9 @@ from sqlalchemy.sql.expression import label
 from sqlalchemy.util.langhelpers import symbol
 
 
-#import src.Models as Models
+
 from src.database_models.Base import Base, Supported_Tasks
-import src.definitions as Definitions
-#from src.Models import Result,Task, Benchmark
+import src.utils.definitions as definitions
 from src.database_models.Solver import Solver
 from src.database_models.Result import Result
 from src.database_models.Task import Task
@@ -20,7 +19,7 @@ from src.database_models.Benchmark import Benchmark
 def get_engine():
     engine = None
     try:
-        engine = create_engine(f"sqlite:///{Definitions.TEST_DATABASE_PATH}")
+        engine = create_engine(f"sqlite:///{definitions.TEST_DATABASE_PATH}")
     except Exception as err:
         print(err)
     return engine
@@ -29,7 +28,7 @@ def init_database(engine):
     Base.metadata.create_all(engine)
     session = create_session(engine)
     task_objs = []
-    for task in Definitions.SUPPORTED_TASKS:
+    for task in definitions.SUPPORTED_TASKS:
         task_objs.append(Task(symbol=task))
     add_objects(session,task_objs)
     session.close()
@@ -52,6 +51,20 @@ def create_session(engine):
     new_session = Session()
     return new_session
 
+def delete_solver(session, solver_id):
+    """
+           Adds a new solver into the solvers table
+
+    """
+    solver_to_delete = (
+        session.query(Solver).filter(Solver.solver_id == solver_id
+                                      ).one_or_none()
+    )
+
+    if solver_to_delete is None:
+        raise ValueError("Solver does not exist")
+    else:
+        session.delete(solver_to_delete)
 
 def add_solver(session, solver, tasks):
     new_solver = (
@@ -74,10 +87,10 @@ def add_solver(session, solver, tasks):
         session.add(new_solver)
         session.flush()
         session.refresh(new_solver)
-        
+
     else:
         raise ValueError("Solver already in Database!")
-    return new_solver.id
+    return new_solver.solver_id
 
 def add_benchmark(session, benchmark):
     """
@@ -120,36 +133,54 @@ def add_result(session,result):
     else:
          raise ValueError("Result already in Database!")
 
-def get_results(session,solver,task, benchmark,tag,filter,only_solved=False) -> pandas.DataFrame:
+def get_results(session,solver,task, benchmark,tag,filter,only_solved=False,validated=False) -> pandas.DataFrame:
 
-    res  = session.query(Result,Solver,Benchmark,Task).join(Solver).join(Benchmark).join(Task)
+    res  = session.query(Result.id,
+                        Solver.solver_id,
+                        Solver.solver_full_name,
+                        Result.instance,
+                        Solver.solver_format,
+                        Result.runtime,
+                        Result.task_id,
+                        Task.symbol,
+                        Result.result,
+                        Result.cut_off,
+                        Result.timed_out,
+                        Result.exit_with_error,
+                        Result.error_code,
+                        Result.additional_argument,
+                        Result.benchmark_id,
+                        Result.correct,
+                        Result.validated,
+                        Benchmark.benchmark_name,
+                        Result.tag).join(Solver,Solver.solver_id == Result.solver_id).join(Benchmark,Benchmark.id==Result.benchmark_id).join(Task, Task.id == Result.task_id)
+
     if tag:
         res = res.filter(Result.tag.in_(tag))
     if solver:
-        res = res.filter(or_(Solver.solver_name.in_(solver), Solver.id.in_(solver)))
+        res = res.filter(or_(Solver.solver_name.in_(solver), Solver.solver_id.in_(solver)))
     if benchmark:
         res = res.filter(or_(Benchmark.benchmark_name.in_(benchmark), Benchmark.id.in_(benchmark)))
     if task:
         res = res.filter(or_(Task.symbol.in_(task), Task.id.in_(task)))
     if filter:
         res = res.filter_by(**filter)
-    
+
     result_df = pandas.read_sql(res.statement,res.session.bind)
-    
     if only_solved:
         return result_df[(result_df['timed_out'] == False) & (result_df['exit_with_error'] == False)]
     else:
         return result_df
-    
+
 
 
 def get_solvers(session, to_get):
     # Get solver by id or name
-    queried_solver = (session.query(Solver).filter(or_(Solver.id.in_(to_get),Solver.solver_name.in_(to_get)))).all()
+    queried_solver = (session.query(Solver).filter(or_(Solver.solver_id.in_(to_get),Solver.solver_name.in_(to_get)))).all()
     return queried_solver
 
 def get_solver(session, to_get):
-    queried_solver = (session.query(Solver).filter(or_(Solver.id == to_get,Solver.solver_name == to_get))).one()
+    queried_solver = (session.query(Solver).filter(or_(Solver.solver_id == to_get,Solver.solver_name == to_get))).one()
     return queried_solver
 
 
@@ -176,7 +207,7 @@ def insert_results(session,task,benchmark,solver,timeout, tag, results: dict):
                             runtime=data['runtime'], result=data['result'], additional_argument = data['additional_argument'],
                             benchmark=benchmark, solver=solver, task=task, exit_with_error=data['exit_with_error'], error_code=data['error_code'])
         session.add(result)
-        
+
     session.commit()
 
 def tag_in_database(session, tag):
@@ -188,7 +219,7 @@ def tag_in_database(session, tag):
         return True
 
 def get_full_name_solver(session,id):
-    return session.query(Solver).filter(Solver.id == id).one().fullname
+    return session.query(Solver).filter(Solver.solver_id == id).one().solver_full_name
 
 def map_ids_to_name(ids):
     print(ids)
@@ -199,6 +230,6 @@ def map_ids_to_name(ids):
 
 
 
-   
+
 
 
