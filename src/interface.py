@@ -125,8 +125,8 @@ def add_solver(name, path, format, tasks, version, guess):
         new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
         new_solver.print_summary()
         click.confirm(
-            "Are you sure you want to add this solver to the database?",
-            abort=True)
+            "Are you sure you want to add this solver to the database?"
+            ,abort=True)
         session.commit()
 
         print("Solver {0} added to database with ID: {1}".format(
@@ -417,16 +417,17 @@ def run(ctx,all, select, benchmark, task, save_to, solver, timeout, dry, tag,
               "-c",
               cls=CustomClickOptions.StringAsOption,
               default=[])
-# @click.option("--vbs", is_flag=True, help="Create virtual best solver")
+@click.option("--vbs", is_flag=True, help="Create virtual best solver")
 @click.option("--save_to", "-st", help="Directory to store tables")
-# @click.option("--export",type=click.Choice(["html","latex","png","jpeg","svg"]),default="png")
-# @click.option("--css",default="styled-table.css",help="CSS file for table style.")
+@click.option("--export",type=click.Choice(["html","latex","png","jpeg","svg"]),default=None)
+@click.option("--css",default="styled-table.css",help="CSS file for table style.")
 def calculate(par, coverage, average, total, solver, task, benchmark,
-              print_format, tag, filter, combine, validated,iccma, save_to):
+              print_format, tag, filter, combine, vbs, validated,iccma,css,export, save_to):
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
 
     grouping = ['tag', 'task_id', 'benchmark_id', 'solver_id']
+    export_columns = ['solver','task']
 
     if combine:
         grouping = [x for x in grouping if x not in combine]
@@ -435,6 +436,12 @@ def calculate(par, coverage, average, total, solver, task, benchmark,
     df = stats.prepare_data(
         DatabaseHandler.get_results(session, solver, task, benchmark, tag,
                                     filter))
+    if vbs:
+        grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
+        vbs_id = df['solver_id'].max() + 1
+        vbs_df = df.groupby(grouping_vbs,as_index=False).apply(lambda df: stats.create_vbs(df,vbs_id))
+        df = df.append(vbs_df)
+
     res = []
     if par:
         par_scores = (df
@@ -443,6 +450,7 @@ def calculate(par, coverage, average, total, solver, task, benchmark,
                      )
 
         res.append(par_scores)
+        export_columns.append("PAR" + str(par))
 
 
     if average:
@@ -453,6 +461,7 @@ def calculate(par, coverage, average, total, solver, task, benchmark,
                         .apply(lambda group: stats.calculate_total_runtime(group))
                         )
         res.append(total_runtimes)
+        export_columns.append("total_runtime")
 
     if coverage:
         coverages = (df
@@ -460,26 +469,28 @@ def calculate(par, coverage, average, total, solver, task, benchmark,
                         .apply(lambda group: stats.calculate_coverage(group))
                         )
         res.append(coverages)
+        export_columns.append("coverage")
     if iccma:
         iccma_scores = (df
                         .groupby(grouping,as_index=False)
                         .apply(lambda group: stats.calculate_iccma_score(group))
                         )
         res.append(iccma_scores)
+        export_columns.append("iccma_score")
 
-        #res.append(stats.calculate_coverages(df))
 
     merged = stats.merge_dataframes(
         res, ['tag', 'task_id', 'benchmark_id', 'solver_id','task','solver','benchmark'])
-
-    #merged = merged[merged.columns[::-1]]  # change column order
 
     grouping.remove('solver_id')
     merged.groupby(grouping).apply(lambda df: print(
         tabulate.tabulate(df, headers='keys', tablefmt='psql', showindex=False)
     ))
-    #css_file = definitions.CSS_TEMPLATES_PATH +"/tables/styled-table.css"
-    #merged[['solver','task','PAR10','total_runtime','coverage','iccma_score']].groupby(['task']).apply(lambda df: utils.export_html(df,save_to,css_file=css_file))
+    if export:
+        if export == 'html':
+            css_file_path = os.path.join(definitions.CSS_TEMPLATES_PATH,"tables",css)
+            merged[export_columns].groupby(['task']).apply(lambda df: utils.export_html(df,save_to,css_file=css_file_path))
+
 
 
 @click.command()
@@ -1045,21 +1056,21 @@ def significance(tag, task, benchmark, solver, filter, combine, parametric,
                                            save_to=save_to)
         result_dict['non_parametric'] = non_parametric_result[
             'non_parametric_result'].tolist()
-    sig_data = [x['post_hoc_result'] for x in result_dict["non_parametric"]]
-    test_data = []
-    data_list = []
-    for test in sig_data:
-        for index, row in test.iterrows():
-            for i, value in row.items():
-                test_data.append({'x': index, 'y': i, 'value': value})
-        data_list.append(json.dumps(test_data))
-    env = Environment(loader=FileSystemLoader(
-        os.path.join(definitions.ROOT_DIR, "src", "html_templates",
-                     "reports")))
-    template = env.get_template('heatmap_template.html')
-    html = template.render(data_list=data_list)
-    with open('html_report_jinja.html', 'w') as f:
-        f.write(html)
+    # sig_data = [x['post_hoc_result'] for x in result_dict["non_parametric"]]
+    # test_data = []
+    # data_list = []
+    # for test in sig_data:
+    #     for index, row in test.iterrows():
+    #         for i, value in row.items():
+    #             test_data.append({'x': index, 'y': i, 'value': value})
+    #     data_list.append(json.dumps(test_data))
+    # env = Environment(loader=FileSystemLoader(
+    #     os.path.join(definitions.ROOT_DIR, "src", "html_templates",
+    #                  "reports")))
+    # template = env.get_template('heatmap_template.html')
+    # html = template.render(data_list=data_list)
+    # with open('html_report_jinja.html', 'w') as f:
+    #     f.write(html)
 
     #sig.print_result_dict(result_dict)
     # env = Environment(loader=FileSystemLoader(os.path.join(definitions.ROOT_DIR,"src","html_templates","reports")))

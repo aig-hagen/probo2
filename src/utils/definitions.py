@@ -3,7 +3,7 @@ import os
 ROOT_DIR = os.path.abspath(os.curdir)  # Root of project
 SRC_DIR = os.path.join(ROOT_DIR,"src")
 DATABASE_DIR = os.path.join(ROOT_DIR, 'databases')
-TEST_DATABASE_PATH = os.path.join(DATABASE_DIR, "probo2.db")
+TEST_DATABASE_PATH = os.path.join(DATABASE_DIR, "probo2_old.db")
 PLOT_JSON_DEFAULTS = os.path.join(ROOT_DIR, os.path.join("src", "plotting", "defaults.json"))
 TEST_INSTANCES_REF_PATH = os.path.join(ROOT_DIR, os.path.join("src", "test", "reference"))
 CSS_TEMPLATES_PATH = os.path.join(SRC_DIR,"css")

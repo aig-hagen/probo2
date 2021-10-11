@@ -13,7 +13,7 @@ def rank_data(df: pd.DataFrame)-> pd.DataFrame:
 
 def prepare_data_cactus_plot(df: pd.DataFrame):
     cols=['id', 'tag', 'solver_id', 'benchmark_id', 'task_id',
-       'cut_off', 'runtime','anon_1','benchmark_name','symbol']
+       'cut_off', 'runtime','anon_1','benchmark_name','symbol','instance']
     return (df
      [cols]
      .rename(columns={"anon_1": "solver_full_name","symbol": "task"})

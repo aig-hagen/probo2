@@ -17,7 +17,7 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     calculate_cols = [
         'id', 'tag', 'solver_id', 'benchmark_id', 'task_id', 'cut_off',
         'timed_out', 'exit_with_error', 'runtime', 'anon_1', 'benchmark_name',
-        'symbol','validated','correct'
+        'symbol','validated','correct','instance'
     ]
     return (df[calculate_cols].rename(columns={
         "anon_1": "solver_full_name",
@@ -146,9 +146,11 @@ def calculate_iccma_score(df: pd.DataFrame)-> pd.Series:
     Returns:
         : [description]
     """
+
     info = get_info_as_strings(df)
     iccma_score = df[(df['timed_out'] == False)
                 & (df['exit_with_error'] == False) & (df.validated == True) & (df.correct == "correct")].shape[0]
+    print(df['solver_full_name'].iloc[0],iccma_score)
     info['iccma_score'] = iccma_score
     return pd.Series(info)
 
@@ -168,3 +170,24 @@ def merge_dataframes(data_frames, on):
     for df_ in data_frames[1:]:
         df = df.merge(df_, on=on)
     return df
+
+def create_vbs(df,vbs_id):
+
+
+    best_runtime = df['runtime'].min()
+
+
+    row = df.iloc[0]
+    row['solver_id'] = vbs_id
+    row['solver_full_name'] = "vbs"
+    row['id'] = 0
+    row['runtime'] = best_runtime
+    row['validated'] = True
+    row['correct'] = 'correct'
+    if  pd.isna(best_runtime):
+        row['timed_out'] = True
+    else:
+        row['timed_out'] = False
+
+
+    return row
