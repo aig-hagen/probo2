@@ -95,7 +95,7 @@ class Solver(Base):
         print("Name: {} \nVersion: {} \nsolver_path: {} \nFormat: {} \nProblems: {}".format(self.solver_name,self.solver_version, self.solver_path, self.solver_format,
                                                                                                                     self.get_supported_tasks()))
 
-    def run(self,task,benchmark,timeout, save_db=True, tag=None, session=None, update_status=False):
+    def run(self,task,benchmark,timeout, save_db=True, tag=None, session=None, update_status=False,n=1):
         results = {}
         cmd_params = []
         arg_lookup = {}
@@ -121,13 +121,22 @@ class Solver(Base):
                 params.extend(["-a",arg])
             final_param = cmd_params + params
             try:
+                total_run_time = 0
+                for i in range(1,n+1):
 
-                start_time = timer()
-                result = subprocess.run(final_param,
+                    start_time_current_run = timer()
+                    result = subprocess.run(final_param,
                                        capture_output=True, timeout=timeout, check=True)
 
-                end_time = timer()
-                run_time = end_time - start_time
+                    end_time_current_run = timer()
+                    run_time_current_run = end_time_current_run - start_time_current_run
+                    total_run_time+=run_time_current_run
+                    print(f'{i} Run\nCurrent Time:{run_time_current_run}\nTotal:{total_run_time}')
+
+
+                run_time = total_run_time / n
+                print(f'AVG Runtim:{run_time}')
+
 
                 solver_output = re.sub("\s+", "",
                                    result.stdout.decode("utf-8"))

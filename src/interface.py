@@ -1,4 +1,4 @@
-from typing_extensions import ParamSpec
+
 import click
 import json
 import os
@@ -80,7 +80,7 @@ def add_solver(name, path, format, tasks, version, guess):
     """ Adds a solver to the database.
     Adding has to be confirmed by user.
       Args:
-          tasks:
+          tasks: Supported tasks
           guess: Pull supported file format and computational problems from solver.
           name: Name of the Solver as string.
           path: Full path to the executable of the solver as string.
@@ -268,51 +268,51 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
     "-a",
     required=False,
     is_flag=True,
-    help="Run all solvers in database on specified problems and instances.")
+    help="Execute all solvers supporting the specified tasks on specified instances.")
 @click.option("--select",
               "-slct",
               is_flag=True,
-              help="Run selected solvers from database.")
+              help="Execute (via solver option) selected solver supporting the specified tasks.")
 @click.option("--solver",
               "-s",
               required=False,
               default=[],
               cls=CustomClickOptions.StringAsOption,
-              help="Comma-separated list of solver ids in database.")
+              help=" Comma-seperated list of ids or names of solvers (in database) to run.")
 @click.option(
     "--benchmark",
     "-b",
     required=False,
     cls=CustomClickOptions.StringAsOption,
     default=[],
-    help="Comma-separated list of benchmark ids or names in database.")
+    help="Comma-seperated list of ids or names of benchmarks (in database) to run solvers on.")
 @click.option("--task",
               cls=CustomClickOptions.StringAsOption,
               required=False,
               #callback=CustomClickOptions.check_problems,
-              help="Computational problems")
+              help="Comma-seperated list of tasks to solve.")
 @click.option("--save_to", required=False, help="Path for storing results.")
 @click.option("--timeout",
               "-t",
               required=False,
               default=600,
-              help="Instance timeout in seconds")
+              help=" Instance cut-off value in seconds. If cut-off is exceeded instance is marked as timed out.")
 @click.option("--dry",
               is_flag=True,
-              help="Print the results to the commandline without saving.")
+              help=" Print results to command-line without saving to the database.")
 @click.option(
     "--track",
     cls=CustomClickOptions.TrackToProblemClass,
     default="",
     type=click.types.STRING,
     is_eager=True,
-    help="Solve the EE,SE,DC,DS problems for a semantics. Supported: CO,ST,GR,PR"
+    help="Comma-seperated list of tracks to solve."
 )
 @click.option(
     "--tag",
     required=True,
     help=
-    "Specify tag for individual experiments.This tag is used to identify the experiment."
+    "Tag for individual experiments.This tag is used to identify the experiment."
 )
 @click.option(
     "--notify",
@@ -320,25 +320,27 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
     help=
     "Send a notification to the email address provided as soon as the experiments are finished."
 )
-@click.option("--report", is_flag=True)
+@click.option("--report", is_flag=True,help="Create summary report of experiment.")
+@click.option("--n_times","-n",required=False,type=click.types.INT,default=1, help="Number of repetitions per instance. Run time is the avg of the n runs.")
 @click.pass_context
-def run(ctx,all, select, benchmark, task, save_to, solver, timeout, dry, tag,
-        notify, report, track):
-    """[summary]
-
+def run(ctx, all, select, benchmark, task, save_to, solver, timeout, dry, tag,
+        notify, report, track, n_times):
+    """Run solver.
+    \f
     Args:
-        all ([type]): [description]
-        select ([type]): [description]
-        benchmark ([type]): [description]
-        task ([type]): [description]
+        all (Boolean): Execute all solvers supporting the specified tasks.
+        select (Boolean): Execute (via solver option) selected solver supporting the specified tasks.
+        benchmark (str): Comma-seperated list of ids or names of benchmark to run solvers on.
+        task (str): Comma-seperated list of tasks to solve.
         save_to ([type]): [description]
-        solver ([type]): [description]
-        timeout ([type]): [description]
-        dry ([type]): [description]
-        tag ([type]): [description]
-        notify ([type]): [description]
-        report ([type]): [description]
-        track ([type]): [description]
+        solver (str):  Comma-seperated list of ids or names of solvers to run.
+        timeout (int): Instance cut-off value. If cut-off is exceeded instance is marked as timed out.
+        dry (Boolean): Print results to command-line without saving to the database.
+        tag (str): Unique tag for experiment.
+        notify (Boolean): Get e-mail notification when experiments are finished.
+        report (Boolean): Create summary report of experiment.
+        track (str): Comma-seperated list of tracks to solve.
+
     """
     run_parameter = ctx.params.copy()
     engine = DatabaseHandler.get_engine()
@@ -350,7 +352,7 @@ def run(ctx,all, select, benchmark, task, save_to, solver, timeout, dry, tag,
 
         tasks = DatabaseHandler.get_tasks(session, task)
 
-    if DatabaseHandler.tag_in_database(session, tag):
+    if DatabaseHandler.tag_in_database(session, tag) and not(dry):
         print("Tag is already used. Please use another tag.")
         sys.exit()
 
@@ -419,7 +421,7 @@ def run(ctx,all, select, benchmark, task, save_to, solver, timeout, dry, tag,
               default=[])
 @click.option("--vbs", is_flag=True, help="Create virtual best solver")
 @click.option("--save_to", "-st", help="Directory to store tables")
-@click.option("--export",type=click.Choice(["html","latex","png","jpeg","svg"]),default=None)
+@click.option("--export","-e",type=click.Choice(["html","latex","png","jpeg","svg",'csv']),default=None,multiple=True)
 @click.option("--css",default="styled-table.css",help="CSS file for table style.")
 def calculate(par, coverage, average, total, solver, task, benchmark,
               print_format, tag, filter, combine, vbs, validated,iccma,css,export, save_to):
@@ -427,7 +429,7 @@ def calculate(par, coverage, average, total, solver, task, benchmark,
     session = DatabaseHandler.create_session(engine)
 
     grouping = ['tag', 'task_id', 'benchmark_id', 'solver_id']
-    export_columns = ['solver','task']
+    export_columns = ['tag','solver','task','benchmark']
 
     if combine:
         grouping = [x for x in grouping if x not in combine]
@@ -438,7 +440,7 @@ def calculate(par, coverage, average, total, solver, task, benchmark,
                                     filter))
     if vbs:
         grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
-        vbs_id = df['solver_id'].max() + 1
+        vbs_id = -1
         vbs_df = df.groupby(grouping_vbs,as_index=False).apply(lambda df: stats.create_vbs(df,vbs_id))
         df = df.append(vbs_df)
 
@@ -487,9 +489,7 @@ def calculate(par, coverage, average, total, solver, task, benchmark,
         tabulate.tabulate(df, headers='keys', tablefmt='psql', showindex=False)
     ))
     if export:
-        if export == 'html':
-            css_file_path = os.path.join(definitions.CSS_TEMPLATES_PATH,"tables",css)
-            merged[export_columns].groupby(['task']).apply(lambda df: utils.export_html(df,save_to,css_file=css_file_path))
+        utils.export(merged,export,save_to=save_to,columns=export_columns,css_file=css)
 
 
 

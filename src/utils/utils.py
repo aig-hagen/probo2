@@ -3,6 +3,47 @@ from pathlib import Path
 
 import click
 import pandas
+from src.utils import definitions as definitions
+
+
+
+def export(df: pandas.DataFrame,
+               formats,
+               save_to: str,
+               file_name=None,
+               columns=None,
+               index=False,
+               css_file=None
+               ) -> None:
+    """[summary]
+
+    Args:
+        df (pandas.DataFrame): [description]
+        formats ([type]): [description]
+        save_to (str): [description]
+        columns ([type], optional): [description]. Defaults to None.
+        index (bool, optional): [description]. Defaults to False.
+    """
+
+
+
+    if not columns:
+        columns = list(df.columns)
+
+    if 'html' in formats:
+        (df
+        [columns]
+        .groupby(['task'])
+        .apply(lambda df: export_html(df,save_to,css_file=css_file,index=index,file_name=file_name)))
+    if 'csv' in formats:
+        (df
+        [columns]
+        .groupby(['task'])
+        .apply(lambda df: export_csv(df,save_to,index=index,file_name=file_name)))
+
+
+
+
 
 
 def export_csv(df: pandas.DataFrame,
@@ -10,7 +51,7 @@ def export_csv(df: pandas.DataFrame,
                columns=None,
                index=False,
                encoding='utf-8',
-               file_name="csv_data.csv",
+               file_name=None,
                compression=None) -> None:
     """[summary]
 
@@ -27,11 +68,12 @@ def export_csv(df: pandas.DataFrame,
         bool: [description]
     """
     Path(save_to).mkdir(parents=True, exist_ok=True)
-
+    if not file_name:
+        file_name = create_file_name(df)
     if columns:
         df = df[columns]
 
-    save_path = os.path.join(save_to, file_name)
+    save_path = os.path.join(save_to, f'{file_name}.csv')
 
     df.to_csv(save_path,
               index=index,
@@ -53,18 +95,21 @@ def export_html(df: pandas.DataFrame,
         save_to (str): [description]
     """
     Path(save_to).mkdir(parents=True, exist_ok=True)
+    if not file_name:
+        file_name = create_file_name(df)
 
     if columns:
         df = df[columns]
-    save_path = os.path.join(save_to, file_name)
+    save_path = os.path.join(save_to, f'{file_name}.html')
 
     if css_file:
-        name_css_file = Path(css_file).stem
+        css_file_path = os.path.join(definitions.CSS_TEMPLATES_PATH,"tables",css_file)
+        name_css_file = Path(css_file_path).stem
         table_html_string = df.to_html(escape=False,
                                        index=index,
                                        classes=name_css_file)
 
-        with open(css_file, encoding="utf-8") as file:
+        with open(css_file_path, encoding="utf-8") as file:
             content_css_file = file.read()
         content_css_file = "<style>\n" + content_css_file + "\n</style>"
 
@@ -87,6 +132,7 @@ def run_experiment(parameters: dict):
     dry = parameters['dry']
     session = parameters['session']
     select = parameters['select']
+    n = parameters['n_times']
 
     for task in tasks:
         task_symbol = task.symbol.upper()
@@ -107,5 +153,22 @@ def run_experiment(parameters: dict):
                            timeout,
                            save_db=(not dry),
                            tag=tag,
-                           session=session)
+                           session=session,
+                           n=n)
                 click.echo("---FINISHED")
+
+def create_file_name(df: pandas.DataFrame) -> str:
+    """[summary]
+
+    Args:
+        df ([type]): [description]
+        post_hoc ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    unique_tags = "_".join(list(df['tag'].unique()))
+    unique_benchmarks = "_".join(list(df['benchmark'].unique()))
+    unique_tasks = "_".join(list(df['task'].unique()))
+    file_name = f'{unique_tags}-{unique_benchmarks}-{unique_tasks}'
+    return file_name

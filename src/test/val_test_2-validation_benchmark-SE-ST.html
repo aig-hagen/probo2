@@ -1,0 +1,96 @@
+<style>
+.styled-table {
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 0.9em;
+    font-family: sans-serif;
+    min-width: 400px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+.styled-table thead tr {
+    background-color: #2b7bba;
+    color: #ffffff;
+    text-align: left;
+}
+
+.styled-table tbody th {
+    background-color: #2b7bba;
+    color: #ffffff;
+    text-align: left;
+}
+.styled-table th,
+.styled-table td {
+    padding: 12px 15px;
+    text-transform:capitalize;
+}
+.styled-table tbody tr {
+    border-bottom: 1px solid #dddddd;
+}
+
+.styled-table tbody tr:nth-of-type(even) {
+    background-color: #e8f1f8;
+}
+.styled-table tbody tr:last-of-type {
+    border-bottom: 2px solid #009879;
+}
+
+</style><table border="1" class="dataframe styled-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>tag</th>
+      <th>solver</th>
+      <th>task</th>
+      <th>benchmark</th>
+      <th>PAR10</th>
+      <th>total_runtime</th>
+      <th>iccma_score</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>val_test_2</td>
+      <td>vbs</td>
+      <td>SE-ST</td>
+      <td>validation_benchmark</td>
+      <td>2.451157</td>
+      <td>34.032119</td>
+      <td>64</td>
+    </tr>
+    <tr>
+      <td>val_test_2</td>
+      <td>MY_SOLVER_2_1.4</td>
+      <td>SE-ST</td>
+      <td>validation_benchmark</td>
+      <td>3.588652</td>
+      <td>34.794315</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td>val_test_2</td>
+      <td>MY_SOLVER_3_1.4</td>
+      <td>SE-ST</td>
+      <td>validation_benchmark</td>
+      <td>2.967267</td>
+      <td>30.675953</td>
+      <td>62</td>
+    </tr>
+    <tr>
+      <td>val_test_2</td>
+      <td>ArgSemSAT_1.4</td>
+      <td>SE-ST</td>
+      <td>validation_benchmark</td>
+      <td>3.078240</td>
+      <td>38.555073</td>
+      <td>62</td>
+    </tr>
+    <tr>
+      <td>val_test_2</td>
+      <td>MatrixX_0.96</td>
+      <td>SE-ST</td>
+      <td>validation_benchmark</td>
+      <td>7.022790</td>
+      <td>38.618086</td>
+      <td>48</td>
+    </tr>
+  </tbody>
+</table>
