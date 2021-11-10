@@ -1,11 +1,16 @@
 import os
 from pathlib import Path
+from tabulate import tabulate
 
 import click
 import pandas
 from src.utils import definitions as definitions
 
-
+def print_df(df, grouping, headers, format='fancy_grid'):
+    (df
+    .groupby(grouping)
+    [headers]
+    .apply(lambda df: print(tabulate(df,headers='keys',tablefmt=format))))
 
 def export(df: pandas.DataFrame,
                formats,
@@ -40,7 +45,37 @@ def export(df: pandas.DataFrame,
         [columns]
         .groupby(['task'])
         .apply(lambda df: export_csv(df,save_to,index=index,file_name=file_name)))
+    if 'latex' in formats:
+        (df
+        [columns]
+        .groupby(['task'])
+        .apply(lambda df: export_latex(df,save_to,index=index,file_name=file_name)))
+def export_latex(df: pandas.DataFrame,
+               save_to: str,
+               columns=None,
+               index=False,
+               encoding='utf-8',
+               file_name=None) -> None:
+    Path(save_to).mkdir(parents=True, exist_ok=True)
+    if not file_name:
+        file_name = create_file_name(df)
+    if columns:
+        df = df[columns]
 
+    save_path = os.path.join(save_to, f'{file_name}.tex')
+    tasks = list(df.task.unique())
+    benchs = list(df.benchmark.unique())
+
+    task_string = ",".join(tasks)
+    bench_string = ",".join(benchs)
+
+    caption_text = f'Results for tasks {task_string} and benchmark {bench_string}'
+
+    df = df.drop(columns=['tag','benchmark','task'])
+    df.to_latex(save_path,
+              index=index,
+              caption=caption_text,
+              encoding=encoding)
 
 
 
@@ -167,6 +202,7 @@ def create_file_name(df: pandas.DataFrame) -> str:
     Returns:
         [type]: [description]
     """
+    print(df)
     unique_tags = "_".join(list(df['tag'].unique()))
     unique_benchmarks = "_".join(list(df['benchmark'].unique()))
     unique_tasks = "_".join(list(df['task'].unique()))

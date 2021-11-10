@@ -1,40 +1,15 @@
+import numpy as np
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 import os
-from src.plotting import CactusPlot
-
-def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
-    """[summary]
-
-    Args:
-        df (pd.DataFrame): [description]
-
-    Returns:
-        pd.DataFrame: [description]
-    """
-    calculate_cols = [
-        'id', 'tag', 'solver_id', 'benchmark_id', 'task_id', 'cut_off',
-        'timed_out', 'exit_with_error', 'runtime', 'anon_1', 'benchmark_name',
-        'symbol','validated','correct','instance'
-    ]
-    return (df[calculate_cols].rename(columns={
-        "anon_1": "solver_full_name",
-        "symbol": "task"
-    }).astype({
-        'solver_id': 'int16',
-        'benchmark_id': 'int16',
-        'task_id': 'int8',
-        'cut_off': 'int16',
-        'runtime': 'float32'
-    }))
-
-def rank_data(df: pd.DataFrame)-> pd.DataFrame:
-    return (df
-            .sort_values(['runtime'],ascending=True)
-            .groupby('solver_id')
-            .apply(lambda group:group.assign(rank=range(1,len(group.index) + 1)))
-            .droplevel(0)
-            .reset_index(drop=True)
-            )
+from src.plotting import CactusPlot, ScatterPlot
+from src.analysis.statistics import get_info_as_strings
+def create_file_name(df: pd.DataFrame,info,save_to: str,kind: str) -> str:
+    task_symbol = info['task']
+    benchmark_name = info['benchmark']
+    curr_tag = info['tag']
+    return os.path.join(save_to, "{}_{}_{}_{}".format(task_symbol, benchmark_name,curr_tag,kind))
 
 def prepare_data_cactus_plot(df: pd.DataFrame):
     return (df
@@ -59,16 +34,87 @@ def prepare_grid(df: pd.DataFrame)-> pd.DataFrame:
           )
 
 
-def cactus_plot(df,save_to,options):
+
+def get_overlapping_instances(df,solver_id):
+    solver_df = df[df.solver_id.isin(solver_id)]
+    unique_instances = solver_df.groupby('solver_id').apply(lambda solver: set(solver[~(solver.runtime.isnull())]['instance'].unique())).tolist()
+    overlapping = list(set.intersection(*unique_instances))
+    return solver_df[solver_df.instance.isin(overlapping)]
+
+def prep_scatter_data(df):
+    overlapping_instances_df = get_overlapping_instances(df)
+    unique_solvers = list(overlapping_instances_df.solver.unique())
+    runtimes_solver = dict()
+    for s in unique_solvers:
+        runtimes_solver[s]  = overlapping_instances_df[overlapping_instances_df.solver == s].sort_values('instance')['runtime'].values
+
+    return pd.DataFrame.from_dict(runtimes_solver).fillna(0)
+def scatter_plot(df: pd.DataFrame, save_to: str, options: dict, grouping: list):
+    pass
+def create_scatter_plot(df: pd.DataFrame, save_to: str, options: dict)->str:
+    info = get_info_as_strings(df)
     df['Solver'] = df['solver_full_name']
-    task_symbol = df['task'].iloc[0]
-    benchmark_name = df['benchmark_name'].iloc[0]
-    curr_tag = df['tag'].iloc[0]
-    options['title'] = task_symbol + " " + benchmark_name
-    save_file_name = os.path.join(save_to, "{}_{}_{}_".format(task_symbol, benchmark_name,curr_tag))
+    options['title'] = info['task'] + " " + info['benchmark']
+    save_file_name = create_file_name(df,info,save_to,'cactus')
+    options['save_to'] = save_file_name
+    ScatterPlot.Scatter(options).create(df)
+    return save_file_name
+
+def cactus_plot(df, save_to, options,grouping):
+    ranked = (df.groupby(grouping,as_index=False)
+                    .apply(lambda df: df.assign(rank=df['runtime'].rank(method='dense',ascending=True))))
+    plot_grouping = grouping.copy()
+    plot_grouping.remove('solver_id')
+    return ranked.groupby(plot_grouping).apply(lambda df: create_cactus_plot(df,save_to,options))
+
+def create_cactus_plot(df,save_to,options):
+    info = get_info_as_strings(df)
+    df['Solver'] = df['solver_full_name']
+    options['title'] = info['task'] + " " + info['benchmark']
+    save_file_name = create_file_name(df,info,save_to,'cactus')
     options['save_to'] = save_file_name
     CactusPlot.Cactus(options).create(df)
+    return save_file_name
+
+def prep_data_count_plot(df):
+    conds = [((df.timed_out == False) & (df.exit_with_error == False)),df.timed_out == True,df.exit_with_error == True]
+    choices = ['Solved','Timed out','Aborted']
+    df['Status'] = np.select(conds,choices)
+    return df
+
+def create_count_plot(df, save_to, options):
+    info = get_info_as_strings(df)
+    save_file_name = create_file_name(df,info,save_to,'count')
+    ax = sns.countplot(data=df,x='solver_full_name',hue='Status')
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=40, ha="right")
+    benchmark_name = info['benchmark']
+    task = info['task']
+    ax.set_title(f'{benchmark_name} {task}')
+    plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    figure = ax.get_figure()
+    figure.savefig(f"{save_file_name}.png",
+                   bbox_inches='tight',
+                   transparent=True)
+    plt.clf()
+    return save_file_name
 
 
-def cactus_plot_group(grouped_df, save_to, options):
-    grouped_df.apply(lambda df: cactus_plot(df,save_to,options))
+def count_plot(df,save_to,options,grouping):
+    preped_data = df.groupby(grouping,as_index=False).apply(lambda df: prep_data_count_plot(df))
+    plot_grouping = grouping.copy()
+    plot_grouping.remove('solver_id')
+    return preped_data.groupby(plot_grouping).apply(lambda df: create_count_plot(df,save_to,options))
+
+def create_pie_chart(df: pd.DataFrame,save_to: str, options: dict):
+    pass
+
+def pie_chart(df: pd.DataFrame, save_to: str, options: dict, grouping: list):
+    pass
+def dispatch_function(df,functions,save_to,options,grouping):
+    only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
+    dispatch_map = {'cactus':cactus_plot(df[only_solved_mask],save_to,options,grouping),
+                    'count':count_plot(df,save_to,options,grouping)
+
+    }
+    functions_to_call = {key: dispatch_map[key] for key in functions}
+    return pd.Series(functions_to_call)

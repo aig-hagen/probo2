@@ -151,6 +151,9 @@ def get_results(session,solver,task, benchmark,tag,filter,only_solved=False,vali
                         Result.additional_argument,
                         Result.benchmark_id,
                         Result.correct,
+                        Result.correct_solved,
+                        Result.incorrect_solved,
+                        Result.no_reference,
                         Result.validated,
                         Benchmark.benchmark_name,
                         Result.tag).join(Solver,Solver.solver_id == Result.solver_id).join(Benchmark,Benchmark.id==Result.benchmark_id).join(Task, Task.id == Result.task_id)

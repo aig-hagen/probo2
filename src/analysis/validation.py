@@ -1,6 +1,5 @@
 """Validation module"""
 import functools
-from operator import index
 import os
 import re
 
@@ -635,5 +634,12 @@ def update_result_object(result_obj, correct, validated):
         correct ([type]): [description]
         validated ([type]): [description]
     """
+    if correct == 'correct':
+        result_obj.correct_solved = True
+    elif correct == 'incorrect':
+        result_obj.incorrect_solved = True
+    elif correct == "no_reference":
+        result_obj.no_reference = True
+
     result_obj.correct = correct
     result_obj.validated = validated

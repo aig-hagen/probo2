@@ -4,7 +4,6 @@ import os
 from timeit import default_timer as timer
 
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import column_property, relationship
 from pathlib import Path
 from sqlalchemy.sql.expression import null, update
@@ -131,11 +130,9 @@ class Solver(Base):
                     end_time_current_run = timer()
                     run_time_current_run = end_time_current_run - start_time_current_run
                     total_run_time+=run_time_current_run
-                    print(f'{i} Run\nCurrent Time:{run_time_current_run}\nTotal:{total_run_time}')
 
 
                 run_time = total_run_time / n
-                print(f'AVG Runtim:{run_time}')
 
 
                 solver_output = re.sub("\s+", "",

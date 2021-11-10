@@ -1,31 +1,23 @@
 
+
 import click
 import json
 import os
-from matplotlib.pyplot import grid
-import pandas as pd
 import seaborn as sns
-import sqlalchemy
 import sys
-from sqlalchemy.sql.functions import coalesce
 import tabulate
-import numpy as np
-from click.decorators import group
 from sqlalchemy import and_, or_
 from sqlalchemy import engine
 from sqlalchemy.sql.expression import false
 from jinja2 import Environment, FileSystemLoader
 from src.utils import utils
+from tabulate import tabulate
 
 from src.reporting.validation_report import Validation_Report
-
 
 import src.analysis.statistics as stats
 import src.analysis.validation as validation
 import src.database_models.DatabaseHandler as DatabaseHandler
-import src.plotting.CactusPlot as CactusPlot
-import src.plotting.DistributionPlot as DistributionPlot
-import src.plotting.ScatterPlot as ScatterPlot
 import src.plotting.plotting_utils as pl_util
 import src.utils.CustomClickOptions as CustomClickOptions
 import src.utils.Status as Status
@@ -34,7 +26,6 @@ from src.database_models.Base import Base, Supported_Tasks
 from src.database_models.Benchmark import Benchmark
 from src.database_models.Result import Result
 from src.database_models.Solver import Solver
-from src.database_models.Task import Task
 from src.utils.Notification import Notification
 
 
@@ -376,15 +367,6 @@ def run(ctx, all, select, benchmark, task, save_to, solver, timeout, dry, tag,
               "-p",
               type=click.types.INT,
               help="Penalty multiplier for PAR score")
-@click.option("--coverage",
-              "-cov",
-              is_flag=True,
-              help="Calculate instance coverage")
-@click.option("--average",
-              "-avg",
-              is_flag=True,
-              help="Calculate average runtimes")
-@click.option("--total", is_flag=True)
 @click.option("--solver",
               "-s",
               required=True,
@@ -405,7 +387,7 @@ def run(ctx, all, select, benchmark, task, save_to, solver, timeout, dry, tag,
               cls=CustomClickOptions.StringAsOption,
               default=[])
 @click.option("--print_format",
-              "-pf",
+              "-pf",default='fancy_grid',
               type=click.Choice([
                   "plain", "simple", "github", "grid", "fancy_grid", "pipe",
                   "orgtbl", "jira", "presto", "pretty", "psql", "rst",
@@ -413,8 +395,6 @@ def run(ctx, all, select, benchmark, task, save_to, solver, timeout, dry, tag,
                   "latex", "latex_raw", "latex_booktabs", "textile"
               ]))
 @click.option("--tag", "-t", cls=CustomClickOptions.StringAsOption, default=[])
-@click.option("--validated", is_flag=True)
-@click.option("--iccma", is_flag=True)
 @click.option("--combine",
               "-c",
               cls=CustomClickOptions.StringAsOption,
@@ -423,8 +403,9 @@ def run(ctx, all, select, benchmark, task, save_to, solver, timeout, dry, tag,
 @click.option("--save_to", "-st", help="Directory to store tables")
 @click.option("--export","-e",type=click.Choice(["html","latex","png","jpeg","svg",'csv']),default=None,multiple=True)
 @click.option("--css",default="styled-table.css",help="CSS file for table style.")
-def calculate(par, coverage, average, total, solver, task, benchmark,
-              print_format, tag, filter, combine, vbs, validated,iccma,css,export, save_to):
+@click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','all']),multiple=True)
+def calculate(par, solver, task, benchmark,
+              tag, filter, combine, vbs, css, export, save_to, statistics,print_format):
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
 
@@ -434,62 +415,38 @@ def calculate(par, coverage, average, total, solver, task, benchmark,
     if combine:
         grouping = [x for x in grouping if x not in combine]
 
+    if 'all' in statistics:
+        functions_to_call = ['mean','sum','min','max','median','var','std','coverage']
+    else:
+        functions_to_call = list(statistics)
 
     df = stats.prepare_data(
         DatabaseHandler.get_results(session, solver, task, benchmark, tag,
                                     filter))
+
     if vbs:
         grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
         vbs_id = -1
         vbs_df = df.groupby(grouping_vbs,as_index=False).apply(lambda df: stats.create_vbs(df,vbs_id))
         df = df.append(vbs_df)
 
-    res = []
     if par:
-        par_scores = (df
-                        .groupby(grouping,as_index=False)
-                        .apply(lambda group: stats.calculate_par_score(group, par))
-                     )
+        functions_to_call.append(f'PAR{par}')
+    else:
+        par=0
 
-        res.append(par_scores)
-        export_columns.append("PAR" + str(par))
+    stats_df = (df
+                .groupby(grouping,as_index=False)
+                .apply(lambda df: stats.dispatch_function(df,functions_to_call,par_penalty=par))
+                )
 
+    print_headers = ['solver','task','benchmark']
+    print_headers.extend(functions_to_call)
+    utils.print_df(stats_df,['tag','benchmark','task'],headers=print_headers,format=print_format)
 
-    if average:
-        res.append(stats.calculate_average_runtimes(df))
-    if total:
-        total_runtimes = (df
-                        .groupby(grouping,as_index=False)
-                        .apply(lambda group: stats.calculate_total_runtime(group))
-                        )
-        res.append(total_runtimes)
-        export_columns.append("total_runtime")
-
-    if coverage:
-        coverages = (df
-                        .groupby(grouping,as_index=False)
-                        .apply(lambda group: stats.calculate_coverage(group))
-                        )
-        res.append(coverages)
-        export_columns.append("coverage")
-    if iccma:
-        iccma_scores = (df
-                        .groupby(grouping,as_index=False)
-                        .apply(lambda group: stats.calculate_iccma_score(group))
-                        )
-        res.append(iccma_scores)
-        export_columns.append("iccma_score")
-
-
-    merged = stats.merge_dataframes(
-        res, ['tag', 'task_id', 'benchmark_id', 'solver_id','task','solver','benchmark'])
-
-    grouping.remove('solver_id')
-    merged.groupby(grouping).apply(lambda df: print(
-        tabulate.tabulate(df, headers='keys', tablefmt='psql', showindex=False)
-    ))
     if export:
-        utils.export(merged,export,save_to=save_to,columns=export_columns,css_file=css)
+        export_columns.extend(functions_to_call)
+        utils.export(stats_df,export,save_to=save_to,columns=export_columns,css_file=css)
 
 
 
@@ -520,10 +477,6 @@ def calculate(par, coverage, average, total, solver, task, benchmark,
     help=
     "Directory to store plots in. Filenames will be generated automatically.")
 @click.option("--vbs", is_flag=True, help="Create virtual best solver")
-@click.option("--plot_type",
-              "-pt",
-              type=click.Choice(['cactus', 'scatter', 'distribution']),
-              help="Specifiy plot type")
 @click.option("--x_max", "-xm", type=click.types.INT)
 @click.option("--y_max", "-ym", type=click.types.INT)
 @click.option("--alpha",
@@ -537,8 +490,13 @@ def calculate(par, coverage, average, total, solver, task, benchmark,
               help="Backend to use")
 @click.option("--no_grid", "-ng", is_flag=True, help="Do not show a grid.")
 @click.option("--grid_plot",is_flag=True)
-def plot(ctx, tag, problem, benchmark, solver, save_to, filter, vbs, plot_type,
-         x_max, y_max, alpha, backend, no_grid,grid_plot):
+@click.option("--combine",
+              "-c",
+              cls=CustomClickOptions.StringAsOption,
+              default=[])
+@click.option("--kind",'-k',type=click.Choice(['cactus','count']),multiple=True)
+def plot(ctx, tag, problem, benchmark, solver, save_to, filter, vbs,
+         x_max, y_max, alpha, backend, no_grid,grid_plot, combine, kind):
     with open(definitions.PLOT_JSON_DEFAULTS, 'r') as fp:
         options = json.load(fp)['settings']
         options['def_path'] = definitions.PLOT_JSON_DEFAULTS
@@ -547,6 +505,9 @@ def plot(ctx, tag, problem, benchmark, solver, save_to, filter, vbs, plot_type,
         if value is not None:
             options[key] = value
 
+    grouping = ['tag', 'task_id', 'benchmark_id', 'solver_id']
+    if combine:
+        grouping = [x for x in grouping if x not in combine]
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
 
@@ -560,30 +521,16 @@ def plot(ctx, tag, problem, benchmark, solver, save_to, filter, vbs, plot_type,
                                         benchmark,
                                         tag,
                                         filter,
-                                        only_solved=True)
-    df = pl_util.prepare_data(og_df)
+                                        only_solved=False)
+    df = stats.prepare_data(og_df)
 
     if vbs:
         grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
         vbs_id = df['solver_id'].max() + 1
         vbs_df = df.groupby(grouping_vbs,as_index=False).apply(lambda df: stats.create_vbs(df,vbs_id))
         df = df.append(vbs_df)
+    pl_util.dispatch_function(df,list(kind),save_to,options,grouping)
 
-
-    if plot_type == 'cactus':
-        group = pl_util.prepare_data_cactus_plot(df)
-        if grid_plot:
-            grid_data = pl_util.prepare_grid(df)
-            grid_data = grid_data.rename(columns={'rank': 'Instance','solver_full_name': 'Solver','task':'Task','runtime':'Runtime'})
-            grid_plot = sns.relplot(x="Instance",y="Runtime", hue="Solver", col="Task",
-                data=grid_data, kind="line",markers=True,
-                height=4, aspect=.9)
-            figure = grid_plot.fig
-            figure.savefig(f"{save_to}_grid.png",
-                     bbox_inches='tight',
-                   transparent=True)
-        else:
-            pl_util.cactus_plot_group(group, save_to, options)
 
 
 @click.command()
@@ -598,7 +545,7 @@ def benchmarks():
         ])
 
     print(
-        tabulate.tabulate(tabulate_data,
+        tabulate(tabulate_data,
                           headers=["ID", "Name", "Format"],
                           tablefmt=format))
     session.close()
@@ -618,7 +565,7 @@ def solvers(verbose):
                 [solver.id, solver.solver_name, solver.solver_format, tasks])
 
         print(
-            tabulate.tabulate(tabulate_data,
+            tabulate(tabulate_data,
                               headers=["ID", "Name", "Format", "Tasks"],
                               tablefmt=format))
     else:
@@ -627,7 +574,7 @@ def solvers(verbose):
                 [solver.solver_id, solver.solver_name, solver.solver_format])
 
         print(
-            tabulate.tabulate(tabulate_data,
+            tabulate(tabulate_data,
                               headers=["ID", "Name", "Format"],
                               tablefmt=format))
 

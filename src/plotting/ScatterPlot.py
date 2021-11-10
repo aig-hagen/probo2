@@ -19,6 +19,7 @@ import six
 from six.moves import range
 import src.analysis.statistics as Stats
 import os
+import seaborn as sns
 #
 #==============================================================================
 class ScatterException(Exception):
@@ -71,8 +72,7 @@ class Scatter(Plot, object):
             Does the plotting.
         """
 
-        if len(data[0][1]) != len(data[1][1]):
-            raise ScatterException('Number of instances for each competitor must be the same')
+        solvers = list(data.columns)
 
         step = int((self.x_max - self.x_min) / 10)
         x = np.arange(self.x_min, self.x_max + self.x_min + step, step)
@@ -111,9 +111,13 @@ class Scatter(Plot, object):
                 rotation=90)
 
         # scatter
-        plt.scatter(data[0][1], data[1][1], c=self.marker_style['color'],
-            marker=self.marker_style['marker'], s=self.marker_style['size'],
-            alpha=self.alpha, zorder=5)
+        # plt.scatter(data[0][1], data[1][1], c=self.marker_style['color'],
+        #     marker=self.marker_style['marker'], s=self.marker_style['size'],
+        #     alpha=self.alpha, zorder=5)
+
+        ax = sns.scatter_plot(data=data, x=solvers[0],y=solvers[1], c=self.marker_style['color'],
+        marker=self.marker_style['marker'], s=self.marker_style['size'],
+        alpha=self.alpha, zorder=5)
 
         plt.suptitle(self.title)
 
@@ -153,7 +157,8 @@ class Scatter(Plot, object):
             i.set_linewidth(1)
 
         plt.savefig(self.save_to, bbox_inches='tight', transparent=self.transparent)
-    
+        plt.clf()
+
     def create_pairwise(self, stat_array, task, benchmark_name):
         num_stat_objs = len(stat_array.stat_objs)
         for i in range(0, num_stat_objs):
@@ -171,8 +176,8 @@ class Scatter(Plot, object):
                                                                                          'solver']['name'] + 'v' +
                                                                                      temp_stat_list[1].meta_data[
                                                                                          'solver']['version'],self.backend))
-                       
-                       
+
+
                         data = temp_stat_array.prepare_plotting(self.options)
                         plotter = Scatter(self.options)
                         plotter.save_to = save_file_name

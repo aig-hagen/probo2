@@ -39,7 +39,7 @@ class Cactus(Plot, object):
 
         with open(self.def_path, 'r') as fp:
             self.linestyles = json.load(fp)['cactus_linestyle']
-    
+
     def create(self, data):
         #seaborn.set_style('whitegrid')
         lines  = seaborn.lineplot(data=data,x='rank', y='runtime', hue="Solver", style="Solver", markers=True, dashes=False)
@@ -60,10 +60,10 @@ class Cactus(Plot, object):
             plt.ylabel(self.y_label)
         else:
             plt.ylabel('CPU time (s)')
-        
+
         if self.lgd_loc != 'off':
            plt.legend(loc=self.lgd_loc)
 
         plt.savefig(self.save_to, bbox_inches='tight', transparent=self.transparent)
+        plt.clf()
 
-  
