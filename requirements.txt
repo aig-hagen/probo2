@@ -8,3 +8,4 @@ seaborn~=0.11.1
 scikit-posthocs
 jinja2
 fpdf
+typing-extensions
