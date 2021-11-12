@@ -74,6 +74,16 @@ def coverage(df):
 
     return solved / total * 100
 
+def penalised_average_runtime(df, penalty):
+    cut_off = df.cut_off.iloc[0]
+    solved_instances = df[(df.timed_out == False)&(df.exit_with_error == False)]
+    solved_runtime = solved_instances.runtime.values.sum()
+    total_num = df.shape[0]
+    solved_num = solved_instances.shape[0]
+    unsolved_num =  total_num - solved_num
+    unsolved_runtime = unsolved_num * cut_off * penalty
+    return (solved_runtime + unsolved_runtime) / total_num
+
 
 def dispatch_function(df,functions,par_penalty=10):
 
@@ -91,17 +101,6 @@ def dispatch_function(df,functions,par_penalty=10):
     info = get_info_as_strings(df)
     ser_dict = dict(info,**functions_to_call)
     return pd.Series(ser_dict)
-
-
-def penalised_average_runtime(df, penalty):
-    cut_off = df.cut_off.iloc[0]
-    solved_instances = df[(df.timed_out == False)&(df.exit_with_error == False)]
-    solved_runtime = solved_instances.runtime.values.sum()
-    total_num = df.shape[0]
-    solved_num = solved_instances.shape[0]
-    unsolved_num =  total_num - solved_num
-    unsolved_runtime = unsolved_num * cut_off * penalty
-    return (solved_runtime + unsolved_runtime) / total_num
 
 def merge_dataframes(data_frames, on):
     """[summary]
@@ -139,138 +138,6 @@ def create_vbs(df,vbs_id):
 
 
     return row
-
-
-# def calculate_total_runtimes(df: pd.DataFrame,grouping: list) -> pd.DataFrame:
-#     """[summary]
-
-#     Args:
-#         df (pd.DataFrame): [description]
-
-#     Returns:
-#         pd.DataFrame: [description]
-#     """
-#     return (df
-#             .groupby(grouping,as_index=False)
-#             .apply(lambda group: calculate_total_runtime(group))
-#                         )
-
-# def calculate_total_runtime(df: pd.DataFrame) -> pd.Series:
-#     info = get_info_as_strings(df)
-#     total_runtime = (df[(df['timed_out'] == False) &
-#                         (df['exit_with_error'] == False)]
-#                         ['runtime']
-#                         .values.sum()
-#                     )
-#     info['total_runtime'] = total_runtime
-
-#     return pd.Series(info)
-
-# def calculate_avg_runtime(df: pd.DataFrame) -> pd.Series:
-#     """[summary]
-
-#     Args:
-#         df (pd.DataFrame): [description]
-
-#     Returns:
-#         pd.Series: [description]
-#     """
-#     info = get_info_as_strings(df)
-#     avg_runtime = (df[(df['timed_out'] == False) &
-#                         (df['exit_with_error'] == False)]
-#                         ['runtime']
-#                         .values.mean()
-#                     )
-#     info['average_runtime'] = avg_runtime
-
-#     return pd.Series(info)
-
-# def calculate_avg_runtimes(df: pd.DataFrame, grouping: list) -> pd.DataFrame:
-#     """[summary]
-
-#     Args:
-#         df (pd.DataFrame): [description]
-
-#     Returns:
-#         pd.DataFrame: [description]
-#     """
-#     return (df
-#             .groupby(grouping,as_index=False)
-#             .apply(lambda group: calculate_avg_runtime(group))
-#                         )
-
-
-# def calculate_par_score(df: pd.DataFrame, penalty: int) -> dict:
-#     """[summary]
-
-#     Args:
-#         df (pd.DataFrame): [description]
-#         penalty (int): [description]
-
-#     Returns:
-#         float: [description]
-#     """
-#     info = get_info_as_strings(df)
-#     cut_off = df['cut_off'].iloc[0]
-#     num_unsolved = df[(df['timed_out'] == True) |
-#                       (df['exit_with_error'] == True)].shape[0]
-#     sum_runtime_unsolved = num_unsolved * cut_off * penalty
-#     sum_runtime_solved = df[(df['timed_out'] == False) & (
-#         df['exit_with_error'] == False)]['runtime'].values.sum()
-#     num_total_instances = df.shape[0]
-#     par_score = (sum_runtime_solved + sum_runtime_unsolved) / num_total_instances
-#     info[f'PAR{penalty}'] = par_score
-#     return pd.Series(info)
-
-
-# def calculate_par_scores(df: pd.DataFrame, penalty: int, grouping: list) -> pd.DataFrame:
-#     """[summary]
-
-#     Args:
-#         df (pd.DataFrame): [description]
-#         penalty (int): [description]
-#         grouping (list): [description]
-
-#     Returns:
-#         pd.DataFrame: [description]
-#     """
-#     return (df
-#             .groupby(grouping,as_index=False)
-#             .apply(lambda group: calculate_par_score(group, penalty))
-#             )
-
-# def calculate_coverages(df: pd.DataFrame, grouping: list) -> pd.DataFrame:
-#     """[summary]
-
-#     Args:
-#         df (pd.DataFrame): [description]
-#         grouping (list): [description]
-
-#     Returns:
-#         pd.DataFrame: [description]
-#     """
-#     return (df
-#             .groupby(grouping,as_index=False)
-#             .apply(lambda group: calculate_coverage(group))
-#             )
-# def calculate_coverage(df: pd.DataFrame) -> pd.Series:
-#     """[summary]
-
-#     Args:
-#         df (pd.DataFrame): [description]
-
-#     Returns:
-#         float: [description]
-#     """
-#     info = get_info_as_strings(df)
-#     total = df.shape[0]
-#     solved = df[(df['timed_out'] == False)
-#                 & (df['exit_with_error'] == False)].shape[0]
-#     coverage = solved / total * 100
-#     info['coverage'] = coverage
-#     info['total'] = total
-#     info['solved'] = solved
-#     return pd.Series(info)
 
 # def calculate_iccma_scores(df: pd.DataFrame, grouping: list) -> pd.DataFrame:
 #     """[summary]

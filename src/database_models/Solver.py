@@ -94,7 +94,7 @@ class Solver(Base):
         print("Name: {} \nVersion: {} \nsolver_path: {} \nFormat: {} \nProblems: {}".format(self.solver_name,self.solver_version, self.solver_path, self.solver_format,
                                                                                                                     self.get_supported_tasks()))
 
-    def run(self,task,benchmark,timeout, save_db=True, tag=None, session=None, update_status=False,n=1):
+    def run(self,task,benchmark,timeout, save_db=True, tag=None, session=None, update_status=True,n=1):
         results = {}
         cmd_params = []
         arg_lookup = {}

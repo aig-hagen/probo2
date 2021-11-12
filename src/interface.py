@@ -1,5 +1,4 @@
 
-
 import click
 import json
 import os
@@ -453,8 +452,8 @@ def calculate(par, solver, task, benchmark,
 @click.command()
 @click.pass_context
 @click.option("--tag", "-t", cls=CustomClickOptions.StringAsOption, default=[])
-@click.option("--problem",
-              "-p",
+@click.option("--task",
+
               required=False,
               callback=CustomClickOptions.check_problems,
               help="Computational problems")
@@ -494,12 +493,13 @@ def calculate(par, solver, task, benchmark,
               "-c",
               cls=CustomClickOptions.StringAsOption,
               default=[])
-@click.option("--kind",'-k',type=click.Choice(['cactus','count']),multiple=True)
-def plot(ctx, tag, problem, benchmark, solver, save_to, filter, vbs,
+@click.option("--kind",'-k',type=click.Choice(['cactus','count','dist','scatter','pie']),multiple=True)
+def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
          x_max, y_max, alpha, backend, no_grid,grid_plot, combine, kind):
     with open(definitions.PLOT_JSON_DEFAULTS, 'r') as fp:
         options = json.load(fp)['settings']
         options['def_path'] = definitions.PLOT_JSON_DEFAULTS
+    print(options)
 
     for key, value in ctx.params.items():
         if value is not None:
@@ -513,7 +513,6 @@ def plot(ctx, tag, problem, benchmark, solver, save_to, filter, vbs,
 
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
-    task = problem
 
     og_df =  DatabaseHandler.get_results(session,
                                         solver,
@@ -737,7 +736,10 @@ def export(save_to, solver, filter, problem, benchmark, tag, task, format,
 
 @click.command()
 def status():
-    Status.print_status_summary()
+    if os.path.exists(definitions.STATUS_FILE_DIR):
+        Status.print_status_summary()
+    else:
+        print("No status query is possible.")
 
 
 @click.command()

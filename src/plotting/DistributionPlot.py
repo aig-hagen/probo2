@@ -25,6 +25,7 @@ class Distribution(Plot, object):
         with open(self.def_path, 'r') as fp:
             self.linestyles = json.load(fp)['cactus_linestyle']
     def create(self,data):
+        print("Creating distplot")
         distribution_plot = seaborn.kdeplot(data)
 
         plt.suptitle(self.title)
@@ -32,9 +33,10 @@ class Distribution(Plot, object):
             plt.xlabel(self.y_label)
         else:
             plt.xlabel('CPU time (s)')
-        
+
         # turning the grid on
         if not self.no_grid:
             plt.grid(True, color=self.grid_color, ls=self.grid_style, lw=self.grid_width, zorder=1)
-        
+
         plt.savefig(self.save_to, bbox_inches='tight', transparent=self.transparent)
+        plt.clf()
