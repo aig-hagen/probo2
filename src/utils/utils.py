@@ -208,3 +208,38 @@ def create_file_name(df: pandas.DataFrame) -> str:
     unique_tasks = "_".join(list(df['task'].unique()))
     file_name = f'{unique_tags}-{unique_benchmarks}-{unique_tasks}'
     return file_name
+
+def dispatch_on_value(func):
+    """
+    Value-dispatch function decorator.
+
+    Transforms a function into a value-dispatch function,
+    which can have different behaviors based on the value of the first argument.
+    """
+
+    registry = {}
+
+    def dispatch(value):
+
+        try:
+            return registry[value]
+        except KeyError:
+            return func
+
+    def register(value, func=None):
+
+        if func is None:
+            return lambda f: register(value, f)
+
+        registry[value] = func
+
+        return func
+
+    def wrapper(*args, **kw):
+        return dispatch(args[0])(*args, **kw)
+
+    wrapper.register = register
+    wrapper.dispatch = dispatch
+    wrapper.registry = registry
+
+    return wrapper

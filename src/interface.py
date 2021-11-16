@@ -4,6 +4,7 @@ import json
 import os
 import seaborn as sns
 import sys
+import shutil
 import tabulate
 from sqlalchemy import and_, or_
 from sqlalchemy import engine
@@ -494,8 +495,9 @@ def calculate(par, solver, task, benchmark,
               cls=CustomClickOptions.StringAsOption,
               default=[])
 @click.option("--kind",'-k',type=click.Choice(['cactus','count','dist','scatter','pie']),multiple=True)
+@click.option("--compress",type=click.Choice(['tar']), required=False,help="Compress saved files")
 def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
-         x_max, y_max, alpha, backend, no_grid,grid_plot, combine, kind):
+         x_max, y_max, alpha, backend, no_grid,grid_plot, combine, kind, compress):
     with open(definitions.PLOT_JSON_DEFAULTS, 'r') as fp:
         options = json.load(fp)['settings']
         options['def_path'] = definitions.PLOT_JSON_DEFAULTS
@@ -522,13 +524,17 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
                                         filter,
                                         only_solved=False)
     df = stats.prepare_data(og_df)
-
+    print(kind)
     if vbs:
         grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
         vbs_id = df['solver_id'].max() + 1
         vbs_df = df.groupby(grouping_vbs,as_index=False).apply(lambda df: stats.create_vbs(df,vbs_id))
         df = df.append(vbs_df)
-    pl_util.dispatch_function(df,list(kind),save_to,options,grouping)
+    #files = pl_util.dispatch_function(df,list(kind),save_to,options,grouping)
+    for plot_kind in list(kind):
+        pl_util.create_plots(plot_kind,df,save_to,options, grouping)
+    if compress:
+        shutil.make_archive(save_to, compress, save_to)
 
 
 
