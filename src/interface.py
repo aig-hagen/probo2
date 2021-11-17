@@ -12,7 +12,7 @@ from sqlalchemy.sql.expression import false
 from jinja2 import Environment, FileSystemLoader
 from src.utils import utils
 from tabulate import tabulate
-import zlib
+
 
 from src.reporting.validation_report import Validation_Report
 
