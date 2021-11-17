@@ -61,17 +61,20 @@ def create_scatter_plot(df: pd.DataFrame, save_to: str, options: dict)->str:
 # Cactus plots
 @create_plots.register("cactus")
 def cactus_plot(kind, df, save_to, options,grouping):
+    print("Creating cactus plots...",end="")
     only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
     ranked = (df[only_solved_mask].groupby(grouping,as_index=False)
                     .apply(lambda df: df.assign(rank=df['runtime'].rank(method='dense',ascending=True))))
     plot_grouping = grouping.copy()
     plot_grouping.remove('solver_id')
     ranked.groupby(plot_grouping).apply(lambda df: create_cactus_plot(df,save_to,options))
+    print("finished.")
 
 def create_cactus_plot(df,save_to,options):
     info = get_info_as_strings(df)
     df['Solver'] = df['solver_full_name']
     options['title'] = info['task'] + " " + info['benchmark']
+
     save_file_name = create_file_name(df,info,save_to,'cactus')
     options['save_to'] = save_file_name
     CactusPlot.Cactus(options).create(df)
@@ -100,10 +103,12 @@ def create_count_plot(df, save_to, options):
 
 @create_plots.register("count")
 def count_plot(kind,df,save_to,options,grouping):
+    print("Creating count plots...",end="")
     preped_data = df.groupby(grouping,as_index=False).apply(lambda df: prep_data_count_plot(df))
     plot_grouping = grouping.copy()
     plot_grouping.remove('solver_id')
     preped_data.groupby(plot_grouping).apply(lambda df: create_count_plot(df,save_to,options))
+    print("finished.")
 
 # Pie charts
 def create_pie_chart(df: pd.DataFrame,save_to: str, options: dict):
@@ -134,6 +139,9 @@ def create_pie_chart(df: pd.DataFrame,save_to: str, options: dict):
 
     colors = sns.color_palette(options['color_palette'])[0:4]
     plt.pie(data, labels = labels, colors = colors, autopct='%.0f%%')
+    benchmark_name = info['benchmark']
+    task = info['task']
+    plt.title(f'{benchmark_name} {task}')
     plt.savefig(f"{save_file_name}.png",
                    bbox_inches='tight',
                    transparent=True)
@@ -143,20 +151,24 @@ def create_pie_chart(df: pd.DataFrame,save_to: str, options: dict):
 
 @create_plots.register("pie")
 def pie_chart(kind,df: pd.DataFrame, save_to: str, options: dict, grouping: list):
+    print("Creating pie charts...",end="")
     with open(options['def_path'], 'r') as fp:
         pie_options = json.load(fp)['pie_options']
     df.groupby(grouping).apply(lambda df: create_pie_chart(df,save_to,pie_options))
     pie_grouping = grouping.copy()
     pie_grouping.remove('solver_id')
     df.groupby(pie_grouping).apply(lambda df: create_pie_chart(df,save_to,pie_options))
+    print("finished.")
 
 # Dist plots
 @create_plots.register("dist")
 def dist_plot(kind,df: pd.DataFrame,save_to: str,options: dict,grouping: list):
+    print("Creating distribution plots...",end="")
     only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
     dist_grouping = grouping.copy()
     dist_grouping.remove('solver_id')
     df[only_solved_mask].groupby(dist_grouping).apply(lambda df: create_dist_plot(df,save_to,options))
+    print("finished.")
 
 def create_dist_plot(df: pd.DataFrame,save_to: str,options: dict):
     info = get_info_as_strings(df)
@@ -165,16 +177,4 @@ def create_dist_plot(df: pd.DataFrame,save_to: str,options: dict):
     save_file_name = create_file_name(df,info,save_to,'dist')
     options['save_to'] = save_file_name
     DistributionPlot.Distribution(options).create(df['runtime'])
-
-
-
-# def dispatch_function(df,functions,save_to,options,grouping):
-#     only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
-#     dispatch_map = {'cactus':cactus_plot(df[only_solved_mask],save_to,options,grouping),
-#                     'count':count_plot(df,save_to,options,grouping),
-#                     'dist': dist_plot(df[only_solved_mask], save_to,options,grouping),
-#                     'pie': pie_chart(df,save_to,options,grouping)
-#     }
-#     functions_to_call = {key: dispatch_map[key] for key in functions}
-#     return pd.Series(functions_to_call)
 

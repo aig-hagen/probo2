@@ -40,6 +40,7 @@ class Scatter(Plot, object):
 
         super(Scatter, self).__init__(options)
 
+
         # setting up axes limits
         if not self.x_min:
             self.x_min = self.y_min  # self.y_min is supposed to have a default value

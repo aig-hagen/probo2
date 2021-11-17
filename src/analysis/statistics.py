@@ -126,7 +126,7 @@ def create_vbs(df,vbs_id):
     row = df.iloc[0]
     row['solver_id'] = vbs_id
     row['solver_full_name'] = "vbs"
-    row['id'] = 0
+    row['id'] = -1
     row['runtime'] = best_runtime
     row['validated'] = True
     row['correct_solved'] = True

@@ -25,8 +25,7 @@ class Distribution(Plot, object):
         with open(self.def_path, 'r') as fp:
             self.linestyles = json.load(fp)['cactus_linestyle']
     def create(self,data):
-        print("Creating distplot")
-        distribution_plot = seaborn.kdeplot(data)
+        distribution_plot = seaborn.kdeplot(data.values)
 
         plt.suptitle(self.title)
         if self.x_label:

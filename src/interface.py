@@ -12,6 +12,7 @@ from sqlalchemy.sql.expression import false
 from jinja2 import Environment, FileSystemLoader
 from src.utils import utils
 from tabulate import tabulate
+import zlib
 
 from src.reporting.validation_report import Validation_Report
 
@@ -495,13 +496,14 @@ def calculate(par, solver, task, benchmark,
               cls=CustomClickOptions.StringAsOption,
               default=[])
 @click.option("--kind",'-k',type=click.Choice(['cactus','count','dist','scatter','pie']),multiple=True)
-@click.option("--compress",type=click.Choice(['tar']), required=False,help="Compress saved files")
+@click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files")
+@click.option("--send", "-s", required=False, help="Send plots via E-Mail")
 def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
-         x_max, y_max, alpha, backend, no_grid,grid_plot, combine, kind, compress):
+         x_max, y_max, alpha, backend, no_grid,grid_plot, combine, kind, compress, send):
     with open(definitions.PLOT_JSON_DEFAULTS, 'r') as fp:
         options = json.load(fp)['settings']
         options['def_path'] = definitions.PLOT_JSON_DEFAULTS
-    print(options)
+
 
     for key, value in ctx.params.items():
         if value is not None:
@@ -524,17 +526,24 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
                                         filter,
                                         only_solved=False)
     df = stats.prepare_data(og_df)
-    print(kind)
+
     if vbs:
         grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
-        vbs_id = df['solver_id'].max() + 1
+        vbs_id = -1
         vbs_df = df.groupby(grouping_vbs,as_index=False).apply(lambda df: stats.create_vbs(df,vbs_id))
         df = df.append(vbs_df)
+
     #files = pl_util.dispatch_function(df,list(kind),save_to,options,grouping)
     for plot_kind in list(kind):
         pl_util.create_plots(plot_kind,df,save_to,options, grouping)
     if compress:
         shutil.make_archive(save_to, compress, save_to)
+    if send:
+        email_attachments = Notification(send,subject="Hi, there. I have your files for you.",message="Enclosed you will find your files.")
+        if compress:
+            email_attachments.attach_files(f'{save_to}.{compress}')
+        email_attachments.send()
+
 
 
 

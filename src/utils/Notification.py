@@ -1,6 +1,8 @@
 import smtplib
 import ssl
 import email
+import os
+
 
 from email import encoders
 from email.mime.base import MIMEBase
@@ -9,7 +11,7 @@ from email.mime.text import MIMEText
 
 
 class Notification:
-    def __init__(self, receiver):
+    def __init__(self, receiver, subject="Hi there, your experiment is finished",message=""):
         self.port = 465  # For SSL
         self.smtp_server = "smtp.gmail.com"
         self.sender_email = "probonotificationbot@gmail.com"  # Enter your address
@@ -18,8 +20,8 @@ class Notification:
         self.message =  MIMEMultipart()
         self.message["From"] = self.sender_email
         self.message["To"] = self.receiver_email
-        self.message["Subject"] = "Hi there, your experiment is finished"
-        #self.message.attach(MIMEText("Enclosed you will find a report of your experiment.", "plain"))
+        self.message["Subject"] = subject
+        self.message.attach(MIMEText(message, "plain"))
 
 
     def send(self):
@@ -35,7 +37,7 @@ class Notification:
         # Email client can usually download this automatically as attachment
             part = MIMEBase("application", "octet-stream")
             part.set_payload(attachment.read())
-        # Encode file in ASCII characters to send by email    
+        # Encode file in ASCII characters to send by email
         encoders.encode_base64(part)
 
         # Add header as key/value pair to attachment part
@@ -46,4 +48,22 @@ class Notification:
 
         # Add attachment to message and convert message to string
         self.message.attach(part)
-    
+    def attach_files(self, path):
+        print(path)
+        if os.path.isfile(path):
+            print("Attaching file")
+            with open(path, "rb") as fil:
+               part = MIMEBase("application", "octet-stream")
+               part.set_payload(fil.read())
+            encoders.encode_base64(part)
+        # After the file is closed
+            part.add_header(
+                        "Content-Disposition",
+                        f"attachment; filename= {os.path.basename(path)}",
+                        )
+            self.message.attach(part)
+
+
+
+
+

@@ -9,3 +9,4 @@ scikit-posthocs
 jinja2
 fpdf
 typing-extensions
+zlib
