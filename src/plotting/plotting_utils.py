@@ -14,7 +14,7 @@ from src.utils.utils import dispatch_on_value
 
 @dispatch_on_value
 def create_plots(kind, df, save_to, options, grouping):
-    print("Everything's fine.")
+    print(f"Plot type {kind} not supported.")
 
 
 def create_file_name(df: pd.DataFrame,info,save_to: str,kind: str) -> str:
@@ -177,4 +177,32 @@ def create_dist_plot(df: pd.DataFrame,save_to: str,options: dict):
     save_file_name = create_file_name(df,info,save_to,'dist')
     options['save_to'] = save_file_name
     DistributionPlot.Distribution(options).create(df['runtime'])
+
+@create_plots.register("box")
+def box_plot(kind,df: pd.DataFrame,save_to: str,options: dict,grouping: list):
+    print("Creating box plots...",end="")
+    only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
+    box_grouping = grouping.copy()
+    box_grouping.remove('solver_id')
+    df[only_solved_mask].groupby(box_grouping).apply(lambda df: create_box_plot(df,save_to,options))
+    print("finished.")
+
+def create_box_plot(df: pd.DataFrame,save_to: str,options: dict):
+    info = get_info_as_strings(df)
+    df['Solver'] = df['solver_full_name']
+    save_file_name = create_file_name(df,info,save_to,'dist')
+    ax=sns.boxplot(data=df,y='runtime', x='solver_full_name')
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=40, ha="right")
+
+    benchmark_name = info['benchmark']
+    task = info['task']
+    ax.set_title(f'{benchmark_name} {task}')
+    ax.set(xlabel='solver')
+    figure = ax.get_figure()
+    figure.savefig(f"{save_file_name}.png",
+                   bbox_inches='tight',
+                   transparent=True)
+    plt.clf()
+
+
 

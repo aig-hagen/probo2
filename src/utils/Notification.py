@@ -49,9 +49,9 @@ class Notification:
         # Add attachment to message and convert message to string
         self.message.attach(part)
     def attach_files(self, path):
-        print(path)
+
         if os.path.isfile(path):
-            print("Attaching file")
+            print(f"Attaching file {path} to e-mail.")
             with open(path, "rb") as fil:
                part = MIMEBase("application", "octet-stream")
                part.set_payload(fil.read())
@@ -62,6 +62,8 @@ class Notification:
                         f"attachment; filename= {os.path.basename(path)}",
                         )
             self.message.attach(part)
+        else:
+            print(f"File {path} not found")
 
 
 

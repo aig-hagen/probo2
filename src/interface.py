@@ -495,7 +495,7 @@ def calculate(par, solver, task, benchmark,
               "-c",
               cls=CustomClickOptions.StringAsOption,
               default=[])
-@click.option("--kind",'-k',type=click.Choice(['cactus','count','dist','scatter','pie']),multiple=True)
+@click.option("--kind",'-k',type=click.Choice(['cactus','count','dist','scatter','pie','box','all']),multiple=True)
 @click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files")
 @click.option("--send", "-s", required=False, help="Send plots via E-Mail")
 def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
@@ -504,16 +504,17 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
         options = json.load(fp)['settings']
         options['def_path'] = definitions.PLOT_JSON_DEFAULTS
 
-
     for key, value in ctx.params.items():
         if value is not None:
             options[key] = value
 
+    if 'all' in kind:
+        kind = ['cactus','count','dist','scatter','pie','box']
+
+
     grouping = ['tag', 'task_id', 'benchmark_id', 'solver_id']
     if combine:
         grouping = [x for x in grouping if x not in combine]
-    engine = DatabaseHandler.get_engine()
-    session = DatabaseHandler.create_session(engine)
 
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
@@ -533,15 +534,19 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
         vbs_df = df.groupby(grouping_vbs,as_index=False).apply(lambda df: stats.create_vbs(df,vbs_id))
         df = df.append(vbs_df)
 
-    #files = pl_util.dispatch_function(df,list(kind),save_to,options,grouping)
     for plot_kind in list(kind):
         pl_util.create_plots(plot_kind,df,save_to,options, grouping)
     if compress:
-        shutil.make_archive(save_to, compress, save_to)
+        save_archive_to = save_to.rstrip("/")
+        click.echo(f"Creating archive {save_archive_to}.{compress}...",nl=False)
+        shutil.make_archive(save_archive_to, compress, save_archive_to)
+        click.echo("finished")
     if send:
         email_attachments = Notification(send,subject="Hi, there. I have your files for you.",message="Enclosed you will find your files.")
         if compress:
-            email_attachments.attach_files(f'{save_to}.{compress}')
+            email_attachments.attach_files(f'{save_archive_to}.{compress}')
+        else:
+            email_attachments.attach_files(save_to)
         email_attachments.send()
 
 
