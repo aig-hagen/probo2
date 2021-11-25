@@ -40,6 +40,7 @@ def add_objects(session, objects: list):
 
 
 
+
 def create_session(engine):
     """
         Adds a new solver into the solvers table
@@ -91,6 +92,30 @@ def add_solver(session, solver, tasks):
     else:
         raise ValueError("Solver already in Database!")
     return new_solver.solver_id
+def get_supported_tasks(session):
+    supported_tasks = session.query(Task).all()
+    symbols = [x.symbol for x in supported_tasks]
+    return symbols
+def add_task(session,task_symbol):
+    new_task = (
+        session.query(Task)
+            .filter(
+                Task.symbol == task_symbol
+            )
+            .one_or_none()
+    )
+        # create solver object
+    if new_task is None:
+        new_task = Task(symbol=task_symbol)
+        session.add(new_task)
+        session.flush()
+        session.refresh(new_task)
+    else:
+        raise ValueError(f"Task {task_symbol} already in Database!")
+
+    return new_task.id
+
+
 
 def add_benchmark(session, benchmark):
     """

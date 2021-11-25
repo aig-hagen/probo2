@@ -9,6 +9,12 @@ import pandas as pd
 import seaborn as sns
 import click
 
+from src.utils.utils import dispatch_on_value
+
+@dispatch_on_value
+def validate_task(task, df, ref_path):
+    print(f"Task {task} not supported for validation.")
+
 
 def prepare_data(df):
     """[summary]
@@ -199,8 +205,8 @@ def parse_result(task: str, result: str):
     else:
         return result
 
-
-def validate_ee(df: pd.DataFrame, reference_path: str):
+@validate_task.register("EE")
+def validate_ee(task, df: pd.DataFrame, reference_path: str):
     """[summary]
 
     Args:
@@ -347,7 +353,8 @@ def compare_result_some_extension(actual,correct):
     else:
         return "incorrect"
 
-def validate_se(df, reference_path):
+@validate_task.register("SE")
+def validate_se(task,df, reference_path):
     """[summary]
 
     Args:
@@ -368,6 +375,18 @@ def validate_se(df, reference_path):
          single_extension_string_to_list(row['result']), reference_extensions),
                      axis=1)
 
+@validate_task.register("CE")
+def validate_ce(task, df: pd.DataFrame, ref_path: str):
+     return validate_decision(df,ref_path)
+
+
+@validate_task.register("DC")
+def validate_dc(task, df: pd.DataFrame, ref_path: str):
+    return validate_decision(df,ref_path)
+
+@validate_task.register("DS")
+def validate_ds(task, df: pd.DataFrame, ref_path: str):
+    return validate_decision(df,ref_path)
 
 def validate_decision(df, reference_path):
     """[summary]
@@ -402,15 +421,18 @@ def validate_instance(df, references):
     reference_path = references[(df['benchmark_id'].iloc[0])]
     if not os.path.exists(reference_path):
         raise click.BadParameter("Reference path not found!")
+    task = str(df['task'].iloc[0]).split("-")[0]
 
-    if 'EE' in str(df['task'].iloc[0]):
-        df['correct'] = validate_ee(df, reference_path)
-    elif 'SE' in str(df['task'].iloc[0]):
-        df['correct'] = validate_se(df, reference_path)
-    elif 'DC' in str(df['task'].iloc[0]):
-        df['correct'] = validate_decision(df, reference_path)
-    elif 'DS' in str(df['task'].iloc[0]):
-        df['correct'] = validate_decision(df, reference_path)
+    df['correct'] = validate_task(task,df,reference_path)
+
+    # if 'EE' in str(df['task'].iloc[0]):
+    #     df['correct'] = validate_ee(df, reference_path)
+    # elif 'SE' in str(df['task'].iloc[0]):
+    #     df['correct'] = validate_se(df, reference_path)
+    # elif 'DC' in str(df['task'].iloc[0]):
+    #     df['correct'] = validate_decision(df, reference_path)
+    # elif 'DS' in str(df['task'].iloc[0]):
+    #     df['correct'] = validate_decision(df, reference_path)
 
     return df
 
@@ -425,10 +447,8 @@ def validate(df, references):
         [type]: [description]
     """
     val = (df
-    #[(df["task"].str.contains("DC")) | (df["task"].str.contains("DS")) ]
     .groupby(['benchmark_id','instance','task'])
     .apply(lambda _df: validate_instance(_df,references))
-    #[['id', 'tag', 'solver_id', 'solver_full_name','benchmark_name','task','instance','correct']]
     )
     val['validated'] = np.where(val.correct.values == "no_reference", False,
                                 True)

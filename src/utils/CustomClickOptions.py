@@ -5,6 +5,7 @@ import ast
 import click
 
 from src.utils import definitions
+from src.database_models import DatabaseHandler
 
 
 class TrackToProblemClass(click.Option):
@@ -70,10 +71,10 @@ class StringToInteger(click.Option):
 def call_click_command(cmd, *args, **kwargs):
     """ Wrapper to call a click command
 
-    :param cmd: click cli command function to call 
-    :param args: arguments to pass to the function 
-    :param kwargs: keywrod arguments to pass to the function 
-    :return: None 
+    :param cmd: click cli command function to call
+    :param args: arguments to pass to the function
+    :param kwargs: keywrod arguments to pass to the function
+    :return: None
     """
 
     # Get positional arguments from args
@@ -132,7 +133,7 @@ def check_path(ctx, param, value):
         return value
 
 
-def check_problems(ctx, param, value):
+def check_problems(ctx, param, value, in_db=True):
     """ Checks if problems are supported.
 
      This function is a callback function of the command-line-interface
@@ -150,8 +151,16 @@ def check_problems(ctx, param, value):
     else:
         value = value.strip()
         problems = value.split(",")
+    if in_db:
+        engine = DatabaseHandler.get_engine()
+        session = DatabaseHandler.create_session(engine)
+        supported_task = DatabaseHandler.get_supported_tasks(session)
+    else:
+        supported_task = definitions.SUPPORTED_TASKS
+
+    session.close()
     for problem in problems:
-        if problem not in definitions.SUPPORTED_TASKS:
+        if problem not in supported_task:
             raise click.BadParameter("Problem not supported!")
     return problems
 

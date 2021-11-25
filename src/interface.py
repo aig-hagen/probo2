@@ -6,6 +6,7 @@ import seaborn as sns
 import sys
 import shutil
 import tabulate
+import hashlib
 from sqlalchemy import and_, or_
 from sqlalchemy import engine
 from sqlalchemy.sql.expression import false
@@ -83,10 +84,13 @@ def add_solver(name, path, format, tasks, version, guess):
      Raises:
           None
       """
+    engine = DatabaseHandler.get_engine()
+    session = DatabaseHandler.create_session(engine)
     new_solver = Solver(solver_name=name,
                         solver_path=path,
                         solver_version=version,
                         solver_format=format)
+    supported_task_database = DatabaseHandler.get_supported_tasks(session)
     if guess:
         if format:
             new_solver.solver_format = format
@@ -99,7 +103,7 @@ def add_solver(name, path, format, tasks, version, guess):
 
             for p in problems_output:
                 p = p.strip(" ")
-                if p in definitions.SUPPORTED_TASKS:
+                if p in supported_task_database:
                     tasks.append(p)
 
     # print("Testing solver...", end='')
@@ -109,8 +113,7 @@ def add_solver(name, path, format, tasks, version, guess):
     # else:
     #     print("success.")
 
-    engine = DatabaseHandler.get_engine()
-    session = DatabaseHandler.create_session(engine)
+
 
     try:
 
@@ -542,12 +545,15 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
         shutil.make_archive(save_archive_to, compress, save_archive_to)
         click.echo("finished")
     if send:
-        email_attachments = Notification(send,subject="Hi, there. I have your files for you.",message="Enclosed you will find your files.")
+        id_code = int(hashlib.sha256(save_to.encode('utf-8')).hexdigest(), 16) % 10**8
+        note_message = "Note: Since the access data for this e-mail account are public, please do not open any attachments to e-mails in which the identification code does not match the one generated for you."
+        email_attachments = Notification(send,subject="Hi, there. I have your files for you.",message=f"Enclosed you will find your files.\nYour e-mail identification code: {id_code}\n\n{note_message}")
         if compress:
             email_attachments.attach_files(f'{save_archive_to}.{compress}')
         else:
             email_attachments.attach_files(save_to)
         email_attachments.send()
+        print(f"\n{note_message}\nYour e-mail identification code: {id_code}")
 
 
 
@@ -1095,12 +1101,67 @@ def delete_solver(id, all):
     finally:
         session.close()
 
+@click.command()
+@click.option("--symbol","-s",multiple=True,required=True)
+def add_task(symbol):
+    engine = DatabaseHandler.get_engine()
+    session = DatabaseHandler.create_session(engine)
+    click.confirm(
+        "Are you sure you want to add this task to the database?",
+        abort=True)
 
+    try:
+        for new_symbol in list(symbol):
+            new_task_id = DatabaseHandler.add_task(
+            session, new_symbol)
+            session.commit()
+            print(f"Task {new_symbol} added to database with ID: {new_task_id}.")
+    except ValueError as e:
+        session.rollback()
+        print(e)
+    finally:
+        session.close()
+
+@click.command()
+@click.option("--table","-t",multiple=True, type=click.Choice(['Task']),required=True)
+def update_db(table):
+
+    engine = DatabaseHandler.get_engine()
+    session = DatabaseHandler.create_session(engine)
+    tasks_in_db = set(DatabaseHandler.get_supported_tasks(session))
+    tasks_in_definition = set(definitions.SUPPORTED_TASKS)
+    diff = set.difference(tasks_in_definition,tasks_in_db)
+
+    try:
+        for new_symbol in list(diff):
+            new_task_id = DatabaseHandler.add_task(
+            session, new_symbol)
+            session.commit()
+            print(f"Task {new_symbol} added to database with ID: {new_task_id}.")
+    except ValueError as e:
+        session.rollback()
+        print(e)
+    finally:
+        session.close()
+
+
+@click.command()
+def tasks():
+   engine = DatabaseHandler.get_engine()
+   session = DatabaseHandler.create_session(engine)
+   tasks_in_db = sorted((DatabaseHandler.get_supported_tasks(session)))
+   print(tasks_in_db)
+
+
+
+
+cli.add_command(update_db)
 cli.add_command(add_solver)
 cli.add_command(add_benchmark)
 cli.add_command(benchmarks)
 cli.add_command(solvers)
 cli.add_command(results)
+cli.add_command(tasks)
 cli.add_command(run)
 cli.add_command(calculate)
 cli.add_command(plot)
@@ -1109,3 +1170,4 @@ cli.add_command(status)
 cli.add_command(validate)
 cli.add_command(significance)
 cli.add_command(delete_solver)
+cli.add_command(add_task)

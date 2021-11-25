@@ -127,6 +127,7 @@ class Solver(Base):
                     result = subprocess.run(final_param,
                                        capture_output=True, timeout=timeout, check=True)
 
+
                     end_time_current_run = timer()
                     run_time_current_run = end_time_current_run - start_time_current_run
                     total_run_time+=run_time_current_run
@@ -138,8 +139,8 @@ class Solver(Base):
                 solver_output = re.sub("\s+", "",
                                    result.stdout.decode("utf-8"))
                 results[instance] = {'timed_out':False,'additional_argument': arg, 'runtime': run_time, 'result': solver_output, 'exit_with_error': False, 'error_code': None}
-            except subprocess.TimeoutExpired:
-                print("TIMEOUT")
+            except subprocess.TimeoutExpired as e:
+                print("...TIMEOUT",end='')
                 results[instance] = {'timed_out':True,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': False, 'error_code': None}
             except subprocess.CalledProcessError as err:
                 print("Error occured")
