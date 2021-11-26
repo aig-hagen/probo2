@@ -529,7 +529,6 @@ def calculate(par, solver, task, benchmark,
 @click.option("--send", "-s", required=False, help="Send plots via E-Mail")
 def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
          x_max, y_max, alpha, backend, no_grid,grid_plot, combine, kind, compress, send):
-
     with open(definitions.PLOT_JSON_DEFAULTS, 'r') as fp:
         options = json.load(fp)['settings']
         options['def_path'] = definitions.PLOT_JSON_DEFAULTS
@@ -628,16 +627,16 @@ def solvers(verbose):
         for solver in solvers:
             tasks = [t.symbol for t in solver.supported_tasks]
             tabulate_data.append(
-                [solver.id, solver.solver_name, solver.solver_format, tasks])
+                [solver.solver_id, solver.solver_name,solver.solver_version, solver.solver_format, tasks])
 
         print(
             tabulate(tabulate_data,
-                              headers=["ID", "Name", "Format", "Tasks"],
+                              headers=["ID", "Name","Version","Format", "Tasks"],
                               tablefmt=format))
     else:
         for solver in solvers:
             tabulate_data.append(
-                [solver.solver_id, solver.solver_name, solver.solver_format])
+                [solver.solver_id, solver.solver_name,solver.solver_format])
 
         print(
             tabulate(tabulate_data,
