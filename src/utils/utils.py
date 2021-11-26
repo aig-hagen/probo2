@@ -5,6 +5,7 @@ from tabulate import tabulate
 import click
 import pandas
 from src.utils import definitions as definitions
+from src.utils import Status
 
 def print_df(df, grouping, headers, format='fancy_grid'):
     (df
@@ -191,6 +192,7 @@ def run_experiment(parameters: dict):
                            session=session,
                            n=n)
                 click.echo("---FINISHED")
+        Status.increment_task_counter()
 
 def create_file_name(df: pandas.DataFrame) -> str:
     """[summary]

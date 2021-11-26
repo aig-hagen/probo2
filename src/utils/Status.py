@@ -8,7 +8,7 @@ from src.utils import definitions
 def init_status_file(tasks, benchmarks, tag):
     status_dict = {'tag': tag, 'total_tasks': len(tasks), 'finished_tasks': 0, 'tasks': {}}
     for task in tasks:
-        
+
         status_dict['tasks'][task.symbol] = {}
         status_dict['tasks'][task.symbol]['solvers'] = dict()
         for solver in task.solvers:

@@ -529,6 +529,7 @@ def calculate(par, solver, task, benchmark,
 @click.option("--send", "-s", required=False, help="Send plots via E-Mail")
 def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
          x_max, y_max, alpha, backend, no_grid,grid_plot, combine, kind, compress, send):
+
     with open(definitions.PLOT_JSON_DEFAULTS, 'r') as fp:
         options = json.load(fp)['settings']
         options['def_path'] = definitions.PLOT_JSON_DEFAULTS
@@ -683,7 +684,7 @@ def results(verbose, solver, task, benchmark, tag, filter):
                                             filter,
                                             only_solved=False)
     print(result_df)
-    print(result_df.tag.unique())
+
 
     # results = session.query(Result).all()
     # tabulate_data = []
