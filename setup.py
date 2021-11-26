@@ -15,6 +15,6 @@ setup(
     install_requires=req,
     entry_points='''
       [console_scripts]
-      Probo2=src.interface:cli
+      probo2=src.interface:cli
   ''',
 )

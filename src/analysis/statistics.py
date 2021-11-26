@@ -2,6 +2,7 @@
 
 
 import pandas as pd
+from sqlalchemy.sql import functions
 
 
 
@@ -39,6 +40,50 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     })
     )
 
+def get_task_summary(df: pd.DataFrame, summary_dict):
+    task = df.task.iloc[0]
+    benchmark= df.benchmark_name.iloc[0]
+    functions_to_call = ['sum','min','max','mean','num_solved','num_timed_out','num_exit_with_error','coverage']
+    stats_solver = (df
+                .groupby(["solver_id"],as_index=False)
+                .apply(lambda df: dispatch_function(df,functions_to_call,par_penalty=0))
+                )
+    stats_summary = dispatch_function(df,functions_to_call)
+    summary_dict[benchmark][task] = {'summary': stats_summary, 'solver': stats_solver}
+
+
+def get_experiment_summary_as_string(df: pd.DataFrame) -> str:
+    tag = df.tag.iloc[0]
+    tasks_str = ",".join(list(df.task.unique()))
+    solvers_str = ",".join(list(df.solver_full_name.unique()))
+    benchmarks_str = ",".join(list(df.benchmark_name.unique()))
+    unique_instances_str = len(list(df.instance.unique()))
+    final_string =f'+++++SUMMARY+++++\nTag: {tag}\nBenchmarks: {benchmarks_str}\n#Unique Instances: {unique_instances_str}\nTasks: {tasks_str}\nSolvers: {solvers_str}\n\n'
+    summary_dict = dict()
+    for benchmark in list(df.benchmark_name.unique()):
+        summary_dict[benchmark] = dict()
+    df.groupby(['benchmark_id','task_id'],as_index=False).apply(lambda df: get_task_summary(df,summary_dict))
+    for benchmark, summary_tasks in summary_dict.items():
+        benchmark_sum_str =f'#####{benchmark}#####\n\n'
+        for task,task_summary in summary_tasks.items():
+            task_sum_str = f'*****{task}*****\n\n'
+            summary = task_summary['summary']
+            solver = task_summary['solver']
+            summary_str = (f'Solver: {summary.solver}\n#Solved: {summary.num_solved}\n#Timeout: {summary.num_timed_out}\n#Errors: {summary.num_exit_with_error}\nCoverage: {summary.coverage}%\n\n')
+            task_sum_str += summary_str
+            solver_sum_str =""
+            for index, row in solver.iterrows():
+                sum_runtime = row['sum']
+                mean_runtime = row['mean']
+                min_runtime = row['min']
+                max_runtime = row['max']
+                cur_solver = f'-----{row.solver}-----\n#Solved: {row.num_solved}\n#Timeout: {row.num_timed_out}\n#Errors: {row.num_exit_with_error}\nCoverage: {row.coverage}%\nTotal runtime: {sum_runtime}\nMean runtime: {mean_runtime}\nMin runtime: {min_runtime}\nMax runtime: {max_runtime}\n\n'
+                solver_sum_str += cur_solver
+
+            benchmark_sum_str += task_sum_str + solver_sum_str
+    return final_string + benchmark_sum_str
+
+
 def get_info_as_strings(df: pd.DataFrame) -> dict:
     tags = ",".join(df.tag.unique())
     solvers = ",".join(df.solver_full_name.unique())
@@ -70,8 +115,7 @@ def std_runtimes(df):
 
 def coverage(df):
     total = df.instance.shape[0]
-    solved = total -(sum_timed_out(df) + sum_exit_with_error(df))
-
+    solved =num_solved(df)
     return solved / total * 100
 
 def penalised_average_runtime(df, penalty):
@@ -84,6 +128,10 @@ def penalised_average_runtime(df, penalty):
     unsolved_runtime = unsolved_num * cut_off * penalty
     return (solved_runtime + unsolved_runtime) / total_num
 
+def num_solved(df):
+    total = df.instance.shape[0]
+    return total -(sum_timed_out(df) + sum_exit_with_error(df))
+
 
 def dispatch_function(df,functions,par_penalty=10):
 
@@ -95,7 +143,10 @@ def dispatch_function(df,functions,par_penalty=10):
                     'var': var_runtimes(df),
                     'std': std_runtimes(df),
                     f'PAR{par_penalty}': penalised_average_runtime(df,par_penalty),
-                    'coverage': coverage(df)
+                    'coverage': coverage(df),
+                    'num_timed_out': sum_timed_out(df),
+                    'num_exit_with_error': sum_exit_with_error(df),
+                    'num_solved': num_solved(df)
     }
     functions_to_call = {key: dispatch_map[key] for key in functions}
     info = get_info_as_strings(df)

@@ -34,10 +34,10 @@ class Benchmark(Base):
                 else:
                     instances.append(instance)
         return sorted(instances)
-    
+
     def get_argument_files(self):
         return self.get_instances(self.extension_arg_files)
-    
+
     def generate_additional_argument_lookup(self, format):
         lookup = {}
         argument_files = self.get_argument_files()
@@ -49,7 +49,7 @@ class Benchmark(Base):
                     argument_param = af.read().replace('\n', '')
             except IOError as err:
                 print(err)
-            
+
             instance_name = Path(file).stem
             lookup[instance_name] = argument_param
 
@@ -86,7 +86,7 @@ class Benchmark(Base):
         if generate_format not in self.get_formats():
             self.format_instances += "," + generate_format
         num_generated = 0
-        
+
         with click.progressbar(self.get_instances(present_format),
                                label="Generating {} files:".format(generate_format)) as instance_progress:
             for instance in instance_progress:
@@ -97,7 +97,7 @@ class Benchmark(Base):
                     num_generated += 1
 
         print("{} files generated.".format(num_generated))
-    
+
     def generate_single_file(self, instance_name, generate_format, present_format):
         """Generates a single instance in the specified format.
         Args:
@@ -117,7 +117,7 @@ class Benchmark(Base):
 
         if generate_format not in self.get_formats():
             self.supported_formats += "," + generate_format
-        
+
         present_instance_path = os.path.join(self.benchmark_path, "{}.{}".format(instance_name, present_format))
         with open(present_instance_path) as present_file:
             present_file_content = present_file.read()
@@ -131,7 +131,7 @@ class Benchmark(Base):
         generate_file.write(generate_file_content)
         generate_file.close()
 
-    
+
 
     @staticmethod
     def __parse_apx_from_tgf(file_content):
@@ -232,7 +232,7 @@ class Benchmark(Base):
         argument_file = open(os.path.join(self.benchmark_path, argument_file_name), 'a')
         argument_file.write(random_argument)
         argument_file.close()
-    
+
     def generate_argument_files(self, extension="arg"):
         """Generate argument file with random arguments from existing files.
             Args:
@@ -280,7 +280,7 @@ class Benchmark(Base):
                             return False
             return True
         else:
-            True  # FileSet with just one supported format is complete
+            return True  # FileSet with just one supported format is complete
 
     def get_missing_files(self):
         """Return a dictionary of missing instances for each format.
@@ -302,11 +302,10 @@ class Benchmark(Base):
                                                .join(self.get_instances(compare_format))
                                                .replace("." + compare_format, "")
                                                .split(","))
-                print(compare_format_instances)
                 current_missing = compare_format_instances.difference(current_format_instances)
                 missing_instances[current_format].update(current_missing)
         return missing_instances
-    
+
     def generate_missing_files(self):
         """Generate all missing files for each format.
         Returns:

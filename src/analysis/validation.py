@@ -379,6 +379,17 @@ def validate_se(task,df, reference_path):
 def validate_ce(task, df: pd.DataFrame, ref_path: str):
      return validate_decision(df,ref_path)
 
+@validate_task.register("EC")
+def validate_ec(task, df: pd.DataFrame, ref_path: str):
+    pass
+
+def compare_argument_list(result: list, actual: list ) -> str:
+    if not actual:
+        return 'no_reference'
+    else:
+        result.sort()
+        actual.sort()
+
 
 @validate_task.register("DC")
 def validate_dc(task, df: pd.DataFrame, ref_path: str):
@@ -580,7 +591,7 @@ def validate_pairwise(df: pd.DataFrame,
                 if 'EE' in row.task or 'SE' in row.task:
                     validation_result = compare_results_enumeration(
                         result_current_solver, other_solver_result)
-                if 'DC' in row.task or 'DS' in row.task:
+                if 'DC' in row.task or 'DS' in row.task or "CE" in row.task:
                     validation_result = compare_results_decision(
                         result_current_solver, other_solver_result)
                 if validation_result == 'correct':

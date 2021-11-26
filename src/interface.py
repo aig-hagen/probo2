@@ -152,6 +152,8 @@ def add_solver(name, path, format, tasks, version, guess):
 @click.option("--format",
               "-f",
               required=True,
+              multiple=True,
+              type=click.Choice(["apx","tgf"]),
               help="Supported formats of benchmark/fileset")
 @click.option("--hardness",
               "-h",
@@ -212,6 +214,15 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
         'hardness': hardness,
         'benchmark_competition': competition
     }
+
+    if len(format) > 1:
+        format = ",".join(list(format))
+    else:
+        format = format[0]
+
+
+
+
     new_benchmark = Benchmark(benchmark_name=name,
                               benchmark_path=path,
                               format_instances=format,
@@ -286,7 +297,7 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
               required=False,
               #callback=CustomClickOptions.check_problems,
               help="Comma-seperated list of tasks to solve.")
-@click.option("--save_to", required=False, help="Path for storing results.")
+#@click.option("--save_to", required=False, help="Path for storing results.")
 @click.option("--timeout",
               "-t",
               required=False,
@@ -311,15 +322,14 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
 )
 @click.option(
     "--notify",
-    "-n",
     help=
     "Send a notification to the email address provided as soon as the experiments are finished."
 )
-@click.option("--report", is_flag=True,help="Create summary report of experiment.")
+#@click.option("--report", is_flag=True,help="Create summary report of experiment.")
 @click.option("--n_times","-n",required=False,type=click.types.INT,default=1, help="Number of repetitions per instance. Run time is the avg of the n runs.")
 @click.pass_context
-def run(ctx, all, select, benchmark, task, save_to, solver, timeout, dry, tag,
-        notify, report, track, n_times):
+def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
+        notify, track, n_times):
     """Run solver.
     \f
     Args:
@@ -360,10 +370,23 @@ def run(ctx, all, select, benchmark, task, save_to, solver, timeout, dry, tag,
         run_parameter['solver'] = DatabaseHandler.get_solvers(session, solver)
 
     utils.run_experiment(run_parameter)
+    df = stats.prepare_data(
+        DatabaseHandler.get_results(session, [], [], [], [tag],
+                                    None))
+
+
+
+    summary = stats.get_experiment_summary_as_string(df)
+    print("")
+    print(summary)
 
     if notify:
-        notification = Notification(notify)
+        id_code = int(hashlib.sha256(tag.encode('utf-8')).hexdigest(), 16) % 10**8
+        note_message = "Note: Since the access data for this e-mail account are public, please do not open any attachments to e-mails in which the identification code does not match the one generated for you."
+        notification = Notification(notify,message=f"Here a little summary of your experiment:\n{summary}.\nYour e-mail identification code: {id_code}\n\n{note_message}")
+
         notification.send()
+        print(f"\n{note_message}\nYour e-mail identification code: {id_code}")
 
 
 @click.command()
@@ -427,6 +450,9 @@ def calculate(par, solver, task, benchmark,
     df = stats.prepare_data(
         DatabaseHandler.get_results(session, solver, task, benchmark, tag,
                                     filter))
+
+
+
 
     if vbs:
         grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
@@ -560,6 +586,15 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
 
 @click.command()
 def benchmarks():
+    """ Prints benchmarks in database to console.
+
+    Args:
+        None
+    Return:
+        None
+    Raises:
+        None
+   """
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
     benchmarks = session.query(Benchmark).all()
@@ -579,6 +614,11 @@ def benchmarks():
 @click.command()
 @click.option("--verbose", "-v", is_flag=True, default=False, required=False)
 def solvers(verbose):
+    """Prints solvers in database to console.
+
+    Args:
+        verbose ([type]): [description]
+    """
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
     solvers = session.query(Solver).all()
@@ -1102,6 +1142,45 @@ def delete_solver(id, all):
         session.close()
 
 @click.command()
+@click.option("--id", type=click.types.INT, required=False)
+@click.option("--all", is_flag=True)
+def delete_benchmark(id, all):
+    """ Deletes a benchmark from the database.
+    Deleting has to be confirmed by user.
+
+    Args:
+        id: benchmark id
+    Return:
+        None
+    Raises:
+        None
+   """
+    engine = DatabaseHandler.get_engine()
+    session = DatabaseHandler.create_session(engine)
+
+    try:
+        if all:
+            click.confirm(
+                "Are you sure you want to delete all benchmarks in the database?",
+                abort=True)
+            session.query(Benchmark).delete()
+            session.commit()
+            print("All benchmarks deleted.")
+        else:
+            click.confirm(
+                "Are you sure you want to delete this benchmark in the database?",
+                abort=True)
+            DatabaseHandler.delete_benchmark(session, id)
+            session.commit()
+            print("Benchmark deleted.")
+
+    except ValueError as value_error:
+        session.rollback()
+        print(value_error)
+    finally:
+        session.close()
+
+@click.command()
 @click.option("--symbol","-s",multiple=True,required=True)
 def add_task(symbol):
     engine = DatabaseHandler.get_engine()
@@ -1154,7 +1233,7 @@ def tasks():
 
 
 
-
+cli.add_command(delete_benchmark)
 cli.add_command(update_db)
 cli.add_command(add_solver)
 cli.add_command(add_benchmark)

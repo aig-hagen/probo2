@@ -54,7 +54,7 @@ def create_session(engine):
 
 def delete_solver(session, solver_id):
     """
-           Adds a new solver into the solvers table
+           Deletes a  solver from the solvers table
 
     """
     solver_to_delete = (
@@ -66,6 +66,21 @@ def delete_solver(session, solver_id):
         raise ValueError("Solver does not exist")
     else:
         session.delete(solver_to_delete)
+
+def delete_benchmark(session, benchmark_id):
+    """
+           Deletes a benchmark from the benchmarks table
+
+    """
+    benchmark_to_delete = (
+        session.query(Benchmark).filter(Benchmark.id == benchmark_id
+                                      ).one_or_none()
+    )
+
+    if benchmark_to_delete is None:
+        raise ValueError("Solver does not exist")
+    else:
+        session.delete(benchmark_to_delete)
 
 def add_solver(session, solver, tasks):
     new_solver = (

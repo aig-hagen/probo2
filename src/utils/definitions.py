@@ -20,10 +20,10 @@ SUPPORTED_TASKS = ["EE-ST", "EE-CO", "EE-PR", "EE-GR", "EE-SST", "EE-STG",
                         "ES-ST", "ES-SST", "ES-STG", "ES-CO", "ES-PR", "ES-GR",
                          "EC-ST", "EC-SST", "EC-STG", "EC-CO", "EC-PR", "EC-ID", "EC-GR"]
 
-SUPPORTED_TRACKS = {'CO': ['EE-CO', 'SE-CO', 'DC-CO', 'DS-CO',"CE-CO"],
-                    'GR': ['EE-GR','SE-GR', 'DC-GR', 'DS-GR'],
-                    'PR': ['EE-PR','SE-PR','DC-PR','DS-PR','CE-PR'],
-                    'ST':  ['EE-ST', 'SE-ST', 'DC-ST', 'DS-ST',"CE-ST"],
-                    'SST': ["EE-SST","SE-SST","DC-SST","DS-SST","CE-SST"],
-                    'STG': ["EE-STG","SE-STG","DC-STG","DS-STG","CE-STG"]
+SUPPORTED_TRACKS = {'CO': ['EE-CO', 'SE-CO', 'DC-CO', 'DS-CO',"CE-CO",'EC-CO','ES-CO'],
+                    'GR': ['EE-GR','SE-GR', 'DC-GR', 'DS-GR','EC-GR','ES-GR'],
+                    'PR': ['EE-PR','SE-PR','DC-PR','DS-PR','CE-PR','EC-PR','ES-PR'],
+                    'ST':  ['EE-ST', 'SE-ST', 'DC-ST', 'DS-ST',"CE-ST",'EC-ST','ES-ST'],
+                    'SST': ["EE-SST","SE-SST","DC-SST","DS-SST","CE-SST",'EC-SST','ES-SST'],
+                    'STG': ["EE-STG","SE-STG","DC-STG","DS-STG","CE-STG",'EC-STG','ES-STG']
                     }
