@@ -218,11 +218,11 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
 
 
 
-    path = os.fspath(pathlib.Path(path).resolve())
+    path_resolved = os.fspath(pathlib.Path(path).resolve())
 
 
     new_benchmark = Benchmark(benchmark_name=name,
-                              benchmark_path=path,
+                              benchmark_path=path_resolved,
                               format_instances=format,
                               extension_arg_files=extension_arg_files,
                               **meta_data)
