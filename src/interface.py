@@ -2,11 +2,11 @@
 import click
 import json
 import os
-import seaborn as sns
 import sys
 import shutil
 import tabulate
 import hashlib
+import pathlib
 from sqlalchemy import and_, or_
 from sqlalchemy import engine
 from sqlalchemy.sql.expression import false
@@ -28,6 +28,7 @@ from src.database_models.Benchmark import Benchmark
 from src.database_models.Result import Result
 from src.database_models.Solver import Solver
 from src.utils.Notification import Notification
+
 
 #TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks, solvers überarbeiten
 
@@ -86,8 +87,9 @@ def add_solver(name, path, format, tasks, version, guess):
       """
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
+    path_resolved = os.fspath(pathlib.Path(path).resolve())
     new_solver = Solver(solver_name=name,
-                        solver_path=path,
+                        solver_path=path_resolved,
                         solver_version=version,
                         solver_format=format)
     supported_task_database = DatabaseHandler.get_supported_tasks(session)
@@ -215,6 +217,8 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
         format = format[0]
 
 
+
+    path = os.fspath(pathlib.Path(path).resolve())
 
 
     new_benchmark = Benchmark(benchmark_name=name,
@@ -568,7 +572,8 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
 
 
 @click.command()
-def benchmarks():
+@click.option("--verbose","-v",is_flag=True,help="Prints additional information on benchmark")
+def benchmarks(verbose):
     """ Prints benchmarks in database to console.
 
     Args:
@@ -582,15 +587,25 @@ def benchmarks():
     session = DatabaseHandler.create_session(engine)
     benchmarks = session.query(Benchmark).all()
     tabulate_data = []
-    for benchmark in benchmarks:
-        tabulate_data.append([
-            benchmark.id, benchmark.benchmark_name, benchmark.format_instances
-        ])
+    if verbose:
+        for benchmark in benchmarks:
+            tabulate_data.append([
+                benchmark.id, benchmark.benchmark_name, benchmark.format_instances,benchmark.benchmark_path
+            ])
+        print(tabulate(tabulate_data,
+                            headers=["ID", "Name", "Format", "Path"],
+                            tablefmt=format))
 
-    print(
-        tabulate(tabulate_data,
-                          headers=["ID", "Name", "Format"],
-                          tablefmt=format))
+    else:
+        for benchmark in benchmarks:
+            tabulate_data.append([
+                benchmark.id, benchmark.benchmark_name, benchmark.format_instances
+            ])
+
+        print(
+            tabulate(tabulate_data,
+                            headers=["ID", "Name", "Format"],
+                            tablefmt=format))
     session.close()
 
 
@@ -619,11 +634,11 @@ def solvers(verbose):
     else:
         for solver in solvers:
             tabulate_data.append(
-                [solver.solver_id, solver.solver_name,solver.solver_format])
+                [solver.solver_id, solver.solver_name,solver.solver_format,solver.solver_path])
 
         print(
             tabulate(tabulate_data,
-                              headers=["ID", "Name", "Format"],
+                              headers=["ID", "Name", "Format","Path"],
                               tablefmt=format))
 
     session.close()
