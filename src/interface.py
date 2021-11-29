@@ -14,6 +14,8 @@ from jinja2 import Environment, FileSystemLoader
 from src.utils import utils
 from tabulate import tabulate
 
+import logging
+
 from src.reporting.validation_report import Validation_Report
 
 import src.analysis.statistics as stats
@@ -30,7 +32,8 @@ from src.database_models.Solver import Solver
 from src.utils.Notification import Notification
 
 
-#TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks, solvers überarbeiten
+#TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks und solvers überarbeiten, Logging system,
+
 
 @click.group()
 def cli():
@@ -313,9 +316,10 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
 )
 #@click.option("--report", is_flag=True,help="Create summary report of experiment.")
 @click.option("--n_times","-n",required=False,type=click.types.INT,default=1, help="Number of repetitions per instance. Run time is the avg of the n runs.")
+@click.option("-d",is_flag=True)
 @click.pass_context
 def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
-        notify, track, n_times):
+        notify, track, n_times,d):
     """Run solver.
     \f
     Args:
@@ -355,16 +359,32 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
     if select:
         run_parameter['solver'] = DatabaseHandler.get_solvers(session, solver)
 
+    if d:
+        logging.basicConfig(level=logging.DEBUG)
+        debug_str = ""
+        for b in benchmarks:
+            debug_str += f"\nBenchmark: {b.benchmark_name}\nPath: {b.benchmark_path}"
+        for t in tasks:
+            debug_str += (f"\nTask: {t.symbol}\nID: {t.id}\nSupported Solvers:")
+            for s in t.solvers:
+                debug_str +=(f"\nSolver: {s.solver_name}\nPath: {s.solver_path}")
+
+    logging.debug(debug_str)
+
+
     utils.run_experiment(run_parameter)
     df = stats.prepare_data(
         DatabaseHandler.get_results(session, [], [], [], [tag],
                                     None))
+    if  df.empty:
+         raise click.BadParameter("Something went wrong")
 
 
     if not dry:
-        summary = stats.get_experiment_summary_as_string(df)
-        print("")
-        print(summary)
+        if df.empty:
+            summary = stats.get_experiment_summary_as_string(df)
+            print("")
+            print(summary)
 
     if notify:
         id_code = int(hashlib.sha256(tag.encode('utf-8')).hexdigest(), 16) % 10**8
@@ -416,7 +436,7 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
 @click.option("--save_to", "-st", help="Directory to store tables")
 @click.option("--export","-e",type=click.Choice(["html","latex","png","jpeg","svg",'csv']),default=None,multiple=True)
 @click.option("--css",default="styled-table.css",help="CSS file for table style.")
-@click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','all']),multiple=True)
+@click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','num_timed_out','all']),multiple=True)
 def calculate(par, solver, task, benchmark,
               tag, filter, combine, vbs, css, export, save_to, statistics,print_format):
     engine = DatabaseHandler.get_engine()
@@ -429,7 +449,7 @@ def calculate(par, solver, task, benchmark,
         grouping = [x for x in grouping if x not in combine]
 
     if 'all' in statistics:
-        functions_to_call = ['mean','sum','min','max','median','var','std','coverage']
+        functions_to_call = ['mean','sum','min','max','median','var','std','coverage','num_timed_out']
     else:
         functions_to_call = list(statistics)
 
