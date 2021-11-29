@@ -14,7 +14,7 @@ def init_status_file(tasks, benchmarks, tag):
         for solver in task.solvers:
             total_num_instances = 0
             for benchmark in benchmarks:
-                file_count = len(glob.glob1(benchmark.benchmark_path,"*.{}".format(solver.solver_format)))
+                file_count = len(benchmark.get_instances(solver.solver_format))
                 total_num_instances += file_count
 
             status_dict['tasks'][task.symbol]['solvers'][solver.solver_id] = {'name': solver.solver_name, 'version': solver.solver_version,
@@ -26,7 +26,8 @@ def init_status_file(tasks, benchmarks, tag):
 
 
 def print_status_summary():
-    with open("status.json") as status_json_file:
+    print(definitions.STATUS_FILE_DIR)
+    with open(definitions.STATUS_FILE_DIR) as status_json_file:
         status_data = json.load(status_json_file)
         print("**********STATUS SUMMARY*********")
         print("Tag: ", status_data['tag'])

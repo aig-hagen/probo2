@@ -9,3 +9,5 @@ scikit-posthocs
 jinja2
 fpdf
 typing-extensions
+psutil
+importlib-resources

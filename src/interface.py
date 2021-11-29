@@ -14,7 +14,6 @@ from jinja2 import Environment, FileSystemLoader
 from src.utils import utils
 from tabulate import tabulate
 
-
 from src.reporting.validation_report import Validation_Report
 
 import src.analysis.statistics as stats
@@ -30,6 +29,7 @@ from src.database_models.Result import Result
 from src.database_models.Solver import Solver
 from src.utils.Notification import Notification
 
+#TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks, solvers überarbeiten
 
 @click.group()
 def cli():
@@ -172,12 +172,6 @@ def add_solver(name, path, format, tasks, version, guess):
 @click.option("--no_check",
               is_flag=True,
               help="Checks if the benchmark is complete.")
-@click.option(
-    "--no_args",
-    is_flag=True,
-    help=
-    "Flag to indicate that there are no additional argument files for the DC/DS problems."
-)
 @click.option("--generate",
               "-g",
               type=click.types.Choice(['apx', 'tgf']),
@@ -188,7 +182,7 @@ def add_solver(name, path, format, tasks, version, guess):
               help="Generate additional argument files with a random argument."
               )
 def add_benchmark(name, path, graph_type, format, hardness, competition,
-                  extension_arg_files, no_check, no_args, generate,
+                  extension_arg_files, no_check, generate,
                   random_arguments):
     """ Adds a benchmark to the database.
      Adding has to be confirmed by user.
@@ -230,22 +224,11 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
                               **meta_data)
 
     if generate:
-        new_benchmark.generate_files(generate)
+        new_benchmark.generate_instances(generate)
     if random_arguments:
-        new_benchmark.generate_argument_files(extension_arg_files)
-
+        new_benchmark.generate_argument_files(extension=extension_arg_files)
     if not no_check:
-        if not new_benchmark.is_complete():
-            if click.confirm(
-                    "Some files are missing. Do you want to create the missing files?"
-            ):
-                new_benchmark.generate_missing_files()
-                if not no_args:
-                    new_benchmark.generate_argument_files(extension_arg_files)
-                if not new_benchmark.is_complete():
-                    sys.exit(
-                        "Something went wrong when generating the missing instances."
-                    )
+        new_benchmark.check()
 
     click.confirm(
         "Are you sure you want to add this benchmark to the database?",
@@ -253,7 +236,6 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
 
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
-
     try:
 
         new_benchmark_id = DatabaseHandler.add_benchmark(
@@ -375,10 +357,10 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
                                     None))
 
 
-
-    summary = stats.get_experiment_summary_as_string(df)
-    print("")
-    print(summary)
+    if not dry:
+        summary = stats.get_experiment_summary_as_string(df)
+        print("")
+        print(summary)
 
     if notify:
         id_code = int(hashlib.sha256(tag.encode('utf-8')).hexdigest(), 16) % 10**8
@@ -479,7 +461,6 @@ def calculate(par, solver, task, benchmark,
         utils.export(stats_df,export,save_to=save_to,columns=export_columns,css_file=css)
 
 
-
 @click.command()
 @click.pass_context
 @click.option("--tag", "-t", cls=CustomClickOptions.StringAsOption, default=[])
@@ -529,9 +510,11 @@ def calculate(par, solver, task, benchmark,
 @click.option("--send", "-s", required=False, help="Send plots via E-Mail")
 def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
          x_max, y_max, alpha, backend, no_grid,grid_plot, combine, kind, compress, send):
-    with open(definitions.PLOT_JSON_DEFAULTS, 'r') as fp:
-        options = json.load(fp)['settings']
-        options['def_path'] = definitions.PLOT_JSON_DEFAULTS
+
+    ref = definitions.PLOT_JSON_DEFAULTS
+    with ref.open('rb') as fp:
+        options =json.load(fp)['settings']
+        options['def_path'] = ref
 
     for key, value in ctx.params.items():
         if value is not None:

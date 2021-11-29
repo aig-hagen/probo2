@@ -1,14 +1,19 @@
 import os
+import src.data
+import src.data.json
+import src.data.test
+from importlib_resources import files
 # Defaults for paths
 ROOT_DIR = os.path.abspath(os.curdir)  # Root of project
 SRC_DIR = os.path.join(ROOT_DIR,"src")
-DATABASE_DIR = os.path.join(ROOT_DIR, 'databases')
+DATABASE_DIR = files(src.data).joinpath("databases")
 TEST_DATABASE_PATH = os.path.join(DATABASE_DIR, "probo2_old.db")
-PLOT_JSON_DEFAULTS = os.path.join(ROOT_DIR, os.path.join("src", "plotting", "defaults.json"))
-TEST_INSTANCES_REF_PATH = os.path.join(ROOT_DIR, os.path.join("src", "test", "reference"))
-CSS_TEMPLATES_PATH = os.path.join(SRC_DIR,"css")
 
-STATUS_FILE_DIR = os.path.join(ROOT_DIR,"status.json")
+TEST_INSTANCES_REF_PATH = files(src.data.test).joinpath("reference")
+CSS_TEMPLATES_PATH = files(src.data).joinpath("css")
+
+STATUS_FILE_DIR = files(src.data.json).joinpath("status.json")
+PLOT_JSON_DEFAULTS =  files(src.data.json).joinpath("plotting_defaults.json")
 
 
 

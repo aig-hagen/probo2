@@ -7,6 +7,7 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import column_property, relationship
 from pathlib import Path
 from sqlalchemy.sql.expression import null, update
+from src.utils import utils
 
 from src.database_models.Base import Base, Supported_Tasks
 from src.database_models.Result import Result
@@ -113,7 +114,7 @@ class Solver(Base):
             instance_name = Path(instance).stem
             params = [self.solver_path,
                   "-p", task.symbol,
-                  "-f", os.path.join(benchmark.benchmark_path, instance),
+                  "-f", instance,
                   "-fo", self.solver_format]
             if arg_lookup:
                 arg = arg_lookup[instance_name]
@@ -124,7 +125,7 @@ class Solver(Base):
                 for i in range(1,n+1):
 
                     start_time_current_run = timer()
-                    result = subprocess.run(final_param,
+                    result = utils.run_process(final_param,
                                        capture_output=True, timeout=timeout, check=True)
 
 
@@ -138,23 +139,22 @@ class Solver(Base):
 
                 solver_output = re.sub("\s+", "",
                                    result.stdout.decode("utf-8"))
-                results[instance] = {'timed_out':False,'additional_argument': arg, 'runtime': run_time, 'result': solver_output, 'exit_with_error': False, 'error_code': None}
+                results[instance_name] = {'timed_out':False,'additional_argument': arg, 'runtime': run_time, 'result': solver_output, 'exit_with_error': False, 'error_code': None}
             except subprocess.TimeoutExpired as e:
-                print("...TIMEOUT",end='')
-                results[instance] = {'timed_out':True,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': False, 'error_code': None}
+                results[instance_name] = {'timed_out':True,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': False, 'error_code': None}
             except subprocess.CalledProcessError as err:
                 print("Error occured")
-                results[instance] = {'timed_out':False,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode}
+                results[instance_name] = {'timed_out':False,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode}
             if save_db:
-                data = results[instance]
+                data = results[instance_name]
                 result = Result(tag=tag,solver_id=self.solver_id,benchmark_id = benchmark.id,task_id = task.id,
-                            instance=instance,cut_off=timeout, timed_out = data['timed_out'],
+                            instance=instance_name,cut_off=timeout, timed_out = data['timed_out'],
                             runtime=data['runtime'], result=data['result'], additional_argument = data['additional_argument'],
                             benchmark=benchmark, solver=self, task=task, exit_with_error=data['exit_with_error'], error_code=data['error_code'])
                 session.add(result)
                 session.commit()
                 del data
-                del results[instance]
+                del results[instance_name]
             # else:
             #     print("")
             #     print( re.sub("\s+", "",

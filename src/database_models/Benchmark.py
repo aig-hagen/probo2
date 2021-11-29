@@ -1,7 +1,8 @@
 import os
 import click
 import random
-
+import numpy as np
+from glob import glob
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -10,7 +11,7 @@ from sqlalchemy.sql.expression import null
 
 
 from src.database_models.Base import Base, Supported_Tasks
-
+#TODO: Check für benchmark überarbeiten, alle get instance calls updaten
 class Benchmark(Base):
     __tablename__ = "benchmarks"
     id = Column(Integer, primary_key=True)
@@ -25,15 +26,9 @@ class Benchmark(Base):
 
     def get_instances(self,extension,without_extension=False,full_path=False):
         instances = []
-        for instance in os.listdir(self.benchmark_path):
-            if instance.endswith(extension):
-                if without_extension:
-                    instances.append(Path(instance).stem)
-                elif full_path:
-                    instances.append(os.path.join(self.benchmark_path,instance))
-                else:
-                    instances.append(instance)
-        return sorted(instances)
+        from itertools import chain
+        result = (chain.from_iterable(glob(os.path.join(x[0], f'*.{extension}')) for x in os.walk(self.benchmark_path)))
+        return sorted(list(result))
 
     def get_argument_files(self):
         return self.get_instances(self.extension_arg_files)
@@ -42,10 +37,8 @@ class Benchmark(Base):
         lookup = {}
         argument_files = self.get_argument_files()
         for file in argument_files:
-            argument_file_path = os.path.join(self.benchmark_path, file)
-
             try:
-                with open(argument_file_path, 'r') as af:
+                with open(file, 'r') as af:
                     argument_param = af.read().replace('\n', '')
             except IOError as err:
                 print(err)
@@ -54,16 +47,16 @@ class Benchmark(Base):
             lookup[instance_name] = argument_param
 
 
-        instances = self.get_instances(format,without_extension=True)
+        instances_paths = self.get_instances(format)
+        instance_name = [Path(x).stem for x in instances_paths]
+        return {k: lookup[k] for k in instance_name} # Select only the argument files of instances that are present in the solver format
 
-        return {k: lookup[k] for k in instances} # Select only the argument files of instances that are present in the solver format
 
 
-
-    def get_formats(self):
+    def get_formats(self) -> list:
         return self.format_instances.split(',')
 
-    def generate_files(self, generate_format, present_format=''):
+    def generate_instances(self, generate_format, present_format=''):
         """Generate files in specified format
 
         Args:
@@ -75,50 +68,36 @@ class Benchmark(Base):
 
         """
         if not present_format:
-            present_format = self.get_formats()[0]
+            present_formats= self.get_formats()
+            for form in present_formats:
+                if form != generate_format:
+                    present_format = form
+                    break
+
+        if not present_format:
+            print("Please use other format to generate instances.")
+            exit()
 
         if present_format not in self.get_formats():
-            raise ValueError("Format {} not supported!".format(present_format))
+            raise ValueError(f"Format {present_format} not supported!")
 
         if generate_format.upper() not in ['APX', 'TGF']:
-            raise ValueError("Can not generate {} instances".format(generate_format))
+            raise ValueError(f"Can not generate {generate_format} instances")
 
-        if generate_format not in self.get_formats():
-            self.format_instances += "," + generate_format
+        _present_instances = self.get_instances(present_format)
         num_generated = 0
-
-        with click.progressbar(self.get_instances(present_format),
-                               label="Generating {} files:".format(generate_format)) as instance_progress:
-            for instance in instance_progress:
-                instance_name = Path(instance).stem
-                generate_instance_name = instance_name + "." + generate_format
-                if generate_instance_name not in self.get_instances(generate_format):
-                    self.generate_single_file(instance_name, generate_format, present_format)
+        with click.progressbar(_present_instances,
+                               label=f"Generating {generate_format} files:") as present_instances:
+            for present_instance in present_instances:
+                file_name, file_extension = os.path.splitext(present_instance)
+                generate_instance_path = f"{file_name}.{generate_format}"
+                if not os.path.isfile(generate_instance_path):
+                    self.gen_single_instance(present_instance, generate_instance_path, generate_format)
                     num_generated += 1
+        print(f'{num_generated} .{generate_format} instances generated.')
+        self.format_instances += f',{generate_format}'
 
-        print("{} files generated.".format(num_generated))
-
-    def generate_single_file(self, instance_name, generate_format, present_format):
-        """Generates a single instance in the specified format.
-        Args:
-          instance_name: Name of instance to generate.
-          generate_format: Format of files to generate.
-          present_format: Format of corresponding files in fileset.
-
-        Returns:
-          None
-        """
-
-        if generate_format.upper() not in ['APX', 'TGF']:
-            raise ValueError("Can not generate {} instances".format(generate_format))
-        if present_format not in self.get_formats():
-            raise ValueError("Format {} not supported!".format(present_format))
-
-
-        if generate_format not in self.get_formats():
-            self.supported_formats += "," + generate_format
-
-        present_instance_path = os.path.join(self.benchmark_path, "{}.{}".format(instance_name, present_format))
+    def gen_single_instance(self,present_instance_path, generate_instance_path, generate_format):
         with open(present_instance_path) as present_file:
             present_file_content = present_file.read()
         if generate_format.upper() == 'APX':
@@ -126,13 +105,9 @@ class Benchmark(Base):
         elif generate_format.upper() == 'TGF':
             generate_file_content = self.__parse_tgf_from_apx(present_file_content)
 
-        generate_file_name = "{}.{}".format(instance_name, generate_format)
-        generate_file = open(os.path.join(self.benchmark_path, generate_file_name), 'a')
-        generate_file.write(generate_file_content)
-        generate_file.close()
-
-
-
+        with open(generate_instance_path,'w') as generate_instance_file:
+            generate_instance_file.write(generate_file_content)
+        generate_instance_file.close()
     @staticmethod
     def __parse_apx_from_tgf(file_content):
         """Parse tgf to apx format.
@@ -153,7 +128,7 @@ class Benchmark(Base):
 
         for arg in arguments:
             if arg:
-                apx_args += 'arg({}).\n'.format(arg)
+                apx_args += f'arg({arg}).\n'
 
         for attack in attacks:
             if attack:
@@ -198,18 +173,18 @@ class Benchmark(Base):
           String: Random argument from the file content
         """
         arguments = list()
-        if format.upper() == 'APX':
+        if format.upper() == '.APX':
             for line in file_content.splitlines():
                 if 'arg' in line:
                     arguments.append(line[line.find("(") + 1:line.find(")")])
             return random.choice(arguments)
 
-        if format.upper() == 'TGF':
+        if format.upper() == '.TGF':
             arg_attacks = file_content.split("#\n")
             arguments = arg_attacks[0].split('\n')
             return random.choice(arguments)
 
-    def generate_single_argument_file(self, instance_name, present_format, extension="arg"):
+    def generate_single_argument_file(self, present_instance_path, generate_instance_path,present_format):
         """Creates a single argument file with a random argument.
         Args:
           instance_name: Name of file to generate.
@@ -218,22 +193,16 @@ class Benchmark(Base):
         Returns:
 
         """
-
-        if present_format not in self.get_formats():
-            raise ValueError("Format {} not supported!".format(present_format))
-
-        present_instance_path = os.path.join(self.benchmark_path, "{}.{}".format(instance_name, present_format))
         with open(present_instance_path) as present_file:
             present_file_content = present_file.read()
-
         random_argument = self.__get_random_argument(present_file_content, present_format)
 
-        argument_file_name = "{}.{}".format(instance_name, extension)
-        argument_file = open(os.path.join(self.benchmark_path, argument_file_name), 'a')
-        argument_file.write(random_argument)
+        with open(generate_instance_path,'w') as argument_file:
+            argument_file.write(random_argument)
+
         argument_file.close()
 
-    def generate_argument_files(self, extension="arg"):
+    def generate_argument_files(self, extension=None,to_generate=None):
         """Generate argument file with random arguments from existing files.
             Args:
             extension: Extension of argument file.
@@ -241,84 +210,137 @@ class Benchmark(Base):
             Returns:
 
         """
+        if not extension:
+            extension = 'arg'
+        if to_generate:
+            present_format = self.get_formats()[0]
+            _present_instances = [ f'{x}.{present_format}' for x in to_generate]
+            arg_files_present = to_generate
+        else:
+            _present_instances = self.get_instances(self.get_formats()[0])
+            arg_files_present = self.get_instances(extension)
         num_generated_files = 0
-        with click.progressbar(self.get_instances(self.get_formats()[0]),
-                                label="Generating argument files:") as files:
+        with click.progressbar(_present_instances,
+                                label="Generating argument files:") as present_instances:
 
-             for file in files:
-                #0file_name = Path(file).stem
-                #print(file_name)
-                name_extension = os.path.splitext(file)
-                if "{}.{}".format(name_extension[0], extension) not in os.listdir(self.benchmark_path):
-                    self.generate_single_argument_file(name_extension[0], name_extension[1].strip("."), extension)
+             for instance in present_instances:
+                present_file_name, present_file_extension = os.path.splitext(instance)
+                generate_instance_path = f"{present_file_name}.{extension}"
+                if generate_instance_path not in arg_files_present:
+                    self.generate_single_argument_file(instance,generate_instance_path, present_file_extension)
                     num_generated_files += 1
-        print("{} argument files generated.".format(num_generated_files))
+        print(f"{num_generated_files} .{extension} files generated.")
+
+
+    def strip_extension(self,instances):
+        extensions_stripped = list()
+        for instance in instances:
+            instance_file_name, instance_file_extension = os.path.splitext(instance)
+            extensions_stripped.append(instance_file_name)
+        return sorted(extensions_stripped)
 
     def is_complete(self):
-        """Check the fileset for completeness.
-        Returns:
-          bool: True if the fileset is complete, false otherwise.
-        """
         num_formats = len(self.get_formats())
         if num_formats > 1:
-            for i in range(0, num_formats):
-                current_format = self.get_formats()[i]
-                current_format_instances = self.get_instances(current_format)
-                for j in range(i + 1, num_formats):
-                    compare_format = self.get_formats()[j]
-                    compare_format_instances = self.get_instances(compare_format)
-                    if not (len(current_format_instances) == len(compare_format_instances)):
-                        print("Number of files with different formats is not equal.")
-                        return False
-                    else:
-                        str_current_format_instances = ",".join(current_format_instances).replace("." + current_format,
-                                                                                                  "")
-                        str_compare_format_instances = ",".join(compare_format_instances).replace("." + compare_format,
-                                                                                                  "")
-                        if str_compare_format_instances != str_current_format_instances:
-                            print("Files of different formats differ")
-                            return False
-            return True
+            apx_instances = self.get_instances('apx')
+            tgf_instances = self.get_instances('tgf')
+            arg_instances = self.get_instances(self.extension_arg_files)
+
+            apx_instances_names = np.array(self.strip_extension(apx_instances))
+            tgf_instances_names = np.array(self.strip_extension(tgf_instances))
+            arg_instances_names = np.array(self.strip_extension(arg_instances))
+
+
+            if apx_instances_names.size == tgf_instances_names.size == arg_instances_names.size:
+
+                return np.logical_and( (apx_instances_names==tgf_instances_names).all(), (tgf_instances_names==arg_instances_names).all() )
+            else:
+                return False
         else:
-            return True  # FileSet with just one supported format is complete
+            preset_format = self.get_formats()[0]
 
-    def get_missing_files(self):
-        """Return a dictionary of missing instances for each format.
-        Returns:
-          dict: Mapping {format:[instances]}
-        """
-        missing_instances = {}
-        num_formats = len(self.get_formats())
-        for i in range(0, num_formats):
-            current_format = self.get_formats()[i]
-            missing_instances[current_format] = set()
-            current_format_instances = set(","
-                                           .join(self.get_instances(current_format))
-                                           .replace("." + current_format, "")
-                                           .split(","))
-            for j in range(0, num_formats):
-                compare_format = self.get_formats()[j]
-                compare_format_instances = set(","
-                                               .join(self.get_instances(compare_format))
-                                               .replace("." + compare_format, "")
-                                               .split(","))
-                current_missing = compare_format_instances.difference(current_format_instances)
-                missing_instances[current_format].update(current_missing)
-        return missing_instances
+            present_instances = self.get_instances(preset_format)
+            arg_instances = self.get_instances(self.extension_arg_files)
+            present_instances_names =  np.array(self.strip_extension(present_instances))
+            arg_instances_names = np.array(self.strip_extension(arg_instances))
 
-    def generate_missing_files(self):
+            if present_instances_names.size == arg_instances_names.size:
+
+                return (present_instances_names==arg_instances_names).all()
+            else:
+                return False
+
+    def get_missing_files_per_format(self):
+        instance_formats = self.get_formats()
+        missing_instances = dict()
+        if len(instance_formats) > 1:
+            apx_instances_path = set(self.strip_extension(self.get_instances('apx')))
+            tgf_instances_path = set(self.strip_extension(self.get_instances('tgf')))
+            apx_missing_path = tgf_instances_path.difference(apx_instances_path)
+            tgf_missing_path = apx_instances_path.difference(tgf_instances_path)
+
+            apx_missing_names = [(os.path.basename(x) + '.apx') for x in apx_missing_path]
+            tgf_missing_names = [(os.path.basename(x) + '.tgf') for x in tgf_missing_path]
+            missing_instances['apx'] = {'paths':apx_missing_path, 'names':apx_missing_names}
+            missing_instances['tgf'] = {'paths':tgf_missing_path, 'names': tgf_missing_names}
+
+            arg_instances_names = set(self.strip_extension(self.get_instances(self.extension_arg_files)))
+            present_instances = set.union(apx_instances_path,tgf_instances_path)
+            arg_missing_path = present_instances.difference(arg_instances_names)
+            arg_missing_names = [(os.path.basename(x) + f'.{self.extension_arg_files}') for x in arg_missing_path]
+            missing_instances[self.extension_arg_files] = {'paths':arg_missing_path, 'names': arg_missing_names}
+            return missing_instances
+        else:
+            arg_instances_names = set(self.strip_extension(self.get_instances(self.extension_arg_files)))
+            present_instances =  set(self.strip_extension(self.get_instances(instance_formats[0])))
+            arg_missing_path = present_instances.difference(arg_instances_names)
+            arg_missing_names = [(os.path.basename(x) + f'.{self.extension_arg_files}') for x in arg_missing_path]
+            missing_instances[self.extension_arg_files] = {'paths':arg_missing_path, 'names': arg_missing_names}
+            return missing_instances
+
+    def generate_missing_files_with_format(self,missing_format,missing_paths,present_format):
+
+        if missing_paths:
+            num_generated = 0
+            for instance in missing_paths:
+                self.gen_single_instance(f'{instance}.{present_format}',f'{instance}.{missing_format}',missing_format)
+                num_generated += 1
+            print(f'{num_generated} .{missing_format} instances generated.')
+
+
+
+
+    def generate_missing_files(self,missing_files: dict):
         """Generate all missing files for each format.
         Returns:
         """
-        missing_files = self.get_missing_files()
-        num_generated = 0
-        with click.progressbar(missing_files.items(),
-                               label="Generating missing files") as missing_files_items:
-            for missing_format, missing in missing_files_items:
-                for instance in missing:
-                    for present_format in self.get_formats():
-                        if "{}.{}".format(instance, present_format) in self.get_instances(present_format):
-                            self.generate_single_file(instance, missing_format, present_format)
-                            num_generated += 1
-                            break  # Instance was created, so we don't have to check the other formats
-        print("{} files generated.".format(num_generated))
+        missing_formats = missing_files.keys()
+        if 'apx' in missing_formats:
+            apx_missing = missing_files['apx']['paths']
+            self.generate_missing_files_with_format('apx',apx_missing,'tgf')
+        if 'tgf' in missing_formats:
+            tgf_missing = missing_files['tgf']['paths']
+            self.generate_missing_files_with_format('tgf',tgf_missing,'apx')
+        if self.extension_arg_files in missing_formats:
+            arg_missing = missing_files[self.extension_arg_files]['paths']
+            if arg_missing:
+                self.generate_argument_files(extension=self.extension_arg_files,to_generate=arg_missing)
+
+    def check(self):
+        if not self.is_complete():
+            missing_files = self.get_missing_files_per_format()
+            print("The following files are missing:")
+            for formats,missing_instances in missing_files.items():
+                if missing_instances:
+                    num_missing = len(missing_instances['names'])
+
+                    print(f"Format: {formats}\n#Missing: {num_missing}\nInstances: {missing_instances['names']}\n\n")
+                else:
+                    continue
+            if click.confirm("Do you want to create the missing files?"):
+                self.generate_missing_files(missing_files)
+                if not self.is_complete():
+                    exit("Something went wrong when generating the missing instances.")
+            else:
+                print("Missing files not created.")
+
