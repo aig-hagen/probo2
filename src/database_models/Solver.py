@@ -143,7 +143,7 @@ class Solver(Base):
             except subprocess.TimeoutExpired as e:
                 results[instance_name] = {'timed_out':True,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': False, 'error_code': None}
             except subprocess.CalledProcessError as err:
-                print("Error occured")
+                print("Error occured:",err)
                 results[instance_name] = {'timed_out':False,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode}
             if save_db:
                 data = results[instance_name]

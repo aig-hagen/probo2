@@ -185,7 +185,7 @@ def run_experiment(parameters: dict):
                 solvers_to_run = set(task.solvers).intersection(
                     set(parameters['solver']))
             else:
-                print(task.solvers)
+
                 solvers_to_run = task.solvers
 
             for solver in solvers_to_run:
