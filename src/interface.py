@@ -404,7 +404,7 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
               cls=CustomClickOptions.StringAsOption,
               default=[])
 @click.option("--print_format",
-              "-pf",default='fancy_grid',
+              "-pfmt",default='fancy_grid',
               type=click.Choice([
                   "plain", "simple", "github", "grid", "fancy_grid", "pipe",
                   "orgtbl", "jira", "presto", "pretty", "psql", "rst",
