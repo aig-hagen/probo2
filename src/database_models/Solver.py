@@ -1,3 +1,4 @@
+import logging
 import re
 import subprocess
 import os
@@ -15,6 +16,11 @@ from src.database_models import DatabaseHandler
 from src.utils import Status
 import src.analysis.validation as validation
 import src.utils.definitions as definitions
+
+class TaskNotSupported(ValueError):
+    pass
+class FormatNotSupported(ValueError):
+    pass
 
 
 class Solver(Base):
@@ -61,7 +67,7 @@ class Solver(Base):
                 return False
 
         return False
-    def guess(self, prop):
+    def fetch(self, prop):
         cmd_params = []
         if self.solver_path.endswith('.sh'):
             cmd_params.append('bash')
@@ -70,18 +76,47 @@ class Solver(Base):
         cmd_params.append(self.solver_path)
         cmd_params.append("--{}".format(prop))
         try:
-            solver_output = subprocess.run(cmd_params,
+            solver_output = utils.run_process(cmd_params,
                                         capture_output=True, check=True)
             solver_output = re.sub("\s+", " ",
                                 solver_output.stdout.decode("utf-8")).strip(" ")
 
             solver_property = solver_output[solver_output.find("[") + 1:solver_output.find("]")].split(",")
-
-
         except subprocess.CalledProcessError as err:
                 print("Error code: {}\nstdout: {}\nstderr:{}\n".format(err.returncode, err.output.decode("utf-8"), err.stderr.decode("utf-8")))
                 exit()
         return solver_property
+
+    def fetch_tasks(self,tasks=None)->list:
+        """Calls solver with "problems" options.
+
+        If tasks is specified it is checked wether the solver really supports these formats.
+        If not a list of the actual supported formats is returned.
+
+        Args:
+            tasks (list, optional): List of tasks the solver might support. Defaults to None.
+
+        Returns:
+            list: List of tasks the solver acutally supports.
+        """
+        supported_tasks = sorted([ x.strip(" ") for x in self.fetch("problems")])
+        if not tasks:
+            return supported_tasks
+        else:
+            intersection_supported = set.intersection(set(supported_tasks),set(tasks))
+            if intersection_supported:
+                return list(intersection_supported)
+            else:
+                raise TaskNotSupported(f'None of the tasks {tasks} are supported for solver {self.solver_name}')
+    def fetch_format(self,format=None):
+        supported_formats = self.fetch("formats")
+        if format:
+            if format in supported_formats:
+                return format
+            else:
+                raise FormatNotSupported(f'Format {format} is not supported for solver {self.solver_name}\nSupported by solver: {supported_formats}')
+        else:
+           return self.fetch("formats")[0]  # select first supported format
 
     def get_supported_tasks(self):
         supported = []
@@ -143,6 +178,7 @@ class Solver(Base):
             except subprocess.TimeoutExpired as e:
                 results[instance_name] = {'timed_out':True,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': False, 'error_code': None}
             except subprocess.CalledProcessError as err:
+                logging.exception(f'Something went wrong running solver {self.solver_name}')
                 print("Error occured:",err)
                 results[instance_name] = {'timed_out':False,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode}
             if save_db:

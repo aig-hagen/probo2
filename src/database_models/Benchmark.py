@@ -8,10 +8,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from pathlib import Path
 from sqlalchemy.sql.expression import null
-
-
+from itertools import chain
 from src.database_models.Base import Base, Supported_Tasks
-#TODO: Check für benchmark überarbeiten, alle get instance calls updaten
+
 class Benchmark(Base):
     __tablename__ = "benchmarks"
     id = Column(Integer, primary_key=True)
@@ -26,14 +25,21 @@ class Benchmark(Base):
 
     def get_instances(self,extension,without_extension=False,full_path=False):
         instances = []
-        from itertools import chain
         result = (chain.from_iterable(glob(os.path.join(x[0], f'*.{extension}')) for x in os.walk(self.benchmark_path)))
         return sorted(list(result))
 
     def get_argument_files(self):
         return self.get_instances(self.extension_arg_files)
 
-    def generate_additional_argument_lookup(self, format):
+    def generate_additional_argument_lookup(self, format: str) -> dict():
+        """[summary]
+
+        Args:
+            format ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
         lookup = {}
         argument_files = self.get_argument_files()
         for file in argument_files:
@@ -108,6 +114,7 @@ class Benchmark(Base):
         with open(generate_instance_path,'w') as generate_instance_file:
             generate_instance_file.write(generate_file_content)
         generate_instance_file.close()
+
     @staticmethod
     def __parse_apx_from_tgf(file_content):
         """Parse tgf to apx format.

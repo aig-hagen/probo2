@@ -23,3 +23,33 @@ source probo2_env/bin/activate
 python setup.py install
 ```
 ## Commands
+### add-solver
+Adds a solver to the database.
+
+**Options**
++ *--name/-n* (required):
+
+    Name of the solver you want to add to the database.
+
++ *--path/-p* (required):
+
+    Path to the solvers executable. Relative paths are automatically resolved.
+    The executable can be a compiled binary, bash script or a python file.
+
++  *--format/-f*:
+
+    Supported file format of the solver.
+
++ *--tasks/-t*:
+
+    Comma-seperated list of supported computational problems.
+
++ *--version/-v* (required):
+
+    Solver version. This option has to be specified to make sure the same solver with different versions can be added to the database.
+
++ *--guess/-g*:
+
+    Pull supported file format and computational problems from solver.
+
+

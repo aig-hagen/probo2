@@ -1,4 +1,5 @@
 import pandas
+import logging
 
 
 from sqlalchemy import create_engine
@@ -32,6 +33,7 @@ def init_database(engine):
         task_objs.append(Task(symbol=task))
     add_objects(session,task_objs)
     session.close()
+    logging.info("Database created.")
 
 
 def add_objects(session, objects: list):
@@ -82,7 +84,7 @@ def delete_benchmark(session, benchmark_id):
     else:
         session.delete(benchmark_to_delete)
 
-def add_solver(session, solver, tasks):
+def add_solver(session, solver: Solver, tasks: list):
     new_solver = (
         session.query(Solver)
             .filter(
@@ -95,11 +97,7 @@ def add_solver(session, solver, tasks):
 
     if new_solver is None:
         new_solver = solver
-        for task in tasks:
-            current_task = session. \
-            query(Task). \
-            filter(Task.symbol == task).one_or_none()
-            new_solver.supported_tasks.append(current_task)
+        new_solver.supported_tasks.extend(get_tasks(session,tasks))
         session.add(new_solver)
         session.flush()
         session.refresh(new_solver)

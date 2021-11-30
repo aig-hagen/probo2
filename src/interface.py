@@ -1,4 +1,3 @@
-
 import click
 import json
 import os
@@ -13,8 +12,11 @@ from sqlalchemy.sql.expression import false
 from jinja2 import Environment, FileSystemLoader
 from src.utils import utils
 from tabulate import tabulate
+from src.utils import definitions
 
 import logging
+
+logging.basicConfig(filename=definitions.LOG_FILE_PATH,format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.INFO)
 
 from src.reporting.validation_report import Validation_Report
 
@@ -40,15 +42,17 @@ def cli():
 
     if not os.path.exists(definitions.DATABASE_DIR):
         os.makedirs(definitions.DATABASE_DIR)
+        logging.info("Database directory created.")
 
     if not os.path.exists(definitions.TEST_DATABASE_PATH):
         engine = DatabaseHandler.get_engine()
         DatabaseHandler.init_database(engine)
 
 
+
 @click.command(cls=CustomClickOptions.command_required_option_from_option('guess'))
 @click.option("--name", "-n", required=True, help="Name of the solver")
-@click.option("--path",
+@click.option("--path","-p",
               required=True,
               callback=CustomClickOptions.check_path,
               type=str,
@@ -70,7 +74,7 @@ def cli():
               required=True,
               help="Version of solver")
 @click.option(
-    "--guess",
+    "--guess","-g",
     is_flag=True,
     help="Pull supported file format and computational problems from solver")
 def add_solver(name, path, format, tasks, version, guess):
@@ -95,21 +99,14 @@ def add_solver(name, path, format, tasks, version, guess):
                         solver_path=path_resolved,
                         solver_version=version,
                         solver_format=format)
-    supported_task_database = DatabaseHandler.get_supported_tasks(session)
     if guess:
-        if format:
-            new_solver.solver_format = format
-        else:
-            new_solver.solver_format = new_solver.guess("formats")[
-                0]  # select first supported format
-
-        if not tasks:
-            problems_output = new_solver.guess("problems")
-
-            for p in problems_output:
-                p = p.strip(" ")
-                if p in supported_task_database:
-                    tasks.append(p)
+        try:
+            tasks = new_solver.fetch_tasks(tasks)
+            format = new_solver.fetch_format(format)
+        except ValueError as e:
+            print(e)
+            exit()
+    new_solver.solver_format = format
 
     # print("Testing solver...", end='')
     # if not new_solver.check_solver(tasks):
@@ -117,11 +114,7 @@ def add_solver(name, path, format, tasks, version, guess):
     #     click.confirm("Continue?", abort=True)
     # else:
     #     print("success.")
-
-
-
     try:
-
         new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
         new_solver.print_summary()
         click.confirm(
@@ -131,9 +124,11 @@ def add_solver(name, path, format, tasks, version, guess):
 
         print("Solver {0} added to database with ID: {1}".format(
             name, new_solver_id))
+        logging.info(f"Solver {name} added to database with ID: {new_solver_id}")
     except ValueError as e:
         session.rollback()
         print(e)
+        logging.exception(f'Unable to add solver {name} to database')
     finally:
         session.close()
 
@@ -248,11 +243,12 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
         new_benchmark_id = DatabaseHandler.add_benchmark(
             session, new_benchmark)
         session.commit()
-        print("Benchmark {0} added to database with ID: {1}.".format(
-            new_benchmark.benchmark_name, new_benchmark_id))
+        print(f"Benchmark {new_benchmark.benchmark_name} added to database with ID: {new_benchmark_id}.")
+        logging.info(f"Benchmark {new_benchmark.benchmark_name} added to database with ID: {new_benchmark_id}.")
     except ValueError as e:
         session.rollback()
         print(e)
+        logging.exception(f'Unable to add benchmark {new_benchmark.benchmark_name} to database')
     finally:
         session.close()
 
@@ -286,7 +282,6 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
               required=False,
               #callback=CustomClickOptions.check_problems,
               help="Comma-seperated list of tasks to solve.")
-#@click.option("--save_to", required=False, help="Path for storing results.")
 @click.option("--timeout",
               "-t",
               required=False,
@@ -316,10 +311,9 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
 )
 #@click.option("--report", is_flag=True,help="Create summary report of experiment.")
 @click.option("--n_times","-n",required=False,type=click.types.INT,default=1, help="Number of repetitions per instance. Run time is the avg of the n runs.")
-@click.option("-d",is_flag=True)
 @click.pass_context
 def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
-        notify, track, n_times,d):
+        notify, track, n_times):
     """Run solver.
     \f
     Args:
@@ -359,32 +353,21 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
     if select:
         run_parameter['solver'] = DatabaseHandler.get_solvers(session, solver)
 
-    if d:
-        logging.basicConfig(level=logging.DEBUG)
-        debug_str = ""
-        for b in benchmarks:
-            debug_str += f"\nBenchmark: {b.benchmark_name}\nPath: {b.benchmark_path}"
-        for t in tasks:
-            debug_str += (f"\nTask: {t.symbol}\nID: {t.id}\nSupported Solvers:")
-            for s in t.solvers:
-                debug_str +=(f"\nSolver: {s.solver_name}\nPath: {s.solver_path}")
 
-    logging.debug(debug_str)
-
-
+    logging.info(f"Stared to run Experiment {tag}")
     utils.run_experiment(run_parameter)
+    logging.info(f"Finisched to run Experiment {tag}")
     df = stats.prepare_data(
         DatabaseHandler.get_results(session, [], [], [], [tag],
                                     None))
-    if  df.empty:
-         raise click.BadParameter("Something went wrong")
-
 
     if not dry:
-        if df.empty:
+        if not df.empty:
             summary = stats.get_experiment_summary_as_string(df)
             print("")
             print(summary)
+        else:
+            summary = 'Something went wrong. Please check the logs for more information.'
 
     if notify:
         id_code = int(hashlib.sha256(tag.encode('utf-8')).hexdigest(), 16) % 10**8
@@ -392,6 +375,7 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
         notification = Notification(notify,message=f"Here a little summary of your experiment:\n{summary}.\nYour e-mail identification code: {id_code}\n\n{note_message}")
 
         notification.send()
+        logging.info(f'Sended Notfication e-mail to {notify}\nID: {id_code}')
         print(f"\n{note_message}\nYour e-mail identification code: {id_code}")
 
 

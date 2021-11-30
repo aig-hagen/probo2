@@ -15,6 +15,8 @@ CSS_TEMPLATES_PATH = files(src.data).joinpath("css")
 STATUS_FILE_DIR = files(src.data.json).joinpath("status.json")
 PLOT_JSON_DEFAULTS =  files(src.data.json).joinpath("plotting_defaults.json")
 
+LOG_FILE_PATH = files(src.data).joinpath('log.txt')
+
 
 
 SUPPORTED_TASKS = ["EE-ST", "EE-CO", "EE-PR", "EE-GR", "EE-SST", "EE-STG",

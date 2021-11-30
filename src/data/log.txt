@@ -1,0 +1,147 @@
+11/29/2021 11:31:46 AM - ERROR - Unable to add solver taas-harper++to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 129, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 110, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+11/29/2021 11:32:12 AM - ERROR - Unable to add solver taas-harper++to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 129, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 110, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+11/29/2021 11:34:32 AM - ERROR - Unable to add solver taas-harper++ to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 129, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 110, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+11/29/2021 11:34:47 AM - INFO - Solver taas-harper++ added to database with ID: 14
+11/29/2021 11:38:34 AM - INFO - Benchmark ICCMA15 added to database with ID: 14.
+11/29/2021 11:38:44 AM - ERROR - Unable to add benchmark ICCMA15 to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 254, in add_benchmark
+    new_benchmark_id = DatabaseHandler.add_benchmark(
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 158, in add_benchmark
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/29/2021 11:39:48 AM] - [ERROR] : Unable to add benchmark ICCMA15 to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 254, in add_benchmark
+    new_benchmark_id = DatabaseHandler.add_benchmark(
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 158, in add_benchmark
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/29/2021 11:44:58 AM] - [INFO] : Stared to run Experiment: Tag:test_experiment_2
+
+Benchmark: MY_BENCHMARK_STANDARD
+Path: /mnt/c/Users/jonas/Entwicklung/Benchmark/small_subset/
+Task: DC-CO
+ID: 17
+Supported Solvers:
+Solver: MY_SOLVER_2
+Path: /home/jklein/dev/arg_solvers/mu-toksia/mu-toksia
+Solver: MY_SOLVER_3
+Path: /home/jklein/dev/arg_solvers/mu-toksia/mu-toksia
+Solver: ArgSemSAT
+Path: /home/jklein/dev/arg_solvers/ArgSemSAT/ArgSemSAT
+Solver: MatrixX
+Path: /home/jklein/new_dev/iccma_21_solvers/MatrixX-main/matrixx.sh
+Solver: Mu-toksia_ce
+Path: /home/jklein/new_dev/iccma_21_solvers/mu-toksia/mu-toksia
+Solver: mu-toksia_ce_2
+Path: /home/jklein/new_dev/iccma_21_solvers/mu-toksia/mu-toksia
+Solver: Test_Solver
+Path: /home/jklein/new_dev/iccma_21_solvers/mu-toksia/mu-toksia
+Solver: MU_Toksia_resolver_path_test
+Path: ./mu-toksia
+Solver: MU_Toksia_resolved
+Path: /home/jklein/new_dev/iccma_21_solvers/mu-toksia/mu-toksia
+Solver: taas-harper++
+Path: /home/jklein/new_dev/iccma_21_solvers/taas-harper++
+Solver: taas-harper++
+Path: /home/jklein/new_dev/iccma_21_solvers/taas-harper++
+Solver: taas-harper++
+Path: /home/jklein/new_dev/iccma_21_solvers/taas-harper++
+[11/29/2021 11:50:27 AM] - [INFO] : Stared to run Experiment test_experiment_2
+[11/30/2021 12:44:37 PM] - [ERROR] : Unable to add solver tass-harper++ to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 112, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 108, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/30/2021 12:44:44 PM] - [ERROR] : Unable to add solver tass-harper++ to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 112, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 108, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/30/2021 12:44:50 PM] - [ERROR] : Unable to add solver tass-harper++ to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 112, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 108, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/30/2021 12:47:41 PM] - [ERROR] : Unable to add solver tass-harper++ to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 112, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 109, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/30/2021 12:50:54 PM] - [ERROR] : Unable to add solver tass-harper++ to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 112, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 111, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/30/2021 12:51:30 PM] - [ERROR] : Unable to add solver tass-harper++ to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 112, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 111, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/30/2021 12:53:01 PM] - [ERROR] : Unable to add solver tass-harper++ to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 112, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 111, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/30/2021 12:53:37 PM] - [ERROR] : Unable to add solver tass-harper++ to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 112, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 111, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/30/2021 12:56:48 PM] - [ERROR] : Unable to add solver tass-harper++ to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 112, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 111, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/30/2021 01:02:45 PM] - [ERROR] : Unable to add solver tass-harper++ to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 112, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 112, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/30/2021 01:03:11 PM] - [ERROR] : Unable to add solver tass-harper++ to database
+Traceback (most recent call last):
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 112, in add_solver
+    new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/DatabaseHandler.py", line 112, in add_solver
+    raise ValueError("Solver already in Database!")
+ValueError: Solver already in Database!
+[11/30/2021 01:47:29 PM] - [INFO] : Solver tass-harper++ added to database with ID: 15
