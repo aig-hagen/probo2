@@ -11,7 +11,7 @@ from email.mime.text import MIMEText
 
 
 class Notification:
-    def __init__(self, receiver, subject="Hi there, your experiment is finished",message=""):
+    def __init__(self, receiver, subject="Hi there, your experiment is finished",message="",id=None):
         self.port = 465  # For SSL
         self.smtp_server = "smtp.gmail.com"
         self.sender_email = "probonotificationbot@gmail.com"  # Enter your address
@@ -21,7 +21,12 @@ class Notification:
         self.message["From"] = self.sender_email
         self.message["To"] = self.receiver_email
         self.message["Subject"] = subject
+        self.foot = "Note: Since the access data for this e-mail account are public, please do not open any attachments to e-mails in which the identification code does not match the one generated for you."
+        self.id = id
         self.message.attach(MIMEText(message, "plain"))
+        self.message.attach(MIMEText(self.foot, "plain"))
+        self.message.attach(MIMEText(f'ID: {str(self.id)}', "plain"))
+
 
 
     def send(self):
@@ -48,7 +53,7 @@ class Notification:
 
         # Add attachment to message and convert message to string
         self.message.attach(part)
-    def attach_files(self, path):
+    def attach_file(self, path):
 
         if os.path.isfile(path):
             print(f"Attaching file {path} to e-mail.")
@@ -64,6 +69,14 @@ class Notification:
             self.message.attach(part)
         else:
             print(f"File {path} not found")
+
+    def attach_mutiple_files(self,path):
+        if isinstance(path,list):
+            for f in path:
+                self.attach_file(f)
+        else:
+            for f in os.listdir(path):
+                self.attach_file(f)
 
 
 

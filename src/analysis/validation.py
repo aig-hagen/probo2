@@ -12,7 +12,7 @@ import click
 from src.utils.utils import dispatch_on_value
 
 @dispatch_on_value
-def validate_task(task, df, ref_path):
+def validate_task(task, df, ref_path,extension):
     print(f"Task {task} not supported for validation.")
 
 
@@ -91,7 +91,7 @@ def compare_results_decision(actual, correct):
         return "incorrect"
 
 
-def get_reference_result_enumeration(path, instance_name, task):
+def get_reference_result_enumeration(path, instance_name, task,extension='out'):
     """[summary]
 
     Args:
@@ -104,7 +104,7 @@ def get_reference_result_enumeration(path, instance_name, task):
     """
     correct_result_file = ""
     for f in os.listdir(path):
-        if (instance_name in f) and ((task + ".out") in f):
+        if (instance_name in f) and ((task + f".{extension}") in f):
             correct_result_file = f
             break
     if correct_result_file:
@@ -115,7 +115,7 @@ def get_reference_result_enumeration(path, instance_name, task):
         return None
 
 
-def get_reference_result_decision(path, instance_name, task):
+def get_reference_result_decision(path, instance_name, task, extension='out'):
     """[summary]
 
     Args:
@@ -128,7 +128,7 @@ def get_reference_result_decision(path, instance_name, task):
     """
     correct_result_file = ""
     for f in os.listdir(path):
-        if (instance_name in f) and ((task + ".out") in f):
+        if (instance_name in f) and ((task + f".{extension}") in f):
             correct_result_file = f
             break
     if correct_result_file:
@@ -206,7 +206,7 @@ def parse_result(task: str, result: str):
         return result
 
 @validate_task.register("EE")
-def validate_ee(task, df: pd.DataFrame, reference_path: str):
+def validate_ee(task, df: pd.DataFrame, reference_path: str, extension):
     """[summary]
 
     Args:
@@ -220,7 +220,7 @@ def validate_ee(task, df: pd.DataFrame, reference_path: str):
     instance_name = df['instance'].iloc[0]
     task = df['task'].iloc[0]
     reference_result = get_reference_result_enumeration(
-        reference_path, instance_name, task)
+        reference_path, instance_name, task,extension=extension)
     reference_extensions = multiple_extensions_string_to_list(reference_result)
     return df.apply(lambda row: compare_results_enumeration(
         multiple_extensions_string_to_list(row['result']), reference_extensions
@@ -354,7 +354,7 @@ def compare_result_some_extension(actual,correct):
         return "incorrect"
 
 @validate_task.register("SE")
-def validate_se(task,df, reference_path):
+def validate_se(task,df, reference_path,extension):
     """[summary]
 
     Args:
@@ -368,7 +368,7 @@ def validate_se(task,df, reference_path):
     instance_name = df['instance'].iloc[0]
     task = df['task'].iloc[0]
     task = 'EE-' + task.split("-")[1]
-    reference_result = get_reference_result_enumeration(reference_path, instance_name, task)
+    reference_result = get_reference_result_enumeration(reference_path, instance_name, task,extension=extension)
 
     reference_extensions = multiple_extensions_string_to_list(reference_result)
     return df.apply(lambda row: compare_result_some_extension(
@@ -376,11 +376,11 @@ def validate_se(task,df, reference_path):
                      axis=1)
 
 @validate_task.register("CE")
-def validate_ce(task, df: pd.DataFrame, ref_path: str):
-     return validate_decision(df,ref_path)
+def validate_ce(task, df: pd.DataFrame, ref_path: str,extension):
+     return validate_decision(df,ref_path,extension)
 
 @validate_task.register("EC")
-def validate_ec(task, df: pd.DataFrame, ref_path: str):
+def validate_ec(task, df: pd.DataFrame, ref_path: str, extension):
     pass
 
 def compare_argument_list(result: list, actual: list ) -> str:
@@ -392,14 +392,14 @@ def compare_argument_list(result: list, actual: list ) -> str:
 
 
 @validate_task.register("DC")
-def validate_dc(task, df: pd.DataFrame, ref_path: str):
-    return validate_decision(df,ref_path)
+def validate_dc(task, df: pd.DataFrame, ref_path: str,extension):
+    return validate_decision(df,ref_path,extension)
 
 @validate_task.register("DS")
-def validate_ds(task, df: pd.DataFrame, ref_path: str):
-    return validate_decision(df,ref_path)
+def validate_ds(task, df: pd.DataFrame, ref_path: str,extension):
+    return validate_decision(df,ref_path,extension)
 
-def validate_decision(df, reference_path):
+def validate_decision(df, reference_path,extension):
     """[summary]
 
     Args:
@@ -412,14 +412,14 @@ def validate_decision(df, reference_path):
     instance_name = df['instance'].iloc[0]
     task = df['task'].iloc[0]
     reference_result = get_reference_result_decision(reference_path,
-                                                     instance_name, task)
+                                                     instance_name, task, extension=extension)
     print(reference_result.rstrip("\n"))
     return df.apply(lambda row: compare_results_enumeration(
         multiple_extensions_string_to_list(row['result']), reference_result),
                     axis=1)
 
 
-def validate_instance(df, references):
+def validate_instance(df, references,extension):
     """[summary]
 
     Args:
@@ -434,7 +434,7 @@ def validate_instance(df, references):
         raise click.BadParameter("Reference path not found!")
     task = str(df['task'].iloc[0]).split("-")[0]
 
-    df['correct'] = validate_task(task,df,reference_path)
+    df['correct'] = validate_task(task,df,reference_path,extension)
 
     # if 'EE' in str(df['task'].iloc[0]):
     #     df['correct'] = validate_ee(df, reference_path)
@@ -447,7 +447,7 @@ def validate_instance(df, references):
 
     return df
 
-def validate(df, references):
+def validate(df, references, extension):
     """[summary]
 
     Args:
@@ -459,7 +459,7 @@ def validate(df, references):
     """
     val = (df
     .groupby(['benchmark_id','instance','task'])
-    .apply(lambda _df: validate_instance(_df,references))
+    .apply(lambda _df: validate_instance(_df,references,extension))
     )
     val['validated'] = np.where(val.correct.values == "no_reference", False,
                                 True)

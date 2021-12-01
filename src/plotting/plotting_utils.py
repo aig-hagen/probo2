@@ -67,8 +67,9 @@ def cactus_plot(kind, df, save_to, options,grouping):
                     .apply(lambda df: df.assign(rank=df['runtime'].rank(method='dense',ascending=True))))
     plot_grouping = grouping.copy()
     plot_grouping.remove('solver_id')
-    ranked.groupby(plot_grouping).apply(lambda df: create_cactus_plot(df,save_to,options))
+    saved_files = ranked.groupby(plot_grouping).apply(lambda df: create_cactus_plot(df,save_to,options))
     print("finished.")
+    return saved_files
 
 def create_cactus_plot(df,save_to,options):
     info = get_info_as_strings(df)
@@ -78,6 +79,7 @@ def create_cactus_plot(df,save_to,options):
     save_file_name = create_file_name(df,info,save_to,'cactus')
     options['save_to'] = save_file_name
     CactusPlot.Cactus(options).create(df)
+    return save_file_name
 # Count plots
 def prep_data_count_plot(df):
     conds = [((df.timed_out == False) & (df.exit_with_error == False)),df.timed_out == True,df.exit_with_error == True]
@@ -190,7 +192,7 @@ def box_plot(kind,df: pd.DataFrame,save_to: str,options: dict,grouping: list):
 def create_box_plot(df: pd.DataFrame,save_to: str,options: dict):
     info = get_info_as_strings(df)
     df['Solver'] = df['solver_full_name']
-    save_file_name = create_file_name(df,info,save_to,'dist')
+    save_file_name = create_file_name(df,info,save_to,'box')
     ax=sns.boxplot(data=df,y='runtime', x='solver_full_name')
     ax.set_xticklabels(ax.get_xticklabels(), rotation=40, ha="right")
 

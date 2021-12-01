@@ -42,7 +42,9 @@ MANIFEST
 pip-log.txt
 probo2-log.txt
 pip-delete-this-directory.txt
+#JSON
 status.json
+last_experiment.json
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/

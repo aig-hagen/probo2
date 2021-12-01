@@ -6,6 +6,7 @@ import shutil
 import tabulate
 import hashlib
 import pathlib
+import datetime
 from sqlalchemy import and_, or_
 from sqlalchemy import engine
 from sqlalchemy.sql.expression import false
@@ -54,9 +55,8 @@ def cli():
 @click.option("--name", "-n", required=True, help="Name of the solver")
 @click.option("--path","-p",
               required=True,
-              callback=CustomClickOptions.check_path,
-              type=str,
-              help="Full path to solver executable")
+              type=click.Path(exists=True,resolve_path=True),
+              help="Path to solver executable")
 @click.option("--format",
               "-f",
               type=click.Choice(['apx', 'tgf'], case_sensitive=False),
@@ -94,9 +94,9 @@ def add_solver(name, path, format, tasks, version, guess):
       """
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
-    path_resolved = os.fspath(pathlib.Path(path).resolve())
+
     new_solver = Solver(solver_name=name,
-                        solver_path=path_resolved,
+                        solver_path=path,
                         solver_version=version,
                         solver_format=format)
     if guess:
@@ -141,10 +141,9 @@ def add_solver(name, path, format, tasks, version, guess):
               help="Name of benchmark/fileset")
 @click.option("--path",
               "-p",
-              type=click.types.STRING,
+              type=click.Path(exists=True,resolve_path=True),
               required=True,
-              help="Path to instances",
-              callback=CustomClickOptions.check_path)
+              help="Path to instances")
 @click.option("--graph_type",
               "-gt",
               type=click.types.STRING,
@@ -366,18 +365,25 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
             summary = stats.get_experiment_summary_as_string(df)
             print("")
             print(summary)
+            now = datetime.datetime.now()
+            last_experiment_dict = {'Tag': tag,
+                                    'Benchmarks' : list(df.benchmark_name.unique()),
+                                    'Tasks' : list(df.task.unique()),
+                                    'Solvers': list(df.solver_full_name.unique()),
+                                    'Finished': now.strftime("%m/%d/%Y, %H:%M:%S")
+                                   }
+            with open(definitions.LAST_EXPERIMENT_JSON_PATH,'w') as f:
+                json.dump(last_experiment_dict,f)
         else:
             summary = 'Something went wrong. Please check the logs for more information.'
 
     if notify:
         id_code = int(hashlib.sha256(tag.encode('utf-8')).hexdigest(), 16) % 10**8
-        note_message = "Note: Since the access data for this e-mail account are public, please do not open any attachments to e-mails in which the identification code does not match the one generated for you."
-        notification = Notification(notify,message=f"Here a little summary of your experiment:\n{summary}.\nYour e-mail identification code: {id_code}\n\n{note_message}")
+        notification = Notification(notify,message=f"Here a little summary of your experiment:\n{summary}",id=id_code)
 
         notification.send()
         logging.info(f'Sended Notfication e-mail to {notify}\nID: {id_code}')
-        print(f"\n{note_message}\nYour e-mail identification code: {id_code}")
-
+        print(f"\n{notification.foot}\nYour e-mail identification code: {id_code}")
 
 @click.command()
 @click.option("--par",
@@ -421,8 +427,14 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
 @click.option("--export","-e",type=click.Choice(["html","latex","png","jpeg","svg",'csv']),default=None,multiple=True)
 @click.option("--css",default="styled-table.css",help="CSS file for table style.")
 @click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','num_timed_out','all']),multiple=True)
+@click.option("--last", "-l",is_flag=True,help="Calculate stats for the last finished experiment.")
 def calculate(par, solver, task, benchmark,
-              tag, filter, combine, vbs, css, export, save_to, statistics,print_format):
+              tag, filter, combine, vbs, css, export, save_to, statistics,print_format,last):
+
+    if last:
+        tag.append(utils.get_from_last_experiment("Tag"))
+
+
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
 
@@ -469,18 +481,16 @@ def calculate(par, solver, task, benchmark,
         utils.export(stats_df,export,save_to=save_to,columns=export_columns,css_file=css)
 
 
-@click.command()
+@click.command(cls=CustomClickOptions.command_required_tag_if_not('last'))
 @click.pass_context
-@click.option("--tag", "-t", cls=CustomClickOptions.StringAsOption, default=[])
+@click.option("--tag", "-t",cls=CustomClickOptions.StringAsOption, default=[])
 @click.option("--task",
-
               required=False,
               callback=CustomClickOptions.check_problems,
               help="Computational problems")
 @click.option("--benchmark", cls=CustomClickOptions.StringAsOption, default=[])
 @click.option("--solver",
               "-s",
-              required=True,
               cls=CustomClickOptions.StringAsOption,
               default=[],
               help="Comma-separated list of solver ids")
@@ -492,9 +502,8 @@ def calculate(par, solver, task, benchmark,
 @click.option(
     "--save_to",
     "-st",
-    required=True,
-    help=
-    "Directory to store plots in. Filenames will be generated automatically.")
+    type=click.Path(exists=True, resolve_path=True),
+    help="Directory to store plots in. Filenames will be generated automatically.")
 @click.option("--vbs", is_flag=True, help="Create virtual best solver")
 @click.option("--x_max", "-xm", type=click.types.INT)
 @click.option("--y_max", "-ym", type=click.types.INT)
@@ -516,8 +525,13 @@ def calculate(par, solver, task, benchmark,
 @click.option("--kind",'-k',type=click.Choice(['cactus','count','dist','scatter','pie','box','all']),multiple=True)
 @click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files")
 @click.option("--send", "-s", required=False, help="Send plots via E-Mail")
+@click.option("--last", "-l",is_flag=True,help="Plot results for the last finished experiment.")
 def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
-         x_max, y_max, alpha, backend, no_grid,grid_plot, combine, kind, compress, send):
+         x_max, y_max, alpha, backend, no_grid,grid_plot, combine, kind, compress, send, last):
+    if not save_to:
+        save_to = os.getcwd()
+    if last:
+        tag.append(utils.get_from_last_experiment("Tag"))
 
     ref = definitions.PLOT_JSON_DEFAULTS
     with ref.open('rb') as fp:
@@ -555,22 +569,24 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
         df = df.append(vbs_df)
 
     for plot_kind in list(kind):
-        pl_util.create_plots(plot_kind,df,save_to,options, grouping)
+        saved_files = pl_util.create_plots(plot_kind,df,save_to,options, grouping)
+
+    saved_files_list = saved_files.to_frame().reset_index().rename(columns={0:'saved_files'})['saved_files'].to_list()
+    saved_files_list = [f'{x}.png' for x in saved_files_list]
+
     if compress:
-        save_archive_to = save_to.rstrip("/")
-        click.echo(f"Creating archive {save_archive_to}.{compress}...",nl=False)
-        shutil.make_archive(save_archive_to, compress, save_archive_to)
-        click.echo("finished")
+        directory_save_path = utils.compress_directory(save_to, save_to,compress)
+
+
     if send:
         id_code = int(hashlib.sha256(save_to.encode('utf-8')).hexdigest(), 16) % 10**8
-        note_message = "Note: Since the access data for this e-mail account are public, please do not open any attachments to e-mails in which the identification code does not match the one generated for you."
-        email_attachments = Notification(send,subject="Hi, there. I have your files for you.",message=f"Enclosed you will find your files.\nYour e-mail identification code: {id_code}\n\n{note_message}")
+        email_notification = Notification(send,subject="Hi, there. I have your files for you.",message=f"Enclosed you will find your files.",id=id_code)
         if compress:
-            email_attachments.attach_files(f'{save_archive_to}.{compress}')
+            email_notification.attach_file(f'{directory_save_path}.{compress}')
         else:
-            email_attachments.attach_files(save_to)
-        email_attachments.send()
-        print(f"\n{note_message}\nYour e-mail identification code: {id_code}")
+            email_notification.attach_mutiple_files(saved_files_list)
+        email_notification.send()
+        print(f"\n{email_notification.foot}\nYour e-mail identification code: {id_code}")
 
 
 
@@ -591,31 +607,33 @@ def benchmarks(verbose):
     session = DatabaseHandler.create_session(engine)
     benchmarks = session.query(Benchmark).all()
     tabulate_data = []
-    if verbose:
-        for benchmark in benchmarks:
-            tabulate_data.append([
-                benchmark.id, benchmark.benchmark_name, benchmark.format_instances,benchmark.benchmark_path
-            ])
-        print(tabulate(tabulate_data,
-                            headers=["ID", "Name", "Format", "Path"],
-                            tablefmt=format))
-
-    else:
+    if not verbose:
         for benchmark in benchmarks:
             tabulate_data.append([
                 benchmark.id, benchmark.benchmark_name, benchmark.format_instances
             ])
+        print(tabulate(tabulate_data, headers=["ID", "Name", "Format"]))
 
-        print(
-            tabulate(tabulate_data,
-                            headers=["ID", "Name", "Format"],
-                            tablefmt=format))
+    else:
+        for benchmark in benchmarks:
+            b_formats = benchmark.get_formats()
+            b_formats.append(benchmark.extension_arg_files)
+            num_instances = []
+            for f in b_formats:
+                num_instances.append(len(benchmark.get_instances(f)))
+            tabulate_data.append([
+                benchmark.id, benchmark.benchmark_name, benchmark.format_instances, *num_instances, benchmark.benchmark_path
+            ])
+
+        str_b_formats = [f'#{x}' for x in b_formats]
+        print(tabulate(tabulate_data,headers=["ID", "Name", "Format",*str_b_formats,'Path']))
     session.close()
 
 
 @click.command()
 @click.option("--verbose", "-v", is_flag=True, default=False, required=False)
-def solvers(verbose):
+@click.option("--id",help="Print summary of solver with specified id")
+def solvers(verbose,id):
     """Prints solvers in database to console.
 
     Args:
@@ -623,27 +641,27 @@ def solvers(verbose):
     """
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
-    solvers = session.query(Solver).all()
-    tabulate_data = []
-    if verbose:
-        for solver in solvers:
-            tasks = [t.symbol for t in solver.supported_tasks]
-            tabulate_data.append(
-                [solver.solver_id, solver.solver_name,solver.solver_version, solver.solver_format, tasks])
-
-        print(
-            tabulate(tabulate_data,
-                              headers=["ID", "Name","Version","Format", "Tasks"],
-                              tablefmt=format))
+    if id:
+        solver = DatabaseHandler.get_solver(session,id)
+        solver.print_summary()
     else:
-        for solver in solvers:
-            tabulate_data.append(
-                [solver.solver_id, solver.solver_name,solver.solver_format,solver.solver_path])
+        solvers = session.query(Solver).all()
+        tabulate_data = []
+        if verbose:
+            for solver in solvers:
+                tasks = [t.symbol for t in solver.supported_tasks]
+                tabulate_data.append(
+                    [solver.solver_id, solver.solver_name,solver.solver_version, solver.solver_format, tasks])
 
-        print(
-            tabulate(tabulate_data,
-                              headers=["ID", "Name", "Format","Path"],
-                              tablefmt=format))
+            print(
+                tabulate(tabulate_data, headers=["ID", "Name","Version","Format", "Tasks"]))
+        else:
+            for solver in solvers:
+                tabulate_data.append(
+                    [solver.solver_id, solver.solver_name,solver.solver_format,solver.solver_path])
+
+            print(
+                tabulate(tabulate_data, headers=["ID", "Name", "Format","Path"]))
 
     session.close()
 
@@ -817,7 +835,7 @@ def status():
               required=False,
               callback=CustomClickOptions.check_problems,
               help="Computational problems")
-@click.option("--benchmark", cls=CustomClickOptions.StringAsOption, default=[])
+@click.option("--benchmark","-b", required=True,help="Benchmark name or id to validate.")
 @click.option("--solver",
               "-s",
               required=True,
@@ -844,18 +862,21 @@ def status():
 @click.option(
     "--save_to",
     "-st",
+    type=click.Path(resolve_path=True,exists=True),
     required=False,
     help=
     "Directory to store plots in. Filenames will be generated automatically.")
 
+@click.option('--extension','-ext',required=True,help="Reference file extension")
+
 def validate(tag, task, benchmark, solver, filter, reference, pairwise,
-             save_to, export, update_db):
+             save_to, export, update_db,extension):
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
     og_df = DatabaseHandler.get_results(session,
                                         solver,
                                         task,
-                                        benchmark,
+                                        [benchmark],
                                         tag,
                                         filter,
                                         only_solved=True)
@@ -1233,8 +1254,18 @@ def tasks():
    tasks_in_db = sorted((DatabaseHandler.get_supported_tasks(session)))
    print(tasks_in_db)
 
-
-
+@click.command()
+def last():
+    if os.path.isfile(definitions.LAST_EXPERIMENT_JSON_PATH):
+        with open(definitions.LAST_EXPERIMENT_JSON_PATH,'r') as file:
+            json_string = file.read()
+        json_obj = json.loads(json_string)
+        print("Last experiment:")
+        for key,value in json_obj.items():
+            print(f'{key}: {str(value)}')
+    else:
+        print("No experiments finished yet.")
+cli.add_command(last)
 cli.add_command(delete_benchmark)
 cli.add_command(update_db)
 cli.add_command(add_solver)

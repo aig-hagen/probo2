@@ -2,6 +2,8 @@ import os
 import psutil
 from pathlib import Path
 from tabulate import tabulate
+import json
+import shutil
 
 import click
 import pandas
@@ -17,7 +19,13 @@ def print_df(df, grouping, headers, format='fancy_grid'):
     (df
     .groupby(grouping)
     [headers]
-    .apply(lambda df: print(tabulate(df,headers='keys',tablefmt=format))))
+    .apply(lambda df: print(tabulate(df,headers='keys',tablefmt=format,showindex=False))))
+
+def compress_directory(from_dir: str, to_dir: str, compression: str):
+    from_dir = from_dir.rstrip(os.path.sep)
+    to_dir = to_dir.rstrip(os.path.sep)
+    shutil.make_archive(from_dir, compression,to_dir)
+    return to_dir
 
 def export(df: pandas.DataFrame,
                formats,
@@ -330,3 +338,12 @@ def run_process(*popenargs,
             raise CalledProcessError(retcode, process.args,
                                      output=stdout, stderr=stderr)
     return CompletedProcess(process.args, retcode, stdout, stderr)
+
+def get_from_last_experiment(key):
+    with open(definitions.LAST_EXPERIMENT_JSON_PATH,'r') as file:
+        json_string = file.read()
+    json_obj = json.loads(json_string)
+
+    if key in json_obj.keys():
+        return json_obj[key]
+

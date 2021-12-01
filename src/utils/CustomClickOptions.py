@@ -4,6 +4,7 @@ import ast
 
 import click
 
+
 from src.utils import definitions
 from src.database_models import DatabaseHandler
 
@@ -28,10 +29,22 @@ def command_required_option_from_option(require_name):
                     raise click.ClickException(
                         "With {}={} must specify option --{} and --{}".format(
                             require_name, guess, "problems", "format"))
+
             super(CommandOptionRequiredClass, self).invoke(ctx)
 
     return CommandOptionRequiredClass
 
+def command_required_tag_if_not(require_name):
+    class CommandOptionRequiredClass(click.Command):
+
+        def invoke(self, ctx):
+            last = ctx.params[require_name]
+            if not last:
+                    raise click.BadOptionUsage(f"With option --{require_name}={last} you must specify a value for option --tag.")
+
+            super(CommandOptionRequiredClass, self).invoke(ctx)
+
+    return CommandOptionRequiredClass
 
 class StringAsOption(click.Option):
     def type_cast_value(self, ctx, value):
