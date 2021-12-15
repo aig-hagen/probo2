@@ -36,7 +36,7 @@ python setup.py install
     - [delete-benchmark](#delete-benchmark)
     - [run](#run)
     - [plot](#plot)
-  - [calculate](#calculate)
+    - [calculate](#calculate)
 ### add-solver
 Usage: *probo2 add-solver [OPTIONS]*
 
@@ -267,7 +267,7 @@ Usage: *probo2 plot[OPTIONS]*
 
     Backend to use.
     Choices: [pdf|pgf|png|ps|svg]
-+ *-c, --combine [tag|task_id|benchmark_id]*
++ *-c, --combine*
 
     Combine results on specified key
     Choices: [tag|task_id|benchmark_id]
@@ -290,40 +290,51 @@ Usage: *probo2 plot[OPTIONS]*
 
     Show this message and exit.
 
+**Example**
+```
+probo2 plot --kind cactus --tag MyExperiment --compress zip --send my@mail.de
+```
 
-## calculate
+
+### calculate
 Calculte different statistical measurements.
 Usage: probo2 calculate [OPTIONS]
 
 **Options**
+ + *-t, --tag*
+
+     Comma-separated list of experiment tags to be selected.
++ *--task*
+
+    Comma-separated list of task IDs or symbols to be selected.
++ *--benchmark*
+
+    Comma-separated list of benchmark IDs or names to be selected.
++ *-s, --solver*
+    
+    Comma-separated list of solver IDs or names to be selected.
+  
   + *-p, --par*
 
     Penalty multiplier for PAR score
-  + *-s, --solver* TEXT
+  + *-s, --solver*
     Comma-separated list of solver ids or names.
 
-  + *-f, --filter*
-
-    Generic filter
-  + *-t, --task*
-
-    Computational problems to calculate stats for.
-  + *-b, --benchmark*
-
-    Comma-seperated list of ids or names of benchmarks (in database).
   + *-pfmt, --print_format*
 
     Table format for printing to console.
+    
     Choices: [plain|simple|github|grid|fancy_grid|pipe|orgtbl|jira|presto|pretty|psql|rst|mediawiki|moinmoin|youtrack|html|unsafehtmllatex|latex_raw|latex_booktabs|textile]
-  + *-t, --tag*
-    Tag for individual experiments.
+
   + *-c, --combine*
 
-    Combine results on key:
+    Combine results on key.
+    
     Choices: [task_id|benchmark_id|solver_id]
   + *--vbs*
 
     Create virtual best solver
+    
   + *-st, --save_to*
 
     Directory to store tables.
@@ -331,21 +342,23 @@ Usage: probo2 calculate [OPTIONS]
   + *-e, --export*
 
     Export results in specified format.
-    Choices: [html|latex|png|jpeg|svg|csv]
-  + *--css* TEXT
-
-    CSS file for table style.
+    
+    Choices: [latex|json|csv]
   + *-s, --statistics*
 
     Stats to calculate.
-    Choices:[mean|sum|min|max|median|var|std|coverage|num_timed_out|all]
+    
+    Choices:[mean|sum|min|max|median|var|std|coverage|timeouts|solved|errors|all]
   + *-l, --last*
 
     Calculate stats for the last finished experiment.
 
   + *--help*                          Show this message and exit.
 
-
+**Example**
+```
+probo2 calculate --tag MyExperiment -s timeouts -s errors -s solved --par 10
+```
 
 
 
