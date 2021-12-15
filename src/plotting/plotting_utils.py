@@ -4,13 +4,34 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 import json
+import shutil
+from src.utils import utils
 from src.plotting import CactusPlot, DistributionPlot, ScatterPlot
 from src.analysis.statistics import get_info_as_strings
 import functools
 from src.utils.utils import dispatch_on_value
 #TODO: Json defaults for all plots, finish Scatter plot implementation,pie chart titles
+def read_default_options(path: str) -> dict:
+    with path.open('rb') as fp:
+        options =json.load(fp)
+        options['def_path'] = path
+    return options
 
+def set_user_options(user_options, default_options):
+    for key, value in user_options.params.items():
+        if value is not None:
+            default_options[key] = value
 
+def create_archive_from_plots(save_to: str, name,saved_files_paths,compress):
+    temp_path = os.path.join(save_to,'_temp_plots')
+    if not os.path.exists(temp_path):
+        os.mkdir(os.path.join(save_to,'_temp_plots'))
+    for file_to_copy in saved_files_paths:
+        shutil.copy(file_to_copy,temp_path)
+    archive_save_to = os.path.join(save_to,f'{name}_plots')
+    directory_save_path =utils.compress_directory(temp_path, archive_save_to,compress)
+    shutil.rmtree(temp_path)
+    return directory_save_path
 
 @dispatch_on_value
 def create_plots(kind, df, save_to, options, grouping):
@@ -74,10 +95,10 @@ def cactus_plot(kind, df, save_to, options,grouping):
 def create_cactus_plot(df,save_to,options):
     info = get_info_as_strings(df)
     df['Solver'] = df['solver_full_name']
-    options['title'] = info['task'] + " " + info['benchmark']
+    options['settings']['title'] = info['task'] + " " + info['benchmark']
 
     save_file_name = create_file_name(df,info,save_to,'cactus')
-    options['save_to'] = save_file_name
+    options['settings']['save_to'] = save_file_name
     CactusPlot.Cactus(options).create(df)
     return save_file_name
 # Count plots
@@ -88,6 +109,7 @@ def prep_data_count_plot(df):
     return df
 
 def create_count_plot(df, save_to, options):
+
     info = get_info_as_strings(df)
     save_file_name = create_file_name(df,info,save_to,'count')
     ax = sns.countplot(data=df,x='solver_full_name',hue='Status')
@@ -102,6 +124,7 @@ def create_count_plot(df, save_to, options):
                    bbox_inches='tight',
                    transparent=True)
     plt.clf()
+    return save_file_name
 
 @create_plots.register("count")
 def count_plot(kind,df,save_to,options,grouping):
@@ -109,8 +132,9 @@ def count_plot(kind,df,save_to,options,grouping):
     preped_data = df.groupby(grouping,as_index=False).apply(lambda df: prep_data_count_plot(df))
     plot_grouping = grouping.copy()
     plot_grouping.remove('solver_id')
-    preped_data.groupby(plot_grouping).apply(lambda df: create_count_plot(df,save_to,options))
+    saved_files = preped_data.groupby(plot_grouping).apply(lambda df: create_count_plot(df,save_to,options))
     print("finished.")
+    return saved_files
 
 # Pie charts
 def create_pie_chart(df: pd.DataFrame,save_to: str, options: dict):
@@ -148,6 +172,7 @@ def create_pie_chart(df: pd.DataFrame,save_to: str, options: dict):
                    bbox_inches='tight',
                    transparent=True)
     plt.clf()
+    return save_file_name
 
 
 
@@ -159,8 +184,9 @@ def pie_chart(kind,df: pd.DataFrame, save_to: str, options: dict, grouping: list
     df.groupby(grouping).apply(lambda df: create_pie_chart(df,save_to,pie_options))
     pie_grouping = grouping.copy()
     pie_grouping.remove('solver_id')
-    df.groupby(pie_grouping).apply(lambda df: create_pie_chart(df,save_to,pie_options))
+    saved_files = df.groupby(pie_grouping).apply(lambda df: create_pie_chart(df,save_to,pie_options))
     print("finished.")
+    return saved_files
 
 # Dist plots
 @create_plots.register("dist")
@@ -169,16 +195,18 @@ def dist_plot(kind,df: pd.DataFrame,save_to: str,options: dict,grouping: list):
     only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
     dist_grouping = grouping.copy()
     dist_grouping.remove('solver_id')
-    df[only_solved_mask].groupby(dist_grouping).apply(lambda df: create_dist_plot(df,save_to,options))
+    saved_files = df[only_solved_mask].groupby(dist_grouping).apply(lambda df: create_dist_plot(df,save_to,options))
     print("finished.")
+    return saved_files
 
-def create_dist_plot(df: pd.DataFrame,save_to: str,options: dict):
+def create_dist_plot(df: pd.DataFrame,save_to: str,options: dict) -> str:
     info = get_info_as_strings(df)
     df['Solver'] = df['solver_full_name']
-    options['title'] = info['task'] + " " + info['benchmark']
+    options['settings']['title'] = info['task'] + " " + info['benchmark']
     save_file_name = create_file_name(df,info,save_to,'dist')
-    options['save_to'] = save_file_name
+    options['settings']['save_to'] = save_file_name
     DistributionPlot.Distribution(options).create(df['runtime'])
+    return save_file_name
 
 @create_plots.register("box")
 def box_plot(kind,df: pd.DataFrame,save_to: str,options: dict,grouping: list):
@@ -186,8 +214,9 @@ def box_plot(kind,df: pd.DataFrame,save_to: str,options: dict,grouping: list):
     only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
     box_grouping = grouping.copy()
     box_grouping.remove('solver_id')
-    df[only_solved_mask].groupby(box_grouping).apply(lambda df: create_box_plot(df,save_to,options))
+    saved_files = df[only_solved_mask].groupby(box_grouping).apply(lambda df: create_box_plot(df,save_to,options))
     print("finished.")
+    return saved_files
 
 def create_box_plot(df: pd.DataFrame,save_to: str,options: dict):
     info = get_info_as_strings(df)
@@ -205,6 +234,7 @@ def create_box_plot(df: pd.DataFrame,save_to: str,options: dict):
                    bbox_inches='tight',
                    transparent=True)
     plt.clf()
+    return save_file_name
 
 
 

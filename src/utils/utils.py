@@ -15,16 +15,23 @@ from subprocess import TimeoutExpired
 from subprocess import CalledProcessError
 from subprocess import CompletedProcess
 
-def print_df(df, grouping, headers, format='fancy_grid'):
-    (df
-    .groupby(grouping)
-    [headers]
-    .apply(lambda df: print(tabulate(df,headers='keys',tablefmt=format,showindex=False))))
+def print_df(df, grouping=None, headers=None, format='fancy_grid'):
+    if headers is None:
+        headers = df.columns.values
+    if grouping is None:
+        print(tabulate(df[headers],headers='keys',tablefmt=format,showindex=False))
+
+    else:
+        (df
+        .groupby(grouping)
+        [headers]
+        .apply(lambda df: print(tabulate(df,headers='keys',tablefmt=format,showindex=False))))
+
 
 def compress_directory(from_dir: str, to_dir: str, compression: str):
     from_dir = from_dir.rstrip(os.path.sep)
     to_dir = to_dir.rstrip(os.path.sep)
-    shutil.make_archive(from_dir, compression,to_dir)
+    shutil.make_archive(to_dir, compression,from_dir)
     return to_dir
 
 def export(df: pandas.DataFrame,

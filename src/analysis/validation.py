@@ -1,6 +1,7 @@
 """Validation module"""
 import functools
 import os
+import pathlib
 import re
 
 import matplotlib.pyplot as plt
@@ -9,12 +10,17 @@ import pandas as pd
 import seaborn as sns
 import click
 
+from itertools import chain
+from glob import glob
+
 from src.utils.utils import dispatch_on_value
+from src.reporting import pretty_latex_table
+import src.utils.utils as utils
 
-@dispatch_on_value
-def validate_task(task, df, ref_path,extension):
-    print(f"Task {task} not supported for validation.")
-
+def test_table_export(df, save_to):
+    (pretty_latex_table.generate_table(df[['solver','correct','incorrect','no_reference']],
+                                       save_to, 'test_table.tex', max_bold=['correct','incorrect','no_reference'],
+                                       columns_headers_bold=True,caption='Test caption',label='TEST_LABEL'))
 
 def prepare_data(df):
     """[summary]
@@ -38,21 +44,66 @@ def prepare_data(df):
         'task_id': 'int8'
     }))
 
+@dispatch_on_value
+def validate_task(task, df, references ,file_extension):
+    print(f"Task {task} not supported for validation.")
+
+@validate_task.register("EE")
+def validate_ee(task, df: pd.DataFrame, references : dict, file_extension):
+    """[summary]
+
+    Args:
+        df (pd.DataFrame): [description]
+        reference_path (str): [description]
+
+    Returns:
+        [type]: [description]
+    """
+
+    instance_name = df['instance'].iloc[0]
+    task = df['task'].iloc[0]
+    reference_result = get_reference_result_enumeration(
+        references, instance_name, task,ref_file_extension=file_extension)
+    reference_extensions = multiple_extensions_string_to_list(reference_result)
+    return df.apply(lambda row: compare_results_enumeration(
+        multiple_extensions_string_to_list(row['result']), reference_extensions
+    ),
+                    axis=1)
+@validate_task.register("SE")
+def validate_se(task,df, references,extension):
+    """[summary]
+
+    Args:
+        df ([type]): [description]
+        reference_path ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+
+    instance_name = df['instance'].iloc[0]
+    task = df['task'].iloc[0]
+    task = 'EE-' + task.split("-")[1] # Use also the results from EE as SE is not unique
+    reference_result = get_reference_result_enumeration(references, instance_name, task,ref_file_extension=extension)
+
+    reference_extensions = multiple_extensions_string_to_list(reference_result)
+    return df.apply(lambda row: compare_result_some_extension(
+         single_extension_string_to_list(row['result']), reference_extensions),
+                     axis=1)
+
 def analyse(df: pd.DataFrame) -> pd.Series:
     analysis = dict()
     analysis['solver'] = df['solver_full_name'].iloc[0]
     analysis['task'] = df['task'].iloc[0]
     analysis['benchmark_name'] = df['benchmark_name'].iloc[0]
-    analysis['correct_solved'] = df[df.correct == 'correct']['correct'].count()
-    analysis['incorrect_solved'] = df[df.correct == 'incorrect']['correct'].count()
-    analysis['no_reference'] = df[df.correct == 'no_reference']['correct'].count()
+    analysis['correct'] = df['correct'].sum()
+    analysis['incorrect'] = df['incorrect'].sum()
+    analysis['no_reference'] = df['no_reference'].sum()
     analysis['total'] = df['instance'].count()
-    analysis['percentage_validated'] = (analysis['total'] - analysis['no_reference']) / analysis['total'] * 100
+    analysis['percentage_validated'] = ( analysis['correct'] + analysis['incorrect'] ) / analysis['total'] * 100
     return pd.Series(analysis)
 
-
-
-
+validaten_result_interpretation = {1:'correct', 0:'incorrect',-1: 'no_reference'}
 
 def compare_results_enumeration(actual, correct):
     """[summary]
@@ -65,12 +116,12 @@ def compare_results_enumeration(actual, correct):
         [type]: [description]
     """
     if not correct:
-        return "no_reference"
+        return -1
     if functools.reduce(lambda i, j: i and j,
                         map(lambda m, k: m == k, actual, correct), True):
-        return "correct"
+        return 1
     else:
-        return "incorrect"
+        return 0
 
 
 def compare_results_decision(actual, correct):
@@ -91,7 +142,7 @@ def compare_results_decision(actual, correct):
         return "incorrect"
 
 
-def get_reference_result_enumeration(path, instance_name, task,extension='out'):
+def get_reference_result_enumeration(references: dict, instance_name: str, task: str,ref_file_extension=None):
     """[summary]
 
     Args:
@@ -102,18 +153,22 @@ def get_reference_result_enumeration(path, instance_name, task,extension='out'):
     Returns:
         [type]: [description]
     """
-    correct_result_file = ""
-    for f in os.listdir(path):
-        if (instance_name in f) and ((task + f".{extension}") in f):
-            correct_result_file = f
-            break
-    if correct_result_file:
-        with open(os.path.join(path, correct_result_file),encoding='utf-8') as f:
-            correct_result = f.read()
-        return correct_result
-    else:
-        return None
+    if ref_file_extension is None or (not ref_file_extension):
+        ref_file_extension = references.keys()
 
+    correct_result_file = ""
+    print(f'{instance_name=} {task=} {ref_file_extension=}')
+    for f_extension in ref_file_extension:
+        print(references[f_extension].keys())
+        if task in references[f_extension].keys():
+            print(task)
+            references_file_extensions_task = references[f_extension][task]
+            for reference_result in references_file_extensions_task:
+                if all(substring in reference_result for substring in [instance_name,task,f_extension]):
+                    with open(reference_result,'r',encoding='utf-8') as ref_file:
+                        ref_result_str = ref_file.read()
+                    return ref_result_str
+    return None
 
 def get_reference_result_decision(path, instance_name, task, extension='out'):
     """[summary]
@@ -161,7 +216,7 @@ def single_extension_string_to_list(res):
         return sorted(extensions[0].split(","))
 
 
-def multiple_extensions_string_to_list(res):
+def multiple_extensions_string_to_list(res: str):
     """[summary]
 
     Args:
@@ -205,27 +260,7 @@ def parse_result(task: str, result: str):
     else:
         return result
 
-@validate_task.register("EE")
-def validate_ee(task, df: pd.DataFrame, reference_path: str, extension):
-    """[summary]
 
-    Args:
-        df (pd.DataFrame): [description]
-        reference_path (str): [description]
-
-    Returns:
-        [type]: [description]
-    """
-
-    instance_name = df['instance'].iloc[0]
-    task = df['task'].iloc[0]
-    reference_result = get_reference_result_enumeration(
-        reference_path, instance_name, task,extension=extension)
-    reference_extensions = multiple_extensions_string_to_list(reference_result)
-    return df.apply(lambda row: compare_results_enumeration(
-        multiple_extensions_string_to_list(row['result']), reference_extensions
-    ),
-                    axis=1)
 
 def print_solver_summary(df: pd.DataFrame):
         num_correct = df[df.correct == 'correct']['correct'].count()
@@ -343,15 +378,16 @@ def create_file_name(df: pd.DataFrame) -> str:
 
 
 def compare_result_some_extension(actual,correct):
-    if correct is None:
-        return "no_reference"
-    if actual == 'NO' and not correct:
-        return 'correct'
+    if correct is None: # No reference file found -> correct is None
+
+        return -1
+    if actual == 'NO' and not correct: #If correct is empty, than there is a ref file with no content
+        return 1
 
     if actual in correct:
-        return "correct"
+        return 1
     else:
-        return "incorrect"
+        return 0
 
 @validate_task.register("SE")
 def validate_se(task,df, reference_path,extension):
@@ -368,7 +404,8 @@ def validate_se(task,df, reference_path,extension):
     instance_name = df['instance'].iloc[0]
     task = df['task'].iloc[0]
     task = 'EE-' + task.split("-")[1]
-    reference_result = get_reference_result_enumeration(reference_path, instance_name, task,extension=extension)
+    reference_result = get_reference_result_enumeration(reference_path, instance_name, task,ref_file_extension=extension)
+    #print(f'{task=}\n{reference_result=}')
 
     reference_extensions = multiple_extensions_string_to_list(reference_result)
     return df.apply(lambda row: compare_result_some_extension(
@@ -419,7 +456,7 @@ def validate_decision(df, reference_path,extension):
                     axis=1)
 
 
-def validate_instance(df, references,extension):
+def validate_instance(df, references ,ref_file_extension):
     """[summary]
 
     Args:
@@ -429,12 +466,12 @@ def validate_instance(df, references,extension):
     Returns:
         [type]: [description]
     """
-    reference_path = references[(df['benchmark_id'].iloc[0])]
-    if not os.path.exists(reference_path):
-        raise click.BadParameter("Reference path not found!")
+    # reference_path = references[(df['benchmark_id'].iloc[0])]
+    # if not os.path.exists(reference_path):
+    #     raise click.BadParameter("Reference path not found!")
     task = str(df['task'].iloc[0]).split("-")[0]
 
-    df['correct'] = validate_task(task,df,reference_path,extension)
+    df['validation_result'] = validate_task(task, df, references, ref_file_extension)
 
     # if 'EE' in str(df['task'].iloc[0]):
     #     df['correct'] = validate_ee(df, reference_path)
@@ -461,8 +498,13 @@ def validate(df, references, extension):
     .groupby(['benchmark_id','instance','task'])
     .apply(lambda _df: validate_instance(_df,references,extension))
     )
-    val['validated'] = np.where(val.correct.values == "no_reference", False,
-                                True)
+
+    val['no_reference'] = np.where(val.validation_result.values == -1, True,
+                                False)
+    val['correct'] = np.where(val.validation_result.values == 1, True,
+                                False)
+    val['incorrect'] = np.where(val.validation_result.values == 0, True,
+                                False)
     return val
 
 
@@ -559,6 +601,37 @@ def get_intersection_of_solved_instances(df: pd.DataFrame) -> list:
         set_list.append(set(group['instance'].unique()))
 
     return list(set.intersection(*set_list))
+
+def validate_intersection(a_solver, other_solver, task, intersection_solved_instances):
+    pass
+
+def _validate_pairwise(df:pd.DataFrame)-> pd.DataFrame:
+    unique_solvers = sorted(list(df['solver_full_name'].unique()))
+    other_solver = unique_solvers.copy()
+    accordance_df = pd.DataFrame(columns=unique_solvers, index=unique_solvers).fillna(0)
+
+    for s in unique_solvers:
+        s_solved = set(df[df.solver_full_name == s].instance.values)
+        accordance_df[s][s] = 100.0
+        other_solver.remove(s)
+        for other in other_solver:
+            o_solved = set(df[df.solver_full_name == other].instance.values)
+            intersection_solved = set.intersection(s_solved,o_solved)
+            print(f'Solver: {s} Other: {other}\n{intersection_solved=}\n\n')
+            for instance in intersection_solved:
+
+                s_res_list = multiple_extensions_string_to_list("".join(df[(df.solver_full_name == s) & (df.instance == instance)].result.values))
+                other_res_list = multiple_extensions_string_to_list("".join(df[(df.solver_full_name == other) & (df.instance == instance)].result.values))
+
+                val_result = compare_results_enumeration(s_res_list,other_res_list)
+                if val_result == 'correct':
+                    accordance_df[s][other] =  accordance_df[s][other] + 1
+                    accordance_df[other][s] =  accordance_df[other][s] + 1
+            accordance_df[s][other] =  accordance_df[s][other] / len(intersection_solved) * 100.0
+            accordance_df[other][s] =  accordance_df[other][s] / len(intersection_solved) * 100.0
+    print(accordance_df)
+
+
 
 
 def validate_pairwise(df: pd.DataFrame,
@@ -674,3 +747,78 @@ def update_result_object(result_obj, correct, validated):
 
     result_obj.correct = correct
     result_obj.validated = validated
+
+def _get_reference_by_extensions(extensions: tuple, unique_tasks: list, reference)-> dict:
+    ref_dict = dict()
+    for f_extension in extensions:
+        instances_per_task = _init_task_dict(unique_tasks)
+        instances_with_f_extension = (list((chain.from_iterable(glob(os.path.join(x[0], f'*.{f_extension}')) for x in os.walk(reference)))))
+        for instance in instances_with_f_extension:
+            match = next((x for x in unique_tasks if x in instance), False)
+            print(match)
+            if match:
+                instances_per_task[match].append(instance)
+        ref_dict[f_extension] = instances_per_task
+    return ref_dict
+
+def _init_task_dict(tasks:list) -> dict:
+    task_dict = {}
+    for t in tasks:
+        task_dict[t] = []
+    return task_dict
+def _get_reference_all_extensions(unique_tasks: list, reference)-> dict:
+    instances_with_f_extension = (list((chain.from_iterable(glob(os.path.join(x[0], f'*.*')) for x in os.walk(reference)))))
+    different_extensions = []
+    ref_dict = dict()
+    for instance in instances_with_f_extension:
+        file_extension = pathlib.Path(instance).suffix.split(".")[1]
+        if not file_extension in different_extensions:
+            different_extensions.append(file_extension)
+            ref_dict[file_extension] = _init_task_dict(unique_tasks)
+        match = next((x for x in unique_tasks if x in instance),False)
+        #print(f'{instance=} {match=}')
+        if match:
+            #print(f'ref_dict[{file_extension=}][{match=}].append({instance})')
+            ref_dict[file_extension][match].append(instance)
+    return ref_dict
+
+def get_reference(extensions: tuple, unique_tasks: list, reference)-> dict:
+    if not extensions:
+        return _get_reference_all_extensions(unique_tasks,reference)
+    else:
+        return _get_reference_by_extensions(extensions,unique_tasks,reference)
+
+def _print_summary(df):
+    unique_solver = ','.join(df.solver.unique())
+    unique_benchmark = ','.join(df.benchmark_name.unique())
+    unique_tasks = ','.join(df.task.unique())
+
+    sum_correct = df.correct.sum()
+    sum_incorrect = df.incorrect.sum()
+    sum_no_reference = df.no_reference.sum()
+    sum_total = df.total.sum()
+
+    percentage_validated_total = (sum_correct + sum_incorrect) / sum_total * 100.0
+
+    print(f'Benchmark:{unique_benchmark}\nTask: {unique_tasks}\nSolver: {unique_solver}')
+    print(f'#Correct: {sum_correct}\n#Incorrect: {sum_incorrect}\n#No_Reference: {sum_no_reference}\n#Total: {sum_total}\nValidated(%): {percentage_validated_total}\n')
+
+
+
+
+def _print_results_per_task(df):
+    task = df.task.iloc[0]
+    print(f'+++++ Task {task} +++++')
+    _print_summary(df)
+    utils.print_df(df,headers=['solver','benchmark_name','correct','incorrect','no_reference','total','percentage_validated'])
+
+
+
+
+def print_validate_with_reference_results(df):
+    tag = df.tag.iloc[0]
+    print(f'***** Validation results experiment {tag} *****')
+    _print_summary(df)
+    df.groupby(['benchmark_id','task']).apply(lambda df_: _print_results_per_task(df_))
+
+

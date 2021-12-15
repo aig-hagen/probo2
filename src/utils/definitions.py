@@ -10,6 +10,10 @@ DATABASE_DIR = files(src.data).joinpath("databases")
 TEST_DATABASE_PATH = os.path.join(DATABASE_DIR, "probo2_old.db")
 
 TEST_INSTANCES_REF_PATH = files(src.data.test).joinpath("reference")
+TEST_INSTANCE_ARG = files(src.data.test).joinpath("a.arg")
+TEST_INSTANCE_APX = files(src.data.test).joinpath("a.apx")
+TEST_INSTANCE_TGF = files(src.data.test).joinpath("a.tgf")
+
 CSS_TEMPLATES_PATH = files(src.data).joinpath("css")
 
 STATUS_FILE_DIR = files(src.data.json).joinpath("status.json")

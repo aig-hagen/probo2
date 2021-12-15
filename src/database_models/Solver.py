@@ -3,11 +3,13 @@ import re
 import subprocess
 import os
 from timeit import default_timer as timer
+import time
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import column_property, relationship
 from pathlib import Path
 from sqlalchemy.sql.expression import null, update
+from src.data import test
 from src.utils import utils
 
 from src.database_models.Base import Base, Supported_Tasks
@@ -23,6 +25,13 @@ class FormatNotSupported(ValueError):
     pass
 
 
+def _init_cmd_params(solver_path):
+    if solver_path.endswith('.sh'):
+        return ['bash']
+    elif solver_path.endswith('.py'):
+        return ['python3']
+    return []
+
 class Solver(Base):
     __tablename__ = "solvers"
     solver_id = Column(Integer, primary_key=True)
@@ -34,39 +43,47 @@ class Solver(Base):
     solver_results = relationship('Result')
     solver_full_name = column_property(solver_name + "_" + solver_version)
 
-    def check_solver(self,tasks):
-        engine = DatabaseHandler.get_engine()
-        session = DatabaseHandler.create_session(engine)
-        benchmark = DatabaseHandler.get_benchmark(session, 4)
-        task = DatabaseHandler.get_task(session, "EE-CO")
 
 
-        if 'EE-CO' in tasks:
-            task = DatabaseHandler.get_task(session, "EE-CO")
-            solver_output = self.run(task,benchmark,600,save_db=False)
-            instance = list(solver_output.keys())[0]
-            data = solver_output[instance]
-            extensions_solver = validation.multiple_extensions_string_to_list(data['result'])
-            extension_reference = validation.multiple_extensions_string_to_list(validation.get_reference_result_enumeration(definitions.TEST_INSTANCES_REF_PATH,instance,'EE-CO'))
-            val_result = validation.compare_results_enumeration(extensions_solver,extension_reference)
-            if val_result == 'correct':
-                return True
-            else:
-                return False
-        elif 'SE-CO' in tasks:
-            task = DatabaseHandler.get_task(session, "SE-CO")
-            solver_output = self.run(task,benchmark,600,save_db=False)
-            instance = list(solver_output.keys())[0]
-            data = solver_output[instance]
-            extensions_solver = validation.single_extension_string_to_list(data['result'])
-            extension_reference = validation.single_extension_string_to_list(validation.get_reference_result_enumeration(definitions.TEST_INSTANCES_REF_PATH,instance,'SE-CO'))
-            val_result = validation.compare_results_enumeration(extensions_solver,extension_reference)
-            if val_result == 'correct':
-                return True
-            else:
-                return False
 
-        return False
+    def check_interface(self,test_task) -> bool:
+        cmd_params = _init_cmd_params(self.solver_path)
+
+        if self.solver_format == 'apx':
+            instance = definitions.TEST_INSTANCE_APX
+        elif self.solver_format == 'tgf':
+            instance = definitions.TEST_INSTANCE_TGF
+        else:
+            raise FormatNotSupported(f'Format {format} is not supported for solver {self.solver_name}')
+
+
+
+        cmd_params.extend([self.solver_path,
+                  "-p", test_task,
+                  "-f", instance,
+                  "-fo", self.solver_format])
+
+        if 'DS' or 'DC' in test_task:
+            with open(definitions.TEST_INSTANCE_ARG,'r') as arg_file:
+                arg = arg_file.read().rstrip('\n')
+                cmd_params.extend(["-a",arg])
+
+        try:
+             result = utils.run_process(cmd_params,
+                                       capture_output=True, timeout=5, check=True)
+        except subprocess.TimeoutExpired as e:
+            print(f'Solver interface test timed out.')
+            return False
+        except subprocess.CalledProcessError as err:
+            print(f'Something went wrong when testing the interface: {err}')
+            return False
+
+        return True
+
+
+
+
+
     def fetch(self, prop):
         cmd_params = []
         if self.solver_path.endswith('.sh'):
@@ -159,18 +176,17 @@ class Solver(Base):
                 total_run_time = 0
                 for i in range(1,n+1):
 
-                    start_time_current_run = timer()
+                    start_time_current_run = time.perf_counter()
                     result = utils.run_process(final_param,
                                        capture_output=True, timeout=timeout, check=True)
 
 
-                    end_time_current_run = timer()
+                    end_time_current_run = time.perf_counter()
                     run_time_current_run = end_time_current_run - start_time_current_run
                     total_run_time+=run_time_current_run
 
 
                 run_time = total_run_time / n
-
 
                 solver_output = re.sub("\s+", "",
                                    result.stdout.decode("utf-8"))
@@ -179,7 +195,7 @@ class Solver(Base):
                 results[instance_name] = {'timed_out':True,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': False, 'error_code': None}
             except subprocess.CalledProcessError as err:
                 logging.exception(f'Something went wrong running solver {self.solver_name}')
-                print("Error occured:",err)
+                print("\nError occured:",err)
                 results[instance_name] = {'timed_out':False,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode}
             if save_db:
                 data = results[instance_name]
@@ -191,11 +207,6 @@ class Solver(Base):
                 session.commit()
                 del data
                 del results[instance_name]
-            # else:
-            #     print("")
-            #     print( re.sub("\s+", "",
-            #                        result.stdout.decode("utf-8")))
-            #     print("--------------------------------")
             if update_status:
                 Status.increment_instances_counter(task.symbol, self.solver_id)
         return results

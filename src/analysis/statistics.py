@@ -1,8 +1,13 @@
 """Statistics module"""
 
 
+from posixpath import join
 import pandas as pd
 from sqlalchemy.sql import functions
+from src.utils.utils import dispatch_on_value
+from src.reporting import pretty_latex_table
+import os
+import json
 
 
 
@@ -51,14 +56,16 @@ def get_task_summary(df: pd.DataFrame, summary_dict):
     stats_summary = dispatch_function(df,functions_to_call)
     summary_dict[benchmark][task] = {'summary': stats_summary, 'solver': stats_solver}
 
-
-def get_experiment_summary_as_string(df: pd.DataFrame) -> str:
+def get_experiment_info(df:pd.DataFrame)->str:
     tag = df.tag.iloc[0]
     tasks_str = ",".join(list(df.task.unique()))
     solvers_str = ",".join(list(df.solver_full_name.unique()))
     benchmarks_str = ",".join(list(df.benchmark_name.unique()))
     unique_instances_str = len(list(df.instance.unique()))
-    final_string =f'+++++SUMMARY+++++\nTag: {tag}\nBenchmarks: {benchmarks_str}\n#Unique Instances: {unique_instances_str}\nTasks: {tasks_str}\nSolvers: {solvers_str}\n\n'
+    return f'+++++SUMMARY+++++\nTag: {tag}\nBenchmarks: {benchmarks_str}\n#Unique Instances: {unique_instances_str}\nTasks: {tasks_str}\nSolvers: {solvers_str}\n\n'
+
+def get_experiment_summary_as_string(df: pd.DataFrame) -> str:
+    final_string = get_experiment_info(df)
     summary_dict = dict()
     for benchmark in list(df.benchmark_name.unique()):
         summary_dict[benchmark] = dict()
@@ -144,9 +151,9 @@ def dispatch_function(df,functions,par_penalty=10):
                     'std': std_runtimes(df),
                     f'PAR{par_penalty}': penalised_average_runtime(df,par_penalty),
                     'coverage': coverage(df),
-                    'num_timed_out': sum_timed_out(df),
-                    'num_exit_with_error': sum_exit_with_error(df),
-                    'num_solved': num_solved(df)
+                    'timeouts': sum_timed_out(df),
+                    'errors': sum_exit_with_error(df),
+                    'solved': num_solved(df)
     }
     functions_to_call = {key: dispatch_map[key] for key in functions}
     info = get_info_as_strings(df)
@@ -166,6 +173,13 @@ def merge_dataframes(data_frames, on):
     df = data_frames[0]
     for df_ in data_frames[1:]:
         df = df.merge(df_, on=on)
+    return df
+
+def create_and_append_vbs(df: pd.DataFrame, vbs_grouping: list,vbs_id=None):
+    if not vbs_id:
+        vbs_id = -1
+    vbs_df = df.groupby(vbs_grouping,as_index=False).apply(lambda df: create_vbs(df,vbs_id))
+    df = df.append(vbs_df)
     return df
 
 def create_vbs(df,vbs_id):
@@ -190,37 +204,42 @@ def create_vbs(df,vbs_id):
 
     return row
 
-# def calculate_iccma_scores(df: pd.DataFrame, grouping: list) -> pd.DataFrame:
-#     """[summary]
+@dispatch_on_value
+def export(export_format: str,df, save_to, calculated,par):
+    print(f"Export format {export_format} not supported.")
 
-#     Args:
-#         df (pd.DataFrame): [description]
-#         grouping (list): [description]
+@export.register('csv')
+def _export_csv(export_format, df, save_to, calculated, par):
+    filename = f'{df.task.iloc[0]}_{df.benchmark.iloc[0]}_{df.tag.iloc[0]}.csv'
+    save_path = os.path.join(save_to,filename)
 
-#     Returns:
-#         pd.DataFrame: [description]
-#     """
-#     return (df
-#             .groupby(grouping,as_index=False)
-#             .apply(lambda group: calculate_iccma_score(group))
-#             )
-# def calculate_iccma_score(df: pd.DataFrame)-> pd.Series:
-#     """[summary]
+    with open(save_path,'w') as csv_file:
+        csv_file.write(df.to_csv(index=False))
 
-#     Args:
-#         df (pd.DataFrame): [description]
+@export.register('json')
+def _export_json(export_format, df, save_to, calculated, par):
+    filename = f'{df.task.iloc[0]}_{df.benchmark.iloc[0]}_{df.tag.iloc[0]}.json'
+    save_path = os.path.join(save_to,filename)
 
-#     Returns:
-#         : [description]
-#     """
+    with open(save_path,'w', encoding='utf-8') as json_file:
+        df.to_json(json_file)
 
-#     info = get_info_as_strings(df)
-#     iccma_score = df[(df['timed_out'] == False)
-#                 & (df['exit_with_error'] == False) & (df.validated == True) & (df.correct_solved == True)].shape[0]
-#     print(df['solver_full_name'].iloc[0],iccma_score)
-#     info['iccma_score'] = iccma_score
-#     return pd.Series(info)
-
-
-
-
+@export.register('latex')
+def _export_latex(export_format, df, save_to, calculated, par):
+    posible_columns = ['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors']
+    column_mapping = {'solved':'#solved','coverage':'coverage(%)','timeouts':'#timeouts','errors':'#errors'}
+    max_bold = set(['solved','coverage','min'])
+    min_bold = set(['mean', 'sum', 'max',f'PAR{par}','timeouts','errors'])
+    calculated_str = ', '.join(calculated).capitalize()
+    caption = f'{calculated_str} values for task {df.task.iloc[0]} on {df.benchmark.iloc[0]} benchmark. Best results in bold.'
+    label = f'{df.tag.iloc[0]}_tbl'
+    filename = f'{df.task.iloc[0]}_{df.benchmark.iloc[0]}_{df.tag.iloc[0]}.tex'
+    pretty_latex_table.generate_table(df[['solver']  + calculated].round(2),
+                                      save_to,
+                                      max_bold=list(set.intersection(set(calculated),max_bold)),
+                                      min_bold=list(set.intersection(set(calculated),min_bold)),
+                                      caption=caption,
+                                      label=label,
+                                      filename=filename,
+                                      column_name_map=column_mapping
+                                      )

@@ -109,6 +109,7 @@ def get_supported_tasks(session):
     supported_tasks = session.query(Task).all()
     symbols = [x.symbol for x in supported_tasks]
     return symbols
+
 def add_task(session,task_symbol):
     new_task = (
         session.query(Task)
@@ -212,6 +213,14 @@ def get_results(session,solver,task, benchmark,tag,filter,only_solved=False,vali
         return result_df[(result_df['timed_out'] == False) & (result_df['exit_with_error'] == False)]
     else:
         return result_df
+
+def get_result_by_tag(session,tag):
+    tag_results = (session.query(Result)
+            .filter(Result.tag ==tag)).all()
+    if tag_results:
+        return tag_results
+    else:
+         raise ValueError(f"Experiment with tag {tag} not found!")
 
 
 

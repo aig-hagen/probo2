@@ -31,7 +31,7 @@ class Benchmark(Base):
     def get_argument_files(self):
         return self.get_instances(self.extension_arg_files)
 
-    def generate_additional_argument_lookup(self, format: str) -> dict():
+    def generate_additional_argument_lookup(self, format: str) -> dict:
         """[summary]
 
         Args:

@@ -39,8 +39,8 @@ def command_required_tag_if_not(require_name):
 
         def invoke(self, ctx):
             last = ctx.params[require_name]
-            if not last:
-                    raise click.BadOptionUsage(f"With option --{require_name}={last} you must specify a value for option --tag.")
+            if not last and not ctx.params['tag']:
+                    raise click.BadOptionUsage(option_name='tag',message=f"With option --{require_name}={last} you must specify a value for option --tag.")
 
             super(CommandOptionRequiredClass, self).invoke(ctx)
 
@@ -180,3 +180,100 @@ def check_problems(ctx, param, value, in_db=True):
 
 def check_ids(ids):
     pass
+
+
+import click.formatting as cl_formmating
+from contextlib import contextmanager
+
+class MyFormatter(cl_formmating.HelpFormatter):
+    def __init__(self, indent_increment=2, width=None, max_width=None):
+        super().__init__(indent_increment=indent_increment, width=width, max_width=max_width)
+
+    def write_usage(self, prog, args="", prefix="*Usage: "):
+        """Writes a usage line into the buffer.
+
+        :param prog: the program name.
+        :param args: whitespace separated list of arguments.
+        :param prefix: the prefix for the first line.
+        """
+        usage_prefix = "{:>{w}}{}*".format(prefix, prog, w=self.current_indent)
+        text_width = self.width - self.current_indent
+
+        if text_width >= (cl_formmating.term_len(usage_prefix) + 20):
+            # The arguments will fit to the right of the prefix.
+            indent = " " * cl_formmating.term_len(usage_prefix)
+            self.write(
+                cl_formmating.wrap_text(
+                    args,
+                    text_width,
+                    initial_indent=usage_prefix,
+                    subsequent_indent=indent,
+                )
+            )
+        else:
+            # The prefix is too long, put the arguments on the next line.
+            self.write(usage_prefix)
+            self.write("\n")
+            indent = " " * (max(self.current_indent, cl_formmating(prefix)) + 4)
+            self.write(
+                cl_formmating.wrap_text(
+                    args, text_width, initial_indent=indent, subsequent_indent=indent
+                )
+            )
+
+        self.write("\n")
+
+    def write_text(self, text):
+        """Writes re-indented text into the buffer.  This rewraps and
+        preserves paragraphs.
+        """
+        text_width = max(self.width - self.current_indent, 11)
+        indent = " " * self.current_indent
+        self.write(
+            cl_formmating.wrap_text(
+                f'{text}',
+                text_width,
+                initial_indent=indent,
+                subsequent_indent=indent,
+                preserve_paragraphs=True,
+            )
+        )
+        self.write("\n")
+    def write_dl(self, rows, col_max=30, col_spacing=2):
+        """Writes a definition list into the buffer.  This is how options
+        and commands are usually formatted.
+
+        :param rows: a list of two item tuples for the terms and values.
+        :param col_max: the maximum width of the first column.
+        :param col_spacing: the number of spaces between the first and
+                            second column.
+        """
+        rows = list(rows)
+        widths = cl_formmating.measure_table(rows)
+        if len(widths) != 2:
+            raise TypeError("Expected two columns for definition list")
+
+        for first, second in cl_formmating.iter_rows(rows, len(widths)):
+
+            self.write("{:>}{}".format("",f'+ *{first}*\n\n'))
+            if not second:
+                self.write("\n")
+                continue
+            else:
+                self.write(f'    {second}\n')
+
+    @contextmanager
+    def section(self, name):
+        """Helpful context manager that writes a paragraph, a heading,
+        and the indents.
+
+        :param name: the section name that is written as heading.
+        """
+        self.write_paragraph()
+        self.write_heading(f'**{name}**')
+        self.indent()
+        try:
+            yield
+        finally:
+            self.dedent()
+

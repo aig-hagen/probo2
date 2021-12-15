@@ -2,6 +2,8 @@ import click
 import json
 import os
 import sys
+from click.decorators import command
+import pandas as pd
 import shutil
 import tabulate
 import hashlib
@@ -14,10 +16,13 @@ from jinja2 import Environment, FileSystemLoader
 from src.utils import utils
 from tabulate import tabulate
 from src.utils import definitions
-
+import timeit
 import logging
+from itertools import chain
+from glob import glob
 
-logging.basicConfig(filename=definitions.LOG_FILE_PATH,format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.INFO)
+from random import choice
+
 
 from src.reporting.validation_report import Validation_Report
 
@@ -35,6 +40,7 @@ from src.database_models.Solver import Solver
 from src.utils.Notification import Notification
 
 
+logging.basicConfig(filename=definitions.LOG_FILE_PATH,format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.INFO)
 #TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks und solvers überarbeiten, Logging system,
 
 
@@ -61,7 +67,7 @@ def cli():
               "-f",
               type=click.Choice(['apx', 'tgf'], case_sensitive=False),
               required=False,
-              help="Supported format")
+              help="Supported format of solver.")
 @click.option('--tasks',
               "-t",
               required=False,
@@ -72,14 +78,15 @@ def cli():
               "-v",
               type=click.types.STRING,
               required=True,
-              help="Version of solver")
+              help="Version of solver.")
 @click.option(
     "--guess","-g",
     is_flag=True,
-    help="Pull supported file format and computational problems from solver")
+    help="Pull supported file format and computational problems from solver.")
 def add_solver(name, path, format, tasks, version, guess):
     """ Adds a solver to the database.
     Adding has to be confirmed by user.
+    \f
       Args:
           tasks: Supported tasks
           guess: Pull supported file format and computational problems from solver.
@@ -107,13 +114,10 @@ def add_solver(name, path, format, tasks, version, guess):
             print(e)
             exit()
     new_solver.solver_format = format
+    is_working = new_solver.check_interface(choice(tasks))
+    if not is_working:
+        exit()
 
-    # print("Testing solver...", end='')
-    # if not new_solver.check_solver(tasks):
-    #     print("failed.")
-    #     click.confirm("Continue?", abort=True)
-    # else:
-    #     print("success.")
     try:
         new_solver_id = DatabaseHandler.add_solver(session, new_solver, tasks)
         new_solver.print_summary()
@@ -167,7 +171,7 @@ def add_solver(name, path, format, tasks, version, guess):
     "-ext",
     type=click.types.STRING,
     default='arg',
-    help="Extension of additional argument parameter for DC/DS problems")
+    help="Extension of additional argument parameter for DC/DS problems.")
 @click.option("--no_check",
               is_flag=True,
               help="Checks if the benchmark is complete.")
@@ -184,7 +188,10 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
                   extension_arg_files, no_check, generate,
                   random_arguments):
     """ Adds a benchmark to the database.
-     Adding has to be confirmed by user.
+     Before a benchmark is added to the database, it is checked if each instance is present in all specified file formats.
+     Missing instances can be generated after the completion test (user has to confirm generation) or beforehand via the --generate/-g option.
+     It is also possilbe to generate random argument files for the DC/DS problems with the --random_arguments/-rnd option.
+     \f
        Args:
            name: Name of the Solver as string.
            path: Full path to instances.
@@ -355,7 +362,7 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
 
     logging.info(f"Stared to run Experiment {tag}")
     utils.run_experiment(run_parameter)
-    logging.info(f"Finisched to run Experiment {tag}")
+    logging.info(f"Finished to run Experiment {tag}")
     df = stats.prepare_data(
         DatabaseHandler.get_results(session, [], [], [], [tag],
                                     None))
@@ -396,10 +403,10 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
               cls=CustomClickOptions.StringAsOption,
               default=[],
               help="Comma-separated list of solver ids")
-@click.option("--filter",
-              "-f",
-              cls=CustomClickOptions.FilterAsDictionary,
-              multiple=True)
+# #@click.option("--filter",
+#               "-f",
+#               cls=CustomClickOptions.FilterAsDictionary,
+#               multiple=True)
 @click.option("--task",
               "-t",
               required=False,
@@ -423,13 +430,13 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
               cls=CustomClickOptions.StringAsOption,
               default=[])
 @click.option("--vbs", is_flag=True, help="Create virtual best solver")
-@click.option("--save_to", "-st", help="Directory to store tables")
-@click.option("--export","-e",type=click.Choice(["html","latex","png","jpeg","svg",'csv']),default=None,multiple=True)
-@click.option("--css",default="styled-table.css",help="CSS file for table style.")
-@click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','num_timed_out','all']),multiple=True)
+@click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
+@click.option("--export","-e",type=click.Choice(['latex','csv','json']),default=None,multiple=True)
+#@click.option("--css",default="styled-table.css",help="CSS file for table style.")
+@click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors','all']),multiple=True)
 @click.option("--last", "-l",is_flag=True,help="Calculate stats for the last finished experiment.")
 def calculate(par, solver, task, benchmark,
-              tag, filter, combine, vbs, css, export, save_to, statistics,print_format,last):
+              tag,combine, vbs, export, save_to, statistics,print_format,last):
 
     if last:
         tag.append(utils.get_from_last_experiment("Tag"))
@@ -445,7 +452,7 @@ def calculate(par, solver, task, benchmark,
         grouping = [x for x in grouping if x not in combine]
 
     if 'all' in statistics:
-        functions_to_call = ['mean','sum','min','max','median','var','std','coverage','num_timed_out']
+        functions_to_call = ['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors']
     else:
         functions_to_call = list(statistics)
 
@@ -477,8 +484,11 @@ def calculate(par, solver, task, benchmark,
     utils.print_df(stats_df,['tag','benchmark','task'],headers=print_headers,format=print_format)
 
     if export:
-        export_columns.extend(functions_to_call)
-        utils.export(stats_df,export,save_to=save_to,columns=export_columns,css_file=css)
+        for export_format in list(export):
+            stats_df.groupby(['tag','benchmark','task']).apply(lambda df_: stats.export(export_format,df_,save_to, functions_to_call,par))
+
+
+
 
 
 @click.command(cls=CustomClickOptions.command_required_tag_if_not('last'))
@@ -487,13 +497,13 @@ def calculate(par, solver, task, benchmark,
 @click.option("--task",
               required=False,
               callback=CustomClickOptions.check_problems,
-              help="Computational problems")
-@click.option("--benchmark", cls=CustomClickOptions.StringAsOption, default=[])
+              help="Comma-separated list of task IDs or symbols to be selected.")
+@click.option("--benchmark", cls=CustomClickOptions.StringAsOption, default=[],help="Comma-separated list of task IDs or symbols to be selected.")
 @click.option("--solver",
               "-s",
               cls=CustomClickOptions.StringAsOption,
               default=[],
-              help="Comma-separated list of solver ids")
+              help="Comma-separated list of solver IDs or names to be selected.")
 @click.option("--filter",
               "-f",
               cls=CustomClickOptions.FilterAsDictionary,
@@ -504,47 +514,65 @@ def calculate(par, solver, task, benchmark,
     "-st",
     type=click.Path(exists=True, resolve_path=True),
     help="Directory to store plots in. Filenames will be generated automatically.")
-@click.option("--vbs", is_flag=True, help="Create virtual best solver")
-@click.option("--x_max", "-xm", type=click.types.INT)
-@click.option("--y_max", "-ym", type=click.types.INT)
-@click.option("--alpha",
-              "-a",
-              type=click.FloatRange(0, 1),
-              help="Alpha value (only for scatter plots)")
+@click.option("--vbs", is_flag=True, help="Create virtual best solver.")
+#@click.option("--x_max", "-xm", type=click.types.INT)
+#@click.option("--y_max", "-ym", type=click.types.INT)
+#@click.option("--alpha",
+            #   "-a",
+            #   type=click.FloatRange(0, 1),
+            #   help="Alpha value (only for scatter plots)")
 @click.option("--backend",
               "-b",
               type=click.Choice(['pdf', 'pgf', 'png', 'ps', 'svg']),
               default='png',
               help="Backend to use")
-@click.option("--no_grid", "-ng", is_flag=True, help="Do not show a grid.")
-@click.option("--grid_plot",is_flag=True)
+# @click.option("--no_grid", "-ng", is_flag=True, help="Do not show a grid.")
+# @click.option("--grid_plot",is_flag=True)
 @click.option("--combine",
               "-c",
-              cls=CustomClickOptions.StringAsOption,
-              default=[])
-@click.option("--kind",'-k',type=click.Choice(['cactus','count','dist','scatter','pie','box','all']),multiple=True)
-@click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files")
-@click.option("--send", "-s", required=False, help="Send plots via E-Mail")
+              type=click.Choice(['tag','task_id','benchmark_id']),help='Combine results on specified key.')
+@click.option("--kind",'-k',type=click.Choice(['cactus','count','dist','pie','box','all']),multiple=True)
+@click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
+@click.option("--send", "-s", required=False, help="Send plots via E-Mail.")
 @click.option("--last", "-l",is_flag=True,help="Plot results for the last finished experiment.")
-def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
-         x_max, y_max, alpha, backend, no_grid,grid_plot, combine, kind, compress, send, last):
+def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs, backend,combine, kind, compress, send, last):
+    """Create plots of experiment results.
+
+    The --tag option is used to specify which experiment the plots should be created for.
+    With the options --solver, --task and --benchmark you can further restrict this selection.
+    If only a tag is given, a plot is automatically created for each task and benchmark of this experiment.
+    With the option --kind you determine what kind of plot should be created.
+    It is also possible to combine the results of different experiments, benchmarks and tasks with the --combine option.
+
+    \f
+
+
+    Args:
+        ctx ([type]): [description]
+        tag ([type]): [description]
+        task ([type]): [description]
+        benchmark ([type]): [description]
+        solver ([type]): [description]
+        save_to ([type]): [description]
+        filter ([type]): [description]
+        vbs ([type]): [description]
+        backend ([type]): [description]
+        combine ([type]): [description]
+        kind ([type]): [description]
+        compress ([type]): [description]
+        send ([type]): [description]
+        last ([type]): [description]
+    """
     if not save_to:
         save_to = os.getcwd()
     if last:
         tag.append(utils.get_from_last_experiment("Tag"))
 
-    ref = definitions.PLOT_JSON_DEFAULTS
-    with ref.open('rb') as fp:
-        options =json.load(fp)['settings']
-        options['def_path'] = ref
-
-    for key, value in ctx.params.items():
-        if value is not None:
-            options[key] = value
+    default_options = pl_util.read_default_options(definitions.PLOT_JSON_DEFAULTS)
+    pl_util.set_user_options(ctx, default_options)
 
     if 'all' in kind:
         kind = ['cactus','count','dist','scatter','pie','box']
-
 
     grouping = ['tag', 'task_id', 'benchmark_id', 'solver_id']
     if combine:
@@ -560,31 +588,35 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs,
                                         tag,
                                         filter,
                                         only_solved=False)
-    df = stats.prepare_data(og_df)
 
+    df = stats.prepare_data(og_df)
     if vbs:
         grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
-        vbs_id = -1
-        vbs_df = df.groupby(grouping_vbs,as_index=False).apply(lambda df: stats.create_vbs(df,vbs_id))
-        df = df.append(vbs_df)
+        stats.create_and_append_vbs(df, grouping_vbs)
+    saved_files = []
+
 
     for plot_kind in list(kind):
-        saved_files = pl_util.create_plots(plot_kind,df,save_to,options, grouping)
+        saved_files.append(pl_util.create_plots(plot_kind, df, save_to, default_options, grouping))
 
-    saved_files_list = saved_files.to_frame().reset_index().rename(columns={0:'saved_files'})['saved_files'].to_list()
-    saved_files_list = [f'{x}.png' for x in saved_files_list]
+    saved_files_df = pd.concat(saved_files).to_frame().rename(columns={0:'saved_files'})
+
+    saved_files_paths = [f'{x}.{backend}' for x in saved_files_df.saved_files.to_list()]
+
+
 
     if compress:
-        directory_save_path = utils.compress_directory(save_to, save_to,compress)
+        archive_name = "_".join(tag)
 
+        archive_save_path = pl_util.create_archive_from_plots(save_to,archive_name,saved_files_paths,compress)
 
     if send:
         id_code = int(hashlib.sha256(save_to.encode('utf-8')).hexdigest(), 16) % 10**8
         email_notification = Notification(send,subject="Hi, there. I have your files for you.",message=f"Enclosed you will find your files.",id=id_code)
         if compress:
-            email_notification.attach_file(f'{directory_save_path}.{compress}')
+            email_notification.attach_file(f'{archive_save_path}.{compress}')
         else:
-            email_notification.attach_mutiple_files(saved_files_list)
+            email_notification.attach_mutiple_files(saved_files_paths)
         email_notification.send()
         print(f"\n{email_notification.foot}\nYour e-mail identification code: {id_code}")
 
@@ -692,7 +724,8 @@ def solvers(verbose,id):
               cls=CustomClickOptions.StringAsOption,
               default=[])
 @click.option("--verbose", "-v", is_flag=True, default=False, required=False)
-def results(verbose, solver, task, benchmark, tag, filter):
+@click.option("--only_tags",is_flag=True)
+def results(verbose, solver, task, benchmark, tag, filter,only_tags):
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
     result_df = DatabaseHandler.get_results(session,
@@ -702,7 +735,8 @@ def results(verbose, solver, task, benchmark, tag, filter):
                                             tag,
                                             filter,
                                             only_solved=False)
-    print(result_df)
+    if only_tags:
+        print(",".join(list(result_df.tag.unique())))
 
 
     # results = session.query(Result).all()
@@ -792,6 +826,7 @@ def export(save_to, solver, filter, problem, benchmark, tag, task, format,
                                             filter,
                                             only_solved=only_solved)
 
+
     if include_column:
         colums_to_export.extend(include_column)
     if exclude_column:
@@ -849,9 +884,8 @@ def status():
               help="Filter results in database. Format: [column:value]")
 @click.option("--reference",
               "-r",
-              cls=CustomClickOptions.StringAsOption,
-              default=[],
-              help="Comma separted list of path to reference files.")
+              type=click.Path(resolve_path=True,exists=True),
+              help="Path to reference files.")
 @click.option("--update_db", is_flag=True)
 @click.option("--pairwise", "-pw", is_flag=True)
 @click.option('--export',
@@ -867,8 +901,7 @@ def status():
     help=
     "Directory to store plots in. Filenames will be generated automatically.")
 
-@click.option('--extension','-ext',required=True,help="Reference file extension")
-
+@click.option('--extension','-ext',multiple=True, help="Reference file extension")
 def validate(tag, task, benchmark, solver, filter, reference, pairwise,
              save_to, export, update_db,extension):
     engine = DatabaseHandler.get_engine()
@@ -882,37 +915,47 @@ def validate(tag, task, benchmark, solver, filter, reference, pairwise,
                                         only_solved=True)
     result_df = validation.prepare_data(og_df)
     if pairwise:
-        validation.validate_pairwise(result_df, save_to=save_to, export=export)
+        #validation.validate_pairwise(result_df, save_to=save_to, export=export)
+        starttime = timeit.default_timer()
+        validation._validate_pairwise(result_df)
+        print( timeit.default_timer() - starttime)
     else:
+        unique_tasks = list(result_df.task.unique())
 
-        unique_benchmark_ids = sorted(result_df['benchmark_id'].unique())
+        # Replace SE with EE for reference as SE problems are not unique
+        for i,t in enumerate(unique_tasks):
+            if 'SE' in t:
+                unique_tasks[i] = unique_tasks[i].replace('SE','EE')
 
-        references = dict(zip(unique_benchmark_ids, reference))
-
-        val = validation.validate(result_df, references)
-
-
-
-
-
-
-        num_correct = val[val.correct == 'correct']['correct'].count()
-
-        num_incorrect = val[val.correct == 'incorrect']['correct'].count()
-        num_no_reference = val[val.correct == 'no_reference']['correct'].count()
-        total = val['instance'].count()
-        percentage_validated = (total - num_no_reference) / total * 100
-
-        print("**********Summary**********")
-        print(f'Total instances: {total}')
-        print(f'Correct instances: {num_correct}')
-        print(f'Incorrect instances: {num_incorrect}')
-        print(f'No reference: {num_no_reference}')
-        print(f'Percentage valdated: {percentage_validated}')
-        print("")
-
-        analyse = val.groupby(['tag', 'task_id', 'benchmark_id','solver_id'],as_index=False).apply(lambda df: validation.analyse(df) )
+        ref_dict = validation.get_reference(extension, unique_tasks, reference)
+        validation_results = validation.validate(result_df, ref_dict, extension)
+        analyse = validation_results.groupby(['tag', 'task_id', 'benchmark_id','solver_id'],as_index=False).apply(lambda df: validation.analyse(df) )
         print(analyse)
+        validation.test_table_export(analyse,'/mnt/c/Users/jonas/Entwicklung')
+        validation.print_validate_with_reference_results(analyse)
+
+        #print(validation_results.groupby(['tag', 'task_id', 'benchmark_id','solver_id'],as_index=False).apply(lambda df: df[df.no_reference == True][['solver_full_name','task','instance']] ))
+
+
+
+
+        # num_correct = val[val.correct == 'correct']['correct'].count()
+
+        # num_incorrect = val[val.correct == 'incorrect']['correct'].count()
+        # num_no_reference = val[val.correct == 'no_reference']['correct'].count()
+        # total = val['instance'].count()
+        # percentage_validated = (total - num_no_reference) / total * 100
+
+        # print("**********Summary**********")
+        # print(f'Total instances: {total}')
+        # print(f'Correct instances: {num_correct}')
+        # print(f'Incorrect instances: {num_incorrect}')
+        # print(f'No reference: {num_no_reference}')
+        # print(f'Percentage valdated: {percentage_validated}')
+        # print("")
+
+
+        # print(analyse)
 
         #val.groupby(['tag', 'task_id', 'benchmark_id']).apply(lambda df: validation.print_summary(df) )
         # pdf = Validation_Report()
@@ -920,37 +963,37 @@ def validate(tag, task, benchmark, solver, filter, reference, pairwise,
         # pdf.output(os.path.join(save_to,'SalesRepot.pdf'), 'F')
 
 
-        if 'count-plot' in export:
-            validation.count_plot(val,save_to,title="Summary",grid=False)
-            val.groupby(['tag', 'task_id', 'benchmark_id']).apply(lambda df: validation.count_plot(df,save_to))
+        # if 'count-plot' in export:
+        #     validation.count_plot(val,save_to,title="Summary",grid=False)
+        #     val.groupby(['tag', 'task_id', 'benchmark_id']).apply(lambda df: validation.count_plot(df,save_to))
 
 
-            #validation.count_plot(val,save_to,title="Summary-Grid",grid=True)
-        if "pie-chart" in export:
-            validation.pie_chart(analyse,save_to,title="Summary")
-            analyse.groupby(['tag', 'task_id', 'benchmark_id']).apply(lambda df: validation.pie_chart(df,save_to))
+        #     #validation.count_plot(val,save_to,title="Summary-Grid",grid=True)
+        # if "pie-chart" in export:
+        #     validation.pie_chart(analyse,save_to,title="Summary")
+        #     analyse.groupby(['tag', 'task_id', 'benchmark_id']).apply(lambda df: validation.pie_chart(df,save_to))
 
         #validation.export_styled_table(analyse[['solver','task','benchmark_name','correct_solved','incorrect_solved','no_reference','total','percentage_validated']],save_to)
 
 
 
-        og_df.set_index("id", inplace=True)
+        # og_df.set_index("id", inplace=True)
 
-        og_df.correct.update(val.set_index("id").correct)
+        # og_df.correct.update(val.set_index("id").correct)
 
-        og_df.validated.update(val.set_index("id").validated)
+        # og_df.validated.update(val.set_index("id").validated)
 
-        if update_db:
-            result_objs = session.query(Result).filter(
-                Result.tag.in_(tag)).all()
-            id_result_mapping = dict()
-            for res in result_objs:
-                id_result_mapping[res.id] = res
+        # if update_db:
+        #     result_objs = session.query(Result).filter(
+        #         Result.tag.in_(tag)).all()
+        #     id_result_mapping = dict()
+        #     for res in result_objs:
+        #         id_result_mapping[res.id] = res
 
-            og_df.apply(lambda row: validation.update_result_object(
-                id_result_mapping[row.name], row['correct'], row['validated']),
-                        axis=1)
-            session.commit()
+        #     og_df.apply(lambda row: validation.update_result_object(
+        #         id_result_mapping[row.name], row['correct'], row['validated']),
+        #                 axis=1)
+        #     session.commit()
 
 
 
@@ -980,20 +1023,22 @@ import src.analysis.significance_testing as sig
               "-c",
               cls=CustomClickOptions.StringAsOption,
               default=[])
-@click.option("--parametric", type=click.Choice(['ANOVA', 't-test']))
+@click.option("--parametric","-p", type=click.Choice(['ANOVA', 't-test']))
 @click.option("--non_parametric",
               "-np",
               type=click.Choice(['kruskal', 'mann-whitney-u']))
 @click.option("--post_hoc_parametric",
               "-php",
               type=click.Choice(
-                  ['scheffe', 'tamhane', 'ttest', 'tukey', 'tukey_hsd']))
+                  ['scheffe', 'tamhane', 'ttest', 'tukey', 'tukey_hsd']),multiple=True,default=())
 @click.option("--post_hoc_non_parametric",
               "-phn",
               type=click.Choice([
                   'conover', 'dscf', 'mannwhitney', 'nemenyi', 'dunn',
                   'npm_test', 'vanwaerden', 'wilcoxon'
-              ]))
+              ]),multiple=True,default=())
+@click.option("--p_adjust", type=click.Choice(
+                  ['holm']),default='holm')
 @click.option("--alpha", "-a", default=0.05, help="Significance level.")
 @click.option('--export',
               '-e',
@@ -1003,12 +1048,21 @@ import src.analysis.significance_testing as sig
 @click.option(
     "--save_to",
     "-st",
+    type=click.Path(exists=True, resolve_path=True),
     required=False,
     help=
     "Directory to store plots in. Filenames will be generated automatically.")
+@click.option("--equal_sample_size",is_flag=True)
+@click.option("--last", "-l",is_flag=True,help="Test the last finished experiment.")
 def significance(tag, task, benchmark, solver, filter, combine, parametric,
                  non_parametric, post_hoc_parametric, post_hoc_non_parametric,
-                 alpha, export, save_to):
+                 alpha, export, save_to, p_adjust, equal_sample_size, last):
+
+    if not save_to:
+        save_to = os.getcwd()
+    if last:
+        tag.append(utils.get_from_last_experiment("Tag"))
+
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
     og_df = DatabaseHandler.get_results(session,
@@ -1022,112 +1076,35 @@ def significance(tag, task, benchmark, solver, filter, combine, parametric,
 
     grouping = ['tag', 'task_id', 'benchmark_id']
 
-    result_dict = {'parametric': None, 'non_parametric': None}
+    #result_dict = {'parametric': None, 'non_parametric': None}
 
     if combine:
         grouping = [x for x in grouping if x not in combine]
 
-    if parametric:
-        if parametric == 't-test':
-            if len(clean['solver_id'].unique()) > 2:
-                raise click.ClickException(
-                    "Dataset contains more than two samples. Please use option ANOVA for a parametric test of two or more samples."
-                )
-            else:
-                if grouping:
-                    clean.groupby(grouping).apply(
-                        lambda df: sig.student_t_test(df, alpha))
-                else:
-                    sig.student_t_test(clean, alpha)
+    significance_tests = [non_parametric,parametric]
+    significance_tests = [ x for x in significance_tests if x is not None]
 
-        if parametric == 'ANOVA':
-            if grouping:
-                result_parametric = clean.groupby(grouping).apply(
-                    lambda df: sig.anova_oneway_parametric(df,
-                                                           alpha,
-                                                           post_hoc=
-                                                           post_hoc_parametric,
-                                                           p_adjust='holm',
-                                                           export=export,
-                                                           save_to=save_to))
-                result_parametric = result_parametric.reset_index(
-                    name='parametric_result')
+    if significance_tests:
+        sig_results_list = [ clean.groupby(grouping,as_index=False).apply(lambda df_: sig.test(kind_test,df_,equal_sample_size)) for kind_test in significance_tests]
+        sig_results_df = pd.concat(sig_results_list)
+        sig_results_df.apply(lambda row: sig.print_significance_results(alpha,row),axis=1)
 
-            else:
-                sig.anova_oneway_parametric(clean,
-                                            alpha,
-                                            post_hoc=post_hoc_parametric,
-                                            p_adjust='holm',
-                                            export=export,
-                                            save_to=save_to)
 
-        result_dict['parametric'] = result_parametric[
-            'parametric_result'].tolist()
+    post_hocs = list(post_hoc_parametric)
+    post_hocs.extend(list(post_hoc_non_parametric))
+    if post_hocs:
+        ph_results_list = [ (clean.groupby(grouping,as_index=False).apply(lambda df_: sig.test_post_hoc(df_,ph,False,p_adjust))) for ph in post_hocs]
+        ph_res_df = pd.concat(ph_results_list)
+        ph_res_df.apply(lambda row: sig.print_post_hoc_results(row),axis=1)
 
-    if non_parametric:
-        if non_parametric == 'mann-whitney-u':
-            if len(clean['solver_id'].unique()) > 2:
-                raise click.ClickException(
-                    "Dataset contains more than two samples. Please use option kruskal for a non-parametric test of two or more samples."
-                )
-            else:
-                if grouping:
-                    non_parametric_result = clean.groupby(grouping).apply(
-                        lambda df: sig.mann_whitney_u(df, alpha))
-                    non_parametric_result = non_parametric.reset_index(
-                        name='non_parametric_result')
-                else:
-                    sig.mann_whitney_u(clean, alpha)
-        if non_parametric == 'kruskal':
-            if grouping:
-                non_parametric_result = clean.groupby(grouping).apply(
-                    lambda df: sig.kruskal_non_parametric(
-                        df,
-                        alpha,
-                        post_hoc=post_hoc_non_parametric,
-                        p_adjust='holm',
-                        export=export,
-                        save_to=save_to))
 
-                non_parametric_result = non_parametric_result.reset_index(
-                    name='non_parametric_result')
 
-            else:
-                sig.kruskal_non_parametric(clean,
-                                           alpha,
-                                           post_hoc=post_hoc_non_parametric,
-                                           p_adjust='holm',
-                                           export=export,
-                                           save_to=save_to)
-        result_dict['non_parametric'] = non_parametric_result[
-            'non_parametric_result'].tolist()
-    # sig_data = [x['post_hoc_result'] for x in result_dict["non_parametric"]]
-    # test_data = []
-    # data_list = []
-    # for test in sig_data:
-    #     for index, row in test.iterrows():
-    #         for i, value in row.items():
-    #             test_data.append({'x': index, 'y': i, 'value': value})
-    #     data_list.append(json.dumps(test_data))
-    # env = Environment(loader=FileSystemLoader(
-    #     os.path.join(definitions.ROOT_DIR, "src", "html_templates",
-    #                  "reports")))
-    # template = env.get_template('heatmap_template.html')
-    # html = template.render(data_list=data_list)
-    # with open('html_report_jinja.html', 'w') as f:
-    #     f.write(html)
-
-    #sig.print_result_dict(result_dict)
-    # env = Environment(loader=FileSystemLoader(os.path.join(definitions.ROOT_DIR,"src","html_templates","reports")))
-    # template = env.get_template('significance_template.html')
-    # html = template.render(result_dict=result_dict)
-    # with open('html_report_jinja.html', 'w') as f:
-    #     f.write(html)
+    #TODO: Ausgabe für post-hoc und significance test implementieren, Exporting refactoring
 
 
 @click.command()
-@click.option("--id", type=click.types.INT, required=False)
-@click.option("--all", is_flag=True)
+@click.option("--id", type=click.types.INT, required=False,help='ID of solver to delete.')
+@click.option("--all", is_flag=True,help='Delete all solvers in database.')
 def delete_solver(id, all):
     """ Deletes a solver from the database.
     Deleting has to be confirmed by user.
@@ -1165,8 +1142,8 @@ def delete_solver(id, all):
         session.close()
 
 @click.command()
-@click.option("--id", type=click.types.INT, required=False)
-@click.option("--all", is_flag=True)
+@click.option("--id", type=click.types.INT, required=False,help='ID of benchmark to delete.')
+@click.option("--all", is_flag=True, help='Delete all benchmarks in database')
 def delete_benchmark(id, all):
     """ Deletes a benchmark from the database.
     Deleting has to be confirmed by user.
@@ -1265,6 +1242,62 @@ def last():
             print(f'{key}: {str(value)}')
     else:
         print("No experiments finished yet.")
+@click.command()
+@click.option("--tag","-t")
+def experiment_info(tag):
+    engine = DatabaseHandler.get_engine()
+    session = DatabaseHandler.create_session(engine)
+    try:
+        df = stats.prepare_data(DatabaseHandler.get_results(session,[],[],[],[tag],[]))
+    except ValueError as e:
+        print(e)
+    finally:
+        session.close()
+
+    print(stats.get_experiment_info(df))
+
+def recursive_help(cmd,text_dict,parent=None):
+    #print(f'cmd dict: {cmd.__dict__}\n\n')
+
+    ctx = click.core.Context(cmd, info_name=cmd.name, parent=parent)
+    text_dict[cmd.__dict__['name']] =get_help(cmd,ctx)
+    #print(get_help(cmd,ctx))
+
+    click.core.Command.get_help
+    commands = getattr(cmd, 'commands', {})
+    for sub in commands.values():
+        recursive_help(sub,text_dict,ctx)
+
+
+
+@click.command()
+def dumphelp_markdown():
+    text_dict = {}
+    with open("dump_help.txt",'a') as fp:
+        recursive_help(cli,text_dict)
+    #1.[Setup](#setup)
+    table_of_contents_commands = ''
+    for i,command in enumerate(text_dict):
+        table_of_contents_commands += f'+ [{command}](#{command.lower()})\n'
+
+    combined_help_text = ""
+    for command, help_text in text_dict.items():
+        combined_help_text += (f'### {command}\n{help_text}\n')
+
+    final = (table_of_contents_commands + combined_help_text).replace('cli','probo2').replace('INTEGER','').replace('TEXT','')
+    print(final)
+
+
+def get_help(cmd,ctx):
+
+    formatter =  CustomClickOptions.MyFormatter(
+            width=ctx.terminal_width, max_width=ctx.max_content_width)
+    cmd.format_help(ctx, formatter)
+    return formatter.getvalue().rstrip("\n")
+
+
+cli.add_command(dumphelp_markdown)
+cli.add_command(experiment_info)
 cli.add_command(last)
 cli.add_command(delete_benchmark)
 cli.add_command(update_db)

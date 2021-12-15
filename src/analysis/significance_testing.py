@@ -6,48 +6,8 @@ import pandas as pd
 import scikit_posthocs as sp
 import scipy.stats as ss
 import seaborn as sns
-
-
-def print_result_dict(result_dict: dict)-> None:
-    """[summary]
-
-    Args:
-        result_dict (dict): [description]
-    """
-    parametric = result_dict['parametric']
-    non_parametric = result_dict['non_parametric']
-    if parametric:
-        print("**********PARAMETRIC TESTS RESULTS**********")
-        result_print(parametric)
-    if non_parametric:
-        print("**********NON-PARAMETRIC TESTS RESULTS**********")
-        result_print(non_parametric)
-
-
-def result_print(parametric):
-    for res in parametric:
-       res_info = res['info']
-       tag = ', '.join(res_info['tag'])
-       task = ', '.join(res_info['task'])
-       bench = ', '.join(res_info['benchmark_name'])
-       solv = ', '.join(res_info['solver'])
-       num_solved_by_all = res_info['num_solved_intersection']
-       test = res['Test']
-       p_value = res['p-value']
-       stat = res['stat']
-       alpha = res['alpha']
-       print(f'Tag: {tag}\nTask: {task}\nBenchmark: {bench}\nSolver: {solv}\n#Solved by all: {num_solved_by_all}\nTest: {test}\nP-value: {p_value}\nStat:{stat}\nAlpha: {alpha}\n')
-       print_result(alpha,stat,p_value)
-       if res['Post-hoc']:
-           ph = res['Post-hoc']
-           p_adjust = res['p-adjust']
-
-           print(f'Post-hoc: {ph}\nP-adjust: {p_adjust}\n')
-           print('Result:\n')
-           print(res['post_hoc_result'])
-           print("")
-       print("------------------------------------------------------------------------------------------------")
-
+from src.utils.utils import dispatch_on_value
+import click
 
 def create_report(result_dict: dict):
     pass
@@ -77,6 +37,127 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
         'runtime': 'float32'
     }))
 
+def _interpretation_of_result(alpha,p_value):
+    if p_value <= alpha:
+        return f'Reject null hypothesis at significance level {alpha=}'
+    if p_value > alpha:
+        return f'Fail to reject null hypothesis at significance level {alpha=}'
+
+def _get_experiment_summary(row: pd.Series) -> str:
+    return (f'Tag: {", ".join(row.tag)}\n'
+            f'Benchmark: {", ".join(row.benchmark_name)}\n'
+            f'Task: {", ".join(row.task)}\n'
+            f'Solver: {", ".join(row.solver)}\n'
+            f'Test: {(row.kind)}\n'
+            )
+
+def print_significance_results(alpha, row):
+    experiment_summary= _get_experiment_summary(row)
+    stat = row.stat
+    p = row.p_value
+    test_statistics=f'{stat=} {p=}'
+    result_interpretation = _interpretation_of_result(alpha,p)
+    print("------------------------------------------------------------------------------")
+    print(f'{experiment_summary}\n{test_statistics}\n{result_interpretation}\n')
+    print("------------------------------------------------------------------------------")
+
+def print_post_hoc_results(row: pd.Series):
+    experiment_summary= _get_experiment_summary(row)
+    ph_result = row.result
+    print("------------------------------------------------------------------------------")
+    print(f'{experiment_summary}\n{ph_result}\n')
+    print("------------------------------------------------------------------------------")
+
+
+def test(kind_test, df: pd.DataFrame, equal_sample_size: bool)->pd.Series:
+    info = get_unique_experiment_infos(df)
+
+    if kind_test=='t-test' and len(info['solver']) > 2:
+        raise click.ClickException(
+                    "Dataset contains more than two samples. Please use option ANOVA for a parametric test of two or more samples."
+                )
+    if kind_test=='mann-whitney-u' and len(info['solver']) > 2:
+                raise click.ClickException(
+                    "Dataset contains more than two samples. Please use option kruskal for a non-parametric test of two or more samples."
+                )
+
+    runtimes,num_solved_intersection = extract_runtimes(df,equal_sample_size=equal_sample_size)
+    stat, p_value = test_significance(kind_test, runtimes)
+    info['num_solved_intersection'] = num_solved_intersection
+    info.update({'stat': stat,'p_value': p_value,'kind':kind_test})
+    return pd.Series(info)
+
+@dispatch_on_value
+def test_significance(kind_test, runtimes):
+    print(f"Test {kind_test} not supported.")
+
+@test_significance.register('ANOVA')
+def _anova_oneway_parametric(kind_test: str, runtimes)->tuple:
+    stat, p_value = ss.f_oneway(*runtimes)
+    return stat,p_value
+
+@test_significance.register('kruskal')
+def _kruskal_non_parametric(kind_test: str, runtimes)->tuple:
+    stat, p_value = ss.kruskal(*runtimes)
+    return stat,p_value
+
+@test_significance.register('mann-whitney-u')
+def _mann_whitney_u(kind_test, runtimes) -> tuple:
+    """[summary]
+
+    Args:
+        df ([type]): [description]
+        alpha ([type]): [description]
+    """
+    stat, p_value = ss.mannwhitneyu(*runtimes)
+    return stat, p_value
+
+@test_significance.register('t-test')
+def _student_t_test(kind_test, runtimes) -> tuple:
+    """[summary]
+
+    Args:
+        df (pd.DataFrame): [description]
+        alpha (float): [description]
+    """
+    stat, p_value = ss.ttest_ind(*runtimes)
+    return stat, p_value
+
+def test_post_hoc(df: pd.DataFrame,post_hoc: str, equal_sample_size: bool, p_adjust=None)->dict:
+    if not p_adjust:
+        p_adjust = 'holm'
+    info = get_unique_experiment_infos(df)
+
+    if equal_sample_size:
+        intersection_instances = get_intersection_of_solved_instances(df)
+        result_post_hoc = _post_hoc_test(df[df.instance.isin(intersection_instances)], post_hoc, p_adjust)
+    else:
+        result_post_hoc = _post_hoc_test(df, post_hoc, p_adjust)
+
+
+    info.update({'kind':post_hoc,'p_adjust':p_adjust,'result': result_post_hoc})
+    return pd.Series(info)
+
+def _post_hoc_test(df : pd.DataFrame, post_hoc: str, p_adjust: str)->pd.DataFrame:
+    """[summary]
+
+    Args:
+        df (pd.DataFrame): [description]
+        post_hoc (str): [description]
+        p_adjust (str): [description]
+
+    Returns:
+        pd.DataFrame: [description]
+    """
+    result = getattr(sp,
+                         "posthoc_" + post_hoc)(df,
+                                                val_col='runtime',
+                                                group_col='solver_full_name',
+                                                p_adjust=p_adjust)
+
+    result = result.sort_index()[sorted(result.columns)]
+    return result
+
 
 def get_intersection_of_solved_instances(df: pd.DataFrame)-> list:
     """[summary]
@@ -92,7 +173,7 @@ def get_intersection_of_solved_instances(df: pd.DataFrame)-> list:
         set_list.append(set(group['instance'].unique()))
     return list(set.intersection(*set_list))
 
-def extract_runtimes(df: pd.DataFrame,intersection_solved_instances=True) -> list:
+def extract_runtimes(df: pd.DataFrame,equal_sample_size=None) -> list:
     """[summary]
 
     Args:
@@ -101,9 +182,11 @@ def extract_runtimes(df: pd.DataFrame,intersection_solved_instances=True) -> lis
     Returns:
         list: [description]
     """
+    if equal_sample_size is None:
+        equal_sample_size = True
     unique_solver_ids = sorted(df['solver_id'].unique())
     run_times = []
-    if intersection_solved_instances:
+    if equal_sample_size:
         instances = get_intersection_of_solved_instances(df)
         for u_id in unique_solver_ids:
             run_times.append((df[(df.solver_id == u_id) &
@@ -115,66 +198,13 @@ def extract_runtimes(df: pd.DataFrame,intersection_solved_instances=True) -> lis
             run_times.append(df[df.solver_id == u_id].runtime.values)
         return run_times,len(list(df['instance'].unique()))
 
-
-
-def print_info(df, test, alpha):
-    """[summary]
-
-    Args:
-        df ([type]): [description]
-        test ([type]): [description]
-        alpha ([type]): [description]
-    """
-    info = get_unique_experiment_infos(df)
-    print("----------{}----------".format(test))
-    print("Significance level:", alpha)
-    print("Tag:", ", ".join(info['tag']))
-    print("Benchmark:", ", ".join(info['benchmark_name']))
-    print("Task:", ", ".join(info['task']))
-    print("Solver:", ", ".join(info['solver']))
-
 def get_unique_experiment_infos(df):
+
     unique_tags = list(df['tag'].unique())
     unique_benchmarks = list(df['benchmark_name'].unique())
     unique_tasks = list(df['task'].unique())
     unique_solver_names = list(df['solver_full_name'].unique())
     return {'tag':unique_tags, 'benchmark_name':unique_benchmarks,'task':unique_tasks,'solver': unique_solver_names}
-
-
-def student_t_test(df: pd.DataFrame, alpha: float):
-    """[summary]
-
-    Args:
-        df (pd.DataFrame): [description]
-        alpha (float): [description]
-    """
-    runtimes = extract_runtimes(df)
-    stat, p_value = ss.ttest_ind(*runtimes)
-    print_info(df, "Student’s t-test", alpha)
-    print("")
-    print('stat=%.3f, p=%.3f' % (stat, p_value))
-    if p_value > alpha:
-        print('Probably the same distribution')
-    else:
-        print('Probably different distributions')
-    print("")
-
-
-def mann_whitney_u(df, alpha):
-    """[summary]
-
-    Args:
-        df ([type]): [description]
-        alpha ([type]): [description]
-    """
-    runtimes = extract_runtimes(df)
-    stat, p_value = ss.mannwhitneyu(*runtimes)
-    print_info(df, "Mann-Whitney U Test", alpha)
-
-    print("")
-    print_result(alpha, stat, p_value)
-    print("")
-
 
 def plot_heatmap(df: pd.DataFrame,
                  save_to: str,
@@ -265,106 +295,6 @@ def export_result(result: pd.DataFrame, formats: list, save_to: str) -> None:
                 "to_" + export_format)("{}.{}".format(save_to, export_format))
 
 
-def kruskal_non_parametric(df: pd.DataFrame,
-                           alpha: float,
-                           post_hoc=None,
-                           p_adjust=None,
-                           export=None,
-                           save_to=None):
-    """[summary]
-
-    Args:
-        df (pd.DataFrame): [description]
-        alpha (float): [description]
-        post_hoc ([type], optional): [description]. Defaults to None.
-        p_adjust ([type], optional): [description]. Defaults to None.
-        export ([type], optional): [description]. Defaults to None.
-        save_to ([type], optional): [description]. Defaults to None.
-    """
-    info = get_unique_experiment_infos(df)
-    runtimes, num_solved_intersection = extract_runtimes(df)
-    info['num_solved_intersection'] = num_solved_intersection
-    stat, p_value = ss.kruskal(*runtimes)
-    if post_hoc:
-        result = post_hoc_test(df,post_hoc,p_adjust)
-        if export:
-            export = list(export)
-            file_name = create_file_name(df, post_hoc)
-            save_to = os.path.join(save_to, file_name)
-            export_result(result, export, save_to)
-
-        return {"post_hoc_result": result, "Test": 'Kruskal', "Post-hoc": post_hoc, "p-adjust":p_adjust, "p-value": p_value, "stat" : stat, "alpha": alpha,"info":info}
-    return {"post_hoc_result": None, "Test": 'Kruskal', "Post-hoc": None, "p-adjust":None, "p-value": p_value, "stat" : stat, "alpha": alpha, "info":info}
-
-def anova_oneway_parametric(df: pd.DataFrame,
-                            alpha: float,
-                            post_hoc=None,
-                            p_adjust=None,
-                            export=None,
-                            save_to=None):
-    """[summary]
-
-    Args:
-        df (pd.DataFrame): [description]
-        alpha (float): [description]
-        post_hoc (str, optional): [description]. Defaults to None.
-        p_adjust (str, optional): [description]. Defaults to None.
-        export (str, optional): [description]. Defaults to None.
-        save_to (str, optional): [description]. Defaults to None.
-    """
-    info = get_unique_experiment_infos(df)
-    runtimes,num_solved_intersection = extract_runtimes(df)
-    stat, p_value = ss.f_oneway(*runtimes)
-    info['num_solved_intersection'] = num_solved_intersection
-
-    if post_hoc:
-
-        result = post_hoc_test(df, post_hoc, p_adjust)
-        if export:
-            export = list(export)
-            file_name = create_file_name(df, post_hoc)
-            save_to = os.path.join(save_to, file_name)
-            export_result(result, export, save_to)
-        return {"post_hoc_result": result, "Test": 'ANOVA', "Post-hoc": post_hoc, "p-adjust":p_adjust, "p-value": p_value, "stat" : stat, "alpha": alpha, 'info': info}
-    return  {"post_hoc_result": None, "Test": 'ANOVA', "Post-hoc": None, "p-adjust":None, "p-value": p_value, "stat" : stat, "alpha": alpha,'info': info}
-
-def post_hoc_test(df : pd.DataFrame, post_hoc: str, p_adjust: str)->pd.DataFrame:
-    """[summary]
-
-    Args:
-        df (pd.DataFrame): [description]
-        post_hoc (str): [description]
-        p_adjust (str): [description]
-
-    Returns:
-        pd.DataFrame: [description]
-    """
-    result = getattr(sp,
-                         "posthoc_" + post_hoc)(df,
-                                                val_col='runtime',
-                                                group_col='solver_full_name',
-                                                p_adjust=p_adjust)
-
-    result = result.sort_index()[sorted(result.columns)]
-    return result
-
-
-def print_result(alpha: float, stat: float, p: float):
-    """[summary]
-
-    Args:
-        alpha (float): [description]
-        stat (float): [description]
-        p (float): [description]
-    """
-    print('stat=%.3f, p=%.3f' % (stat, p))
-    if p > alpha:
-        print('Probably the same distribution')
-    else:
-        print('Probably different distributions')
-    print("")
-
-
 def create_file_name(df: pd.DataFrame, post_hoc: str) -> str:
     """[summary]
 
@@ -382,3 +312,16 @@ def create_file_name(df: pd.DataFrame, post_hoc: str) -> str:
                                      '_'.join(unique_benchmarks),
                                      '_'.join(unique_tasks), post_hoc)
     return file_name
+
+def _gen_file_name(df):
+     return (f'{"_".join(df.tag)}_{"_".join(df.task)}_{"_".join(df.benchmark_name)}_ {(df.kind)}')
+
+@dispatch_on_value
+def export(export_format, df_to_export, save_to):
+    pass
+
+@export.register('csv')
+def csv_export(export_format, df_to_export,save_to):
+    df_to_export.to_csv(save_to,index=False)
+
+
