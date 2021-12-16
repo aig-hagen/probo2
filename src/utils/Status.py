@@ -5,13 +5,14 @@ import glob
 from src.utils import definitions
 
 
-def init_status_file(tasks, benchmarks, tag):
+def init_status_file(tasks, benchmarks, tag, solvers):
     status_dict = {'tag': tag, 'total_tasks': len(tasks), 'finished_tasks': 0, 'tasks': {}}
     for task in tasks:
 
         status_dict['tasks'][task.symbol] = {}
         status_dict['tasks'][task.symbol]['solvers'] = dict()
-        for solver in task.solvers:
+        intersection_solvers = set.intersection(set(solvers), set(task.solvers))
+        for solver in intersection_solvers:
             total_num_instances = 0
             for benchmark in benchmarks:
                 file_count = len(benchmark.get_instances(solver.solver_format))

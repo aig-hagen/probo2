@@ -157,11 +157,11 @@ def get_reference_result_enumeration(references: dict, instance_name: str, task:
         ref_file_extension = references.keys()
 
     correct_result_file = ""
-    print(f'{instance_name=} {task=} {ref_file_extension=}')
+
     for f_extension in ref_file_extension:
-        print(references[f_extension].keys())
+
         if task in references[f_extension].keys():
-            print(task)
+
             references_file_extensions_task = references[f_extension][task]
             for reference_result in references_file_extensions_task:
                 if all(substring in reference_result for substring in [instance_name,task,f_extension]):
@@ -821,4 +821,44 @@ def print_validate_with_reference_results(df):
     _print_summary(df)
     df.groupby(['benchmark_id','task']).apply(lambda df_: _print_results_per_task(df_))
 
+@dispatch_on_value
+def export(export_format: str,df:pd.DataFrame, save_to):
+    print(f"Export format {export_format} not supported.")
 
+@export.register('latex')
+def _export_latex(export_format: str,df:pd.DataFrame, save_to):
+
+    column_mapping = {'correct':'#Correct','incorrect': '#Incorrect','no_reference':'#No_Reference','total':'#Total','percentage_validated':'Validated(%)'}
+    max_bold = set(['correct','total','percentage_validated'])
+    min_bold = set(['incorrect','no_reference'])
+    columns_str = ['correct','incorrect','no_reference',]
+    #caption = f'{calculated_str} values for task {df.task.iloc[0]} on {df.benchmark.iloc[0]} benchmark. Best results in bold.'
+    caption = f'Total number of correct solved, incorrect solved, without reference and checked instances for {df.task.iloc[0]} task on {df.benchmark_name.iloc[0]} benchmark.'
+    label = f'{df.tag.iloc[0]}_tbl'
+    filename = f'{df.task.iloc[0]}_{df.benchmark_name.iloc[0]}_{df.tag.iloc[0]}.tex'
+    return pretty_latex_table.generate_table(df[['solver']  + ['correct','incorrect','no_reference','total','percentage_validated']].round(2),
+                                      save_to,
+                                      max_bold=max_bold,
+                                      min_bold=min_bold,
+                                      caption=caption,
+                                      label=label,
+                                      filename=filename,
+                                      column_name_map=column_mapping
+                                      )
+@export.register('csv')
+def _export_csv(export_format, df, save_to):
+    filename = f'{df.task.iloc[0]}_{df.benchmark_name.iloc[0]}_{df.tag.iloc[0]}.csv'
+    save_path = os.path.join(save_to,filename)
+
+    with open(save_path,'w') as csv_file:
+        csv_file.write(df.to_csv(index=False))
+    return save_path
+
+@export.register('json')
+def _export_json(export_format, df, save_to):
+    filename = f'{df.task.iloc[0]}_{df.benchmark_name.iloc[0]}_{df.tag.iloc[0]}.json'
+    save_path = os.path.join(save_to,filename)
+
+    with open(save_path,'w', encoding='utf-8') as json_file:
+        df.to_json(json_file)
+    return save_path

@@ -48,7 +48,7 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
 def get_task_summary(df: pd.DataFrame, summary_dict):
     task = df.task.iloc[0]
     benchmark= df.benchmark_name.iloc[0]
-    functions_to_call = ['sum','min','max','mean','num_solved','num_timed_out','num_exit_with_error','coverage']
+    functions_to_call = ['sum','min','max','mean','solved','timeouts','errors','coverage']
     stats_solver = (df
                 .groupby(["solver_id"],as_index=False)
                 .apply(lambda df: dispatch_function(df,functions_to_call,par_penalty=0))
@@ -76,7 +76,7 @@ def get_experiment_summary_as_string(df: pd.DataFrame) -> str:
             task_sum_str = f'*****{task}*****\n\n'
             summary = task_summary['summary']
             solver = task_summary['solver']
-            summary_str = (f'Solver: {summary.solver}\n#Solved: {summary.num_solved}\n#Timeout: {summary.num_timed_out}\n#Errors: {summary.num_exit_with_error}\nCoverage: {summary.coverage}%\n\n')
+            summary_str = (f'Solver: {summary.solver}\n#Solved: {summary.solved}\n#Timeout: {summary.timeouts}\n#Errors: {summary.errors}\nCoverage: {summary.coverage}%\n\n')
             task_sum_str += summary_str
             solver_sum_str =""
             for index, row in solver.iterrows():
@@ -84,7 +84,7 @@ def get_experiment_summary_as_string(df: pd.DataFrame) -> str:
                 mean_runtime = row['mean']
                 min_runtime = row['min']
                 max_runtime = row['max']
-                cur_solver = f'-----{row.solver}-----\n#Solved: {row.num_solved}\n#Timeout: {row.num_timed_out}\n#Errors: {row.num_exit_with_error}\nCoverage: {row.coverage}%\nTotal runtime: {sum_runtime}\nMean runtime: {mean_runtime}\nMin runtime: {min_runtime}\nMax runtime: {max_runtime}\n\n'
+                cur_solver = f'-----{row.solver}-----\n#Solved: {row.solved}\n#Timeout: {row.timeouts}\n#Errors: {row.errors}\nCoverage: {row.coverage}%\nTotal runtime: {sum_runtime}\nMean runtime: {mean_runtime}\nMin runtime: {min_runtime}\nMax runtime: {max_runtime}\n\n'
                 solver_sum_str += cur_solver
 
             benchmark_sum_str += task_sum_str + solver_sum_str

@@ -353,15 +353,16 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
         print("Tag is already used. Please use another tag.")
         sys.exit()
 
-    Status.init_status_file(tasks, benchmarks, tag)
+
     run_parameter['benchmark'] = benchmarks
     run_parameter['task'] = tasks
     run_parameter['session'] = session
 
     if select:
-        run_parameter['solver'] = DatabaseHandler.get_solvers(session, solver)
+        solvers =  DatabaseHandler.get_solvers(session, solver)
+        run_parameter['solver'] = solvers
 
-
+    Status.init_status_file(tasks, benchmarks, tag, solvers)
     logging.info(f"Stared to run Experiment {tag}")
     utils.run_experiment(run_parameter)
     logging.info(f"Finished to run Experiment {tag}")
@@ -924,8 +925,25 @@ def status():
     "Directory to store plots in. Filenames will be generated automatically.")
 
 @click.option('--extension','-ext',multiple=True, help="Reference file extension")
+@click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
+@click.option("--send", required=False, help="Send plots via E-Mail.")
 def validate(tag, task, benchmark, solver, filter, reference, pairwise,
-             save_to, export, update_db,extension):
+             save_to, export, update_db,extension,compress,send):
+    """[summary]
+
+    Args:
+        tag ([type]): [description]
+        task ([type]): [description]
+        benchmark ([type]): [description]
+        solver ([type]): [description]
+        filter ([type]): [description]
+        reference ([type]): [description]
+        pairwise ([type]): [description]
+        save_to ([type]): [description]
+        export ([type]): [description]
+        update_db ([type]): [description]
+        extension ([type]): [description]
+    """
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
     og_df = DatabaseHandler.get_results(session,
@@ -936,6 +954,9 @@ def validate(tag, task, benchmark, solver, filter, reference, pairwise,
                                         filter,
                                         only_solved=True)
     result_df = validation.prepare_data(og_df)
+
+    saved_files = []
+
     if pairwise:
         #validation.validate_pairwise(result_df, save_to=save_to, export=export)
         starttime = timeit.default_timer()
@@ -953,12 +974,31 @@ def validate(tag, task, benchmark, solver, filter, reference, pairwise,
         validation_results = validation.validate(result_df, ref_dict, extension)
         analyse = validation_results.groupby(['tag', 'task_id', 'benchmark_id','solver_id'],as_index=False).apply(lambda df: validation.analyse(df) )
         print(analyse)
-        validation.test_table_export(analyse,'/mnt/c/Users/jonas/Entwicklung')
+        #validation.test_table_export(analyse,'/mnt/c/Users/jonas/Entwicklung')
         validation.print_validate_with_reference_results(analyse)
 
+
+        if export:
+            for export_format in list(export):
+                saved_files.append(analyse.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.export(export_format,df_,save_to)))
+
+        saved_files = list(itertools.chain(*[x.values for x in saved_files]))
         #print(validation_results.groupby(['tag', 'task_id', 'benchmark_id','solver_id'],as_index=False).apply(lambda df: df[df.no_reference == True][['solver_full_name','task','instance']] ))
 
+    if compress:
+        archive_name = "_".join(tag)
 
+        archive_save_path = utils.create_archive_from_files(save_to,archive_name,saved_files,compress,'validations')
+
+    if send:
+        id_code = int(hashlib.sha256(save_to.encode('utf-8')).hexdigest(), 16) % 10**8
+        email_notification = Notification(send,subject="Hi, there. I have your files for you.",message=f"Enclosed you will find your files.",id=id_code)
+        if compress:
+            email_notification.attach_file(f'{archive_save_path}.{compress}')
+        else:
+            email_notification.attach_mutiple_files(saved_files)
+        email_notification.send()
+        print(f"\n{email_notification.foot}\nYour e-mail identification code: {id_code}")
 
 
         # num_correct = val[val.correct == 'correct']['correct'].count()

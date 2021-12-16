@@ -46,15 +46,16 @@ def generate_table(df, save_to,filename=None, max_bold=None, min_bold=None, colu
         # format_tbl = "l" + \
         #     "@{\hskip 12pt}" +\
         #     4*"S[table-format = 2.2]"
-
-        latex_file.write(df
-                .to_latex(index=False,
+        replace_map = {'#': '\#', '%': '\%','_': ' '}
+        latex_tbl = (df
+                        .to_latex(index=False,
                           escape=False,
                           caption=caption,
                           label=label,
-                          column_format=f'l*{{{df.shape[1]-1}}}{{c}}').replace('_',' ')
-
-                )
+                          column_format=f'l*{{{df.shape[1]-1}}}{{c}}'))
+        trans_table = latex_tbl.maketrans(replace_map)
+        latex_tbl = latex_tbl.translate(trans_table)
+        latex_file.write(latex_tbl)
     return save_path
 
 

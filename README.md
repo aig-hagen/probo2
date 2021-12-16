@@ -311,9 +311,9 @@ Usage: probo2 calculate [OPTIONS]
 
     Comma-separated list of benchmark IDs or names to be selected.
 + *-s, --solver*
-    
+
     Comma-separated list of solver IDs or names to be selected.
-  
+
   + *-p, --par*
 
     Penalty multiplier for PAR score
@@ -323,18 +323,18 @@ Usage: probo2 calculate [OPTIONS]
   + *-pfmt, --print_format*
 
     Table format for printing to console.
-    
+
     Choices: [plain|simple|github|grid|fancy_grid|pipe|orgtbl|jira|presto|pretty|psql|rst|mediawiki|moinmoin|youtrack|html|unsafehtmllatex|latex_raw|latex_booktabs|textile]
 
   + *-c, --combine*
 
     Combine results on key.
-    
+
     Choices: [task_id|benchmark_id|solver_id]
   + *--vbs*
 
     Create virtual best solver
-    
+
   + *-st, --save_to*
 
     Directory to store tables.
@@ -342,22 +342,32 @@ Usage: probo2 calculate [OPTIONS]
   + *-e, --export*
 
     Export results in specified format.
-    
+
     Choices: [latex|json|csv]
   + *-s, --statistics*
 
     Stats to calculate.
-    
+
     Choices:[mean|sum|min|max|median|var|std|coverage|timeouts|solved|errors|all]
   + *-l, --last*
 
     Calculate stats for the last finished experiment.
 
-  + *--help*                          Show this message and exit.
+  + *--compress*
+
+    Compress saved files.
+    Choices: [tar|zip]
+  + *-s, --send*
+
+    Send files via E-Mail
+
+  + *--help*
+
+  Show this message and exit.
 
 **Example**
 ```
-probo2 calculate --tag MyExperiment -s timeouts -s errors -s solved --par 10
+probo2 calculate --tag MyExperiment -s timeouts -s errors -s solved --par 10 --compress zip --send my@mail.de
 ```
 
 
