@@ -40,8 +40,8 @@ def generate_table(df, save_to,filename=None, max_bold=None, min_bold=None, colu
         caption = 'Your caption could be here'
     if not label:
         label = 'Your label'
-
-    with open(os.path.join(save_to,filename),"w") as latex_file:
+    save_path = os.path.join(save_to,filename)
+    with open(save_path,"w") as latex_file:
 
         # format_tbl = "l" + \
         #     "@{\hskip 12pt}" +\
@@ -55,6 +55,9 @@ def generate_table(df, save_to,filename=None, max_bold=None, min_bold=None, colu
                           column_format=f'l*{{{df.shape[1]-1}}}{{c}}').replace('_',' ')
 
                 )
+    return save_path
+
+
 
 
 

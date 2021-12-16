@@ -1,7 +1,9 @@
+import itertools
 import click
 import json
 import os
 import sys
+from click.core import iter_params_for_processing
 from click.decorators import command
 import pandas as pd
 import shutil
@@ -403,10 +405,10 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
               cls=CustomClickOptions.StringAsOption,
               default=[],
               help="Comma-separated list of solver ids")
-# #@click.option("--filter",
-#               "-f",
-#               cls=CustomClickOptions.FilterAsDictionary,
-#               multiple=True)
+@click.option("--filter",
+              "-f",
+              cls=CustomClickOptions.FilterAsDictionary,
+              multiple=True)
 @click.option("--task",
               "-t",
               required=False,
@@ -435,8 +437,10 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
 #@click.option("--css",default="styled-table.css",help="CSS file for table style.")
 @click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors','all']),multiple=True)
 @click.option("--last", "-l",is_flag=True,help="Calculate stats for the last finished experiment.")
+@click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
+@click.option("--send", required=False, help="Send plots via E-Mail.")
 def calculate(par, solver, task, benchmark,
-              tag,combine, vbs, export, save_to, statistics,print_format,last):
+              tag,combine, vbs, export, save_to, statistics,print_format,filter,last, send, compress):
 
     if last:
         tag.append(utils.get_from_last_experiment("Tag"))
@@ -483,9 +487,27 @@ def calculate(par, solver, task, benchmark,
     print_headers.extend(functions_to_call)
     utils.print_df(stats_df,['tag','benchmark','task'],headers=print_headers,format=print_format)
 
+    saved_files = []
     if export:
         for export_format in list(export):
-            stats_df.groupby(['tag','benchmark','task']).apply(lambda df_: stats.export(export_format,df_,save_to, functions_to_call,par))
+            saved_files.append(stats_df.groupby(['tag','benchmark','task']).apply(lambda df_: stats.export(export_format,df_,save_to, functions_to_call,par)))
+
+    saved_files = list(itertools.chain(*[x.values for x in saved_files]))
+    if compress:
+        archive_name = "_".join(tag)
+
+        archive_save_path = utils.create_archive_from_files(save_to,archive_name,saved_files,compress,'calculations')
+
+    if send:
+        id_code = int(hashlib.sha256(save_to.encode('utf-8')).hexdigest(), 16) % 10**8
+        email_notification = Notification(send,subject="Hi, there. I have your files for you.",message=f"Enclosed you will find your files.",id=id_code)
+        if compress:
+            email_notification.attach_file(f'{archive_save_path}.{compress}')
+        else:
+            email_notification.attach_mutiple_files(saved_files)
+        email_notification.send()
+        print(f"\n{email_notification.foot}\nYour e-mail identification code: {id_code}")
+
 
 
 

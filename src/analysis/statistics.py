@@ -215,6 +215,7 @@ def _export_csv(export_format, df, save_to, calculated, par):
 
     with open(save_path,'w') as csv_file:
         csv_file.write(df.to_csv(index=False))
+    return save_path
 
 @export.register('json')
 def _export_json(export_format, df, save_to, calculated, par):
@@ -223,6 +224,7 @@ def _export_json(export_format, df, save_to, calculated, par):
 
     with open(save_path,'w', encoding='utf-8') as json_file:
         df.to_json(json_file)
+    return save_path
 
 @export.register('latex')
 def _export_latex(export_format, df, save_to, calculated, par):
@@ -234,7 +236,7 @@ def _export_latex(export_format, df, save_to, calculated, par):
     caption = f'{calculated_str} values for task {df.task.iloc[0]} on {df.benchmark.iloc[0]} benchmark. Best results in bold.'
     label = f'{df.tag.iloc[0]}_tbl'
     filename = f'{df.task.iloc[0]}_{df.benchmark.iloc[0]}_{df.tag.iloc[0]}.tex'
-    pretty_latex_table.generate_table(df[['solver']  + calculated].round(2),
+    return pretty_latex_table.generate_table(df[['solver']  + calculated].round(2),
                                       save_to,
                                       max_bold=list(set.intersection(set(calculated),max_bold)),
                                       min_bold=list(set.intersection(set(calculated),min_bold)),

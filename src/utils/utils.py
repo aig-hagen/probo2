@@ -15,6 +15,17 @@ from subprocess import TimeoutExpired
 from subprocess import CalledProcessError
 from subprocess import CompletedProcess
 
+def create_archive_from_files(save_to: str, name: str,saved_files_paths: list,compress: str, archive_type:str):
+    temp_path = os.path.join(save_to,'_temp_files')
+    if not os.path.exists(temp_path):
+        os.mkdir(os.path.join(save_to,'_temp_files'))
+    for file_to_copy in saved_files_paths:
+        shutil.copy(file_to_copy,temp_path)
+    archive_save_to = os.path.join(save_to,f'{name}_{archive_type}')
+    directory_save_path =compress_directory(temp_path, archive_save_to,compress)
+    shutil.rmtree(temp_path)
+    return directory_save_path
+
 def print_df(df, grouping=None, headers=None, format='fancy_grid'):
     if headers is None:
         headers = df.columns.values
