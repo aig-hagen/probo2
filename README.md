@@ -70,7 +70,8 @@ Usage: *probo2 add-solver [OPTIONS]*
     Supported computational problems
 + *-v, --version*
 
-    Version of solver [required]
+    Version of solver [required].
+    
     This option has to be specified to make sure the same solver with different versions can be added to the database.
 + *-g, --guess*
 
@@ -95,6 +96,8 @@ Prints solvers in database to console.
   + *--help*
 
     Show this message and exit.
+
+
 ### delete-solver
 Usage: *probo2 delete-solver [OPTIONS]*
 
@@ -109,6 +112,7 @@ Usage: *probo2 delete-solver [OPTIONS]*
 + *--help*
 
     Show this message and exit.
+
 
 ### add-benchmark
 Usage: *probo2 add-benchmark [OPTIONS]*
@@ -156,6 +160,7 @@ Usage: *probo2 add-benchmark [OPTIONS]*
 probo2 add-benchmark --name MyTrickyBenchmark --path ./path/to/MyTrickyBenchmark --format tgf --generate apx -rnd
 ```
 
+
 ### benchmarks
 
   Prints benchmarks in database to console.
@@ -169,6 +174,7 @@ probo2 add-benchmark --name MyTrickyBenchmark --path ./path/to/MyTrickyBenchmark
   + *--help*
 
     Show this message and exit.
+
 
 ### delete-benchmark
 Usage: *probo2 delete-benchmark [OPTIONS]*
@@ -186,6 +192,7 @@ Usage: *probo2 delete-benchmark [OPTIONS]*
 + *--help*
 
     Show this message and exit.
+
 
 ### run
 
@@ -242,6 +249,7 @@ Usage: *probo2 delete-benchmark [OPTIONS]*
 probo2 run --all --benchmark my_benchmark --task EE-CO,EE-PR --tag MyExperiment --timeout 600 --notify my@mail.de
 ```
 
+
 ### status
 Usage: *probo2 status*
 
@@ -251,6 +259,7 @@ Usage: *probo2 status*
 + *--help*
 
     Show this message and exit.
+
 
 ### last
 Usage: *probo2 last*
