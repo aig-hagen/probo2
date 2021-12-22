@@ -52,14 +52,14 @@ def _get_experiment_summary(row: pd.Series) -> str:
             )
 
 def print_significance_results(alpha, row):
-    experiment_summary= _get_experiment_summary(row)
+    #experiment_summary= _get_experiment_summary(row)
     stat = row.stat
     p = row.p_value
     test_statistics=f'{stat=} {p=}'
     result_interpretation = _interpretation_of_result(alpha,p)
-    print("------------------------------------------------------------------------------")
-    print(f'{experiment_summary}\n{test_statistics}\n{result_interpretation}\n')
-    print("------------------------------------------------------------------------------")
+    #print("------------------------------------------------------------------------------")
+    print(f'Solver: {row.solver}\n{test_statistics}\n\n{result_interpretation}\n')
+    #print("------------------------------------------------------------------------------")
 
 def print_post_hoc_results(row: pd.Series):
     experiment_summary= _get_experiment_summary(row)
@@ -70,7 +70,7 @@ def print_post_hoc_results(row: pd.Series):
 
 
 def test(kind_test, df: pd.DataFrame, equal_sample_size: bool)->pd.Series:
-    info = get_unique_experiment_infos(df)
+    info = get_unique_experiment_infos(df,to_string=True)
 
     if kind_test=='t-test' and len(info['solver']) > 2:
         raise click.ClickException(
@@ -188,6 +188,7 @@ def extract_runtimes(df: pd.DataFrame,equal_sample_size=None) -> list:
     run_times = []
     if equal_sample_size:
         instances = get_intersection_of_solved_instances(df)
+
         for u_id in unique_solver_ids:
             run_times.append((df[(df.solver_id == u_id) &
                                  (df.instance.isin(instances))].runtime.values))
@@ -198,12 +199,20 @@ def extract_runtimes(df: pd.DataFrame,equal_sample_size=None) -> list:
             run_times.append(df[df.solver_id == u_id].runtime.values)
         return run_times,len(list(df['instance'].unique()))
 
-def get_unique_experiment_infos(df):
+def get_unique_experiment_infos(df,to_string=None):
 
+    if to_string is None:
+        to_string=False
     unique_tags = list(df['tag'].unique())
     unique_benchmarks = list(df['benchmark_name'].unique())
     unique_tasks = list(df['task'].unique())
     unique_solver_names = list(df['solver_full_name'].unique())
+    if to_string:
+        unique_tags = ','.join(unique_tags)
+        unique_benchmarks = ','.join(unique_benchmarks)
+        unique_tasks = ','.join(unique_tasks)
+        unique_solver_names = ','.join(unique_solver_names)
+
     return {'tag':unique_tags, 'benchmark_name':unique_benchmarks,'task':unique_tasks,'solver': unique_solver_names}
 
 def plot_heatmap(df: pd.DataFrame,
@@ -325,3 +334,34 @@ def csv_export(export_format, df_to_export,save_to):
     df_to_export.to_csv(save_to,index=False)
 
 
+@dispatch_on_value
+def print_result(type:str, df: pd.DataFrame):
+    pass
+
+
+@print_result.register('significance')
+def _print_significance_results(type:str, df: pd.DataFrame):
+    df.groupby('kind').apply(lambda _df: _print_result_per_test(_df))
+
+def _print_result_per_test(df):
+    kind = df.kind.iloc[0]
+    print(f'\n***** Test: {kind} *****')
+    df.groupby('tag').apply(lambda _df: _print_result_per_tag(_df))
+
+def _print_result_per_tag(df):
+    tag = df.tag.iloc[0]
+    print(f'\n++++ Tag: {tag} ++++')
+    df.groupby('benchmark_id').apply(lambda _df: _print_result_per_benchmark(_df))
+
+def _print_result_per_benchmark(df):
+    benchmark = df.benchmark_name.iloc[0]
+    benchmark_id = df.benchmark_id.iloc[0]
+    print(f'\n--- Benchmark: {benchmark} (ID: {benchmark_id}) ---')
+    df.groupby('task').apply(lambda _df: _print_result_per_task(_df))
+
+def _print_result_per_task(df):
+    task = df.task.iloc[0]
+    task_id = df.task_id.iloc[0]
+    print(f'\n· Task: {task} (ID: {task_id})\n')
+    print_significance_results(0.5,df.iloc[0])
+    #df.groupby('benchmark_id').apply(lambda _df: _print_result_per_benchmark(_df))

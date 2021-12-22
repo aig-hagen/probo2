@@ -24,9 +24,8 @@ class Benchmark(Base):
     results = relationship("Result")
 
     def get_instances(self,extension,without_extension=False,full_path=False):
-        instances = []
-        result = (chain.from_iterable(glob(os.path.join(x[0], f'*.{extension}')) for x in os.walk(self.benchmark_path)))
-        return sorted(list(result))
+        instances = (chain.from_iterable(glob(os.path.join(x[0], f'*.{extension}')) for x in os.walk(self.benchmark_path)))
+        return sorted(list(instances))
 
     def get_argument_files(self):
         return self.get_instances(self.extension_arg_files)
@@ -49,7 +48,7 @@ class Benchmark(Base):
             except IOError as err:
                 print(err)
 
-            instance_name = Path(file).stem
+            instance_name = os.path.basename(file).removesuffix(f'.{self.extension_arg_files}')
             lookup[instance_name] = argument_param
 
 
@@ -139,6 +138,7 @@ class Benchmark(Base):
 
         for attack in attacks:
             if attack:
+                print(f'{attack=}')
                 apx_attacks += 'att({},{}).\n'.format(*attack.split(" "))
 
         apx_instance_string = apx_args + apx_attacks
@@ -238,7 +238,8 @@ class Benchmark(Base):
                     num_generated_files += 1
         print(f"{num_generated_files} .{extension} files generated.")
 
-
+    def _strip_extension_arg_files(self, instances):
+        return [ instance.removesuffix(f'.{self.extension_arg_files}') for instance in instances]
     def strip_extension(self,instances):
         extensions_stripped = list()
         for instance in instances:
@@ -255,7 +256,7 @@ class Benchmark(Base):
 
             apx_instances_names = np.array(self.strip_extension(apx_instances))
             tgf_instances_names = np.array(self.strip_extension(tgf_instances))
-            arg_instances_names = np.array(self.strip_extension(arg_instances))
+            arg_instances_names = np.array(self._strip_extension_arg_files(arg_instances))
 
 
             if apx_instances_names.size == tgf_instances_names.size == arg_instances_names.size:
@@ -269,7 +270,7 @@ class Benchmark(Base):
             present_instances = self.get_instances(preset_format)
             arg_instances = self.get_instances(self.extension_arg_files)
             present_instances_names =  np.array(self.strip_extension(present_instances))
-            arg_instances_names = np.array(self.strip_extension(arg_instances))
+            arg_instances_names = np.array(self._strip_extension_arg_files(arg_instances))
 
             if present_instances_names.size == arg_instances_names.size:
 
@@ -291,14 +292,14 @@ class Benchmark(Base):
             missing_instances['apx'] = {'paths':apx_missing_path, 'names':apx_missing_names}
             missing_instances['tgf'] = {'paths':tgf_missing_path, 'names': tgf_missing_names}
 
-            arg_instances_names = set(self.strip_extension(self.get_instances(self.extension_arg_files)))
+            arg_instances_names = set(self._strip_extension_arg_files(self.get_instances(self.extension_arg_files)))
             present_instances = set.union(apx_instances_path,tgf_instances_path)
             arg_missing_path = present_instances.difference(arg_instances_names)
             arg_missing_names = [(os.path.basename(x) + f'.{self.extension_arg_files}') for x in arg_missing_path]
             missing_instances[self.extension_arg_files] = {'paths':arg_missing_path, 'names': arg_missing_names}
             return missing_instances
         else:
-            arg_instances_names = set(self.strip_extension(self.get_instances(self.extension_arg_files)))
+            arg_instances_names = set(self._strip_extension_arg_files(self.get_instances(self.extension_arg_files)))
             present_instances =  set(self.strip_extension(self.get_instances(instance_formats[0])))
             arg_missing_path = present_instances.difference(arg_instances_names)
             arg_missing_names = [(os.path.basename(x) + f'.{self.extension_arg_files}') for x in arg_missing_path]

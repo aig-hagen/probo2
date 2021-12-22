@@ -186,9 +186,10 @@ def add_solver(name, path, format, tasks, version, guess):
               is_flag=True,
               help="Generate additional argument files with a random argument."
               )
+@click.option('--replace_extension','-r')
 def add_benchmark(name, path, graph_type, format, hardness, competition,
                   extension_arg_files, no_check, generate,
-                  random_arguments):
+                  random_arguments,replace_extension):
     """ Adds a benchmark to the database.
      Before a benchmark is added to the database, it is checked if each instance is present in all specified file formats.
      Missing instances can be generated after the completion test (user has to confirm generation) or beforehand via the --generate/-g option.
@@ -222,9 +223,21 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
     else:
         format = format[0]
 
-
-
     path_resolved = os.fspath(pathlib.Path(path).resolve())
+    if replace_extension:
+        current_replace = replace_extension.split(',')
+        current = current_replace[0]
+        replace_with = current_replace[1]
+        print(f'{current=} {replace_with=}')
+        instances_ = (chain.from_iterable(glob(os.path.join(x[0], f'*.{current}')) for x in os.walk(path_resolved)))
+        for i in instances_:
+            print(i)
+    #exit()
+
+
+
+
+
 
 
     new_benchmark = Benchmark(benchmark_name=name,
@@ -361,8 +374,11 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
     if select:
         solvers =  DatabaseHandler.get_solvers(session, solver)
         run_parameter['solver'] = solvers
-
-    Status.init_status_file(tasks, benchmarks, tag, solvers)
+        Status.init_status_file(tasks, benchmarks, tag, solvers)
+    else:
+        solvers_all_tasks = [ (t.solvers) for t in tasks]
+        solver_to_run = [ solver for sub_list_solver in solvers_all_tasks for solver in sub_list_solver]
+        Status.init_status_file(tasks, benchmarks, tag, solver_to_run)
     logging.info(f"Stared to run Experiment {tag}")
     utils.run_experiment(run_parameter)
     logging.info(f"Finished to run Experiment {tag}")
@@ -761,6 +777,7 @@ def results(verbose, solver, task, benchmark, tag, filter,only_tags):
     if only_tags:
         print(",".join(list(result_df.tag.unique())))
 
+    print(result_df[['correct_solved','incorrect_solved','no_reference']])
 
     # results = session.query(Result).all()
     # tabulate_data = []
@@ -880,6 +897,9 @@ def export(save_to, solver, filter, problem, benchmark, tag, task, format,
 
 @click.command()
 def status():
+    """Provides an overview of the progress of the currently running experiment.
+
+    """
     if os.path.exists(definitions.STATUS_FILE_DIR):
         Status.print_status_summary()
     else:
@@ -887,19 +907,19 @@ def status():
 
 
 @click.command()
-@click.option("--tag", cls=CustomClickOptions.StringAsOption, default=[])
+@click.option("--tag",help="Experiment tag to be validated")
 @click.option("--task",
               "-t",
               required=False,
               callback=CustomClickOptions.check_problems,
-              help="Computational problems")
-@click.option("--benchmark","-b", required=True,help="Benchmark name or id to validate.")
+              help="Comma-separated list of task IDs or symbols to be validated.")
+@click.option("--benchmark","-b", required=True,help="Benchmark name or id to be validated.")
 @click.option("--solver",
               "-s",
               required=True,
               cls=CustomClickOptions.StringAsOption,
               default=[],
-              help="Comma-separated list of solver ids")
+              help="Comma-separated list of solver IDs or names to be validated.")
 @click.option("--filter",
               "-f",
               cls=CustomClickOptions.FilterAsDictionary,
@@ -909,27 +929,49 @@ def status():
               "-r",
               type=click.Path(resolve_path=True,exists=True),
               help="Path to reference files.")
-@click.option("--update_db", is_flag=True)
-@click.option("--pairwise", "-pw", is_flag=True)
+@click.option("--update_db", is_flag=True,help="Update instances status (correct, incorrect, no reference) in database.")
+@click.option("--pairwise", "-pw", is_flag=True,help="Pairwise comparision of results. Not supported for the SE task.")
 @click.option('--export',
               '-e',
               type=click.Choice(
-                  ['json', 'latex', 'excel', 'html', 'heatmap','pie-chart','count-plot','csv']),
-              multiple=True)
+                  ['json', 'latex','csv']),
+              multiple=True,help="Export results in specified format." )
+@click.option("--raw", is_flag=True, help='Export raw validation results in csv format.')
+@click.option('--plot',
+              '-p',
+              type=click.Choice(
+                  ['heatmap','count']),
+              multiple=True,help="Create a heatmap for pairwise comparision results and a count plot for validation with references.")
 @click.option(
     "--save_to",
     "-st",
     type=click.Path(resolve_path=True,exists=True),
     required=False,
     help=
-    "Directory to store plots in. Filenames will be generated automatically.")
+    "Directory to store plots and data in. Filenames will be generated automatically.")
 
 @click.option('--extension','-ext',multiple=True, help="Reference file extension")
 @click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
-@click.option("--send", required=False, help="Send plots via E-Mail.")
+@click.option("--send", required=False, help="Send plots and data via E-Mail.")
+@click.option("--verbose","-v", is_flag=True,help="Verbose output for validation with reference. For each solver the instance names of not validated and incorrect instances is printed to the console.")
 def validate(tag, task, benchmark, solver, filter, reference, pairwise,
-             save_to, export, update_db,extension,compress,send):
-    """[summary]
+             save_to, export,plot, update_db,extension,compress,send, verbose,raw):
+    """Validate experiments results.
+
+    With the validation, we have the choice between a pairwise comparison of the results or a validation based on reference results.
+    Pairwise validation is useful when no reference results are available. For each solver pair, the instances that were solved by both solvers are first identified.
+    The results are then compared and the percentage of accordance is calculated and output in the form of a table.
+    It is also possible to show the accordance of the different solvers as a heatmap with the "--plot heatmap" option.
+    Note: The SE task is not supported here.
+
+    For the validation with references, we need to specify the path to our references results with the option "--ref". It's important to note that each reference instance has to follow a naming pattern to get matched with the correct result instance.
+    The naming of the reference instance has to include (1) the full name of the instance to validate, (2) the task, and (3) the specified extension. For example for the instance "my_instance.apx",  the corresponding reference instance for the EE-PR task would be named as follows: "my_instance_EE-PR.apx"
+    The order of name and task does not matter.
+    The extension is provided via the "--extension" option.
+
+    \f
+
+
 
     Args:
         tag ([type]): [description]
@@ -944,24 +986,35 @@ def validate(tag, task, benchmark, solver, filter, reference, pairwise,
         update_db ([type]): [description]
         extension ([type]): [description]
     """
+    if not save_to:
+        save_to = os.getcwd()
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
     og_df = DatabaseHandler.get_results(session,
                                         solver,
                                         task,
                                         [benchmark],
-                                        tag,
+                                        [tag],
                                         filter,
                                         only_solved=True)
     result_df = validation.prepare_data(og_df)
 
     saved_files = []
 
+
+
     if pairwise:
-        #validation.validate_pairwise(result_df, save_to=save_to, export=export)
-        starttime = timeit.default_timer()
-        validation._validate_pairwise(result_df)
-        print( timeit.default_timer() - starttime)
+        pairwise_result = result_df.groupby(['tag','benchmark_id','task']).apply(lambda df_: validation._validate_pairwise(df_)).reset_index()
+        validation.print_validate_pairwise(pairwise_result)
+
+        if export:
+            for export_format in list(export):
+                saved_files.append(pairwise_result.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.export_pairwise(export_format,df_,save_to,file_name_suffix='pairwise')))
+
+        if plot:
+            for kind in list(plot):
+                saved_files.append(pairwise_result.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.plot_pairwise(kind,df_,save_to)))
+
     else:
         unique_tasks = list(result_df.task.unique())
 
@@ -972,21 +1025,50 @@ def validate(tag, task, benchmark, solver, filter, reference, pairwise,
 
         ref_dict = validation.get_reference(extension, unique_tasks, reference)
         validation_results = validation.validate(result_df, ref_dict, extension)
-        analyse = validation_results.groupby(['tag', 'task_id', 'benchmark_id','solver_id'],as_index=False).apply(lambda df: validation.analyse(df) )
-        print(analyse)
-        #validation.test_table_export(analyse,'/mnt/c/Users/jonas/Entwicklung')
+        analyse = validation_results.groupby(['tag','benchmark_id','task_id','solver_id'],as_index=False).apply(lambda df: validation.analyse(df) )
         validation.print_validate_with_reference_results(analyse)
+        if verbose:
+            validation.print_not_validated(validation_results)
+
+
 
 
         if export:
+            if raw:
+                saved_files.append(validation_results.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.export('csv',df_,save_to,file_name_suffix='raw')))
+
+
             for export_format in list(export):
                 saved_files.append(analyse.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.export(export_format,df_,save_to)))
+        if plot:
+            for kind in list(plot):
+                saved_files.append(validation_results.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.plot(kind,df_,save_to)))
 
-        saved_files = list(itertools.chain(*[x.values for x in saved_files]))
-        #print(validation_results.groupby(['tag', 'task_id', 'benchmark_id','solver_id'],as_index=False).apply(lambda df: df[df.no_reference == True][['solver_full_name','task','instance']] ))
+
+
+
+        if update_db and not pairwise:
+            og_df.set_index("id", inplace=True)
+            og_df.no_reference.update(validation_results.set_index("id").no_reference)
+            og_df.correct_solved.update(validation_results.set_index("id").correct)
+            og_df.incorrect_solved.update(validation_results.set_index("id").incorrect)
+
+            result_objs = session.query(Result).filter(
+                Result.tag.in_(tag)).all()
+            id_result_mapping = dict()
+            for res in result_objs:
+                id_result_mapping[res.id] = res
+            og_df.apply(lambda row: validation.update_result_object(id_result_mapping[row.name], row.correct_solved,row.incorrect_solved,row.no_reference),
+                        axis=1)
+            session.commit()
+
+    saved_files = list(itertools.chain(*[x.values for x in saved_files]))
 
     if compress:
-        archive_name = "_".join(tag)
+        if pairwise:
+            archive_name = f'{tag}_pairwise'
+        else:
+            archive_name = f'{tag}_reference'
 
         archive_save_path = utils.create_archive_from_files(save_to,archive_name,saved_files,compress,'validations')
 
@@ -1000,76 +1082,17 @@ def validate(tag, task, benchmark, solver, filter, reference, pairwise,
         email_notification.send()
         print(f"\n{email_notification.foot}\nYour e-mail identification code: {id_code}")
 
-
-        # num_correct = val[val.correct == 'correct']['correct'].count()
-
-        # num_incorrect = val[val.correct == 'incorrect']['correct'].count()
-        # num_no_reference = val[val.correct == 'no_reference']['correct'].count()
-        # total = val['instance'].count()
-        # percentage_validated = (total - num_no_reference) / total * 100
-
-        # print("**********Summary**********")
-        # print(f'Total instances: {total}')
-        # print(f'Correct instances: {num_correct}')
-        # print(f'Incorrect instances: {num_incorrect}')
-        # print(f'No reference: {num_no_reference}')
-        # print(f'Percentage valdated: {percentage_validated}')
-        # print("")
-
-
-        # print(analyse)
-
-        #val.groupby(['tag', 'task_id', 'benchmark_id']).apply(lambda df: validation.print_summary(df) )
-        # pdf = Validation_Report()
-        # pdf.print_summary(tag)
-        # pdf.output(os.path.join(save_to,'SalesRepot.pdf'), 'F')
-
-
-        # if 'count-plot' in export:
-        #     validation.count_plot(val,save_to,title="Summary",grid=False)
-        #     val.groupby(['tag', 'task_id', 'benchmark_id']).apply(lambda df: validation.count_plot(df,save_to))
-
-
-        #     #validation.count_plot(val,save_to,title="Summary-Grid",grid=True)
-        # if "pie-chart" in export:
-        #     validation.pie_chart(analyse,save_to,title="Summary")
-        #     analyse.groupby(['tag', 'task_id', 'benchmark_id']).apply(lambda df: validation.pie_chart(df,save_to))
-
-        #validation.export_styled_table(analyse[['solver','task','benchmark_name','correct_solved','incorrect_solved','no_reference','total','percentage_validated']],save_to)
-
-
-
-        # og_df.set_index("id", inplace=True)
-
-        # og_df.correct.update(val.set_index("id").correct)
-
-        # og_df.validated.update(val.set_index("id").validated)
-
-        # if update_db:
-        #     result_objs = session.query(Result).filter(
-        #         Result.tag.in_(tag)).all()
-        #     id_result_mapping = dict()
-        #     for res in result_objs:
-        #         id_result_mapping[res.id] = res
-
-        #     og_df.apply(lambda row: validation.update_result_object(
-        #         id_result_mapping[row.name], row['correct'], row['validated']),
-        #                 axis=1)
-        #     session.commit()
-
-
-
 import src.analysis.significance_testing as sig
 
 
 @click.command()
-@click.option("--tag", cls=CustomClickOptions.StringAsOption, default=[])
+@click.option("--tag", cls=CustomClickOptions.StringAsOption, default=[],help="Experiment tag to be tested.")
 @click.option("--task",
               "-t",
               required=False,
               callback=CustomClickOptions.check_problems,
-              help="Computational problems")
-@click.option("--benchmark", cls=CustomClickOptions.StringAsOption, default=[])
+              help="Comma-separated list of task IDs or symbols to be tested.")
+@click.option("--benchmark", cls=CustomClickOptions.StringAsOption, default=[],help="Benchmark name or id to be tested.")
 @click.option("--solver",
               "-s",
               required=True,
@@ -1085,10 +1108,10 @@ import src.analysis.significance_testing as sig
               "-c",
               cls=CustomClickOptions.StringAsOption,
               default=[])
-@click.option("--parametric","-p", type=click.Choice(['ANOVA', 't-test']))
+@click.option("--parametric","-p", type=click.Choice(['ANOVA', 't-test']),help="Parametric significance test. ANOVA for mutiple solvers and t-test for two solvers.")
 @click.option("--non_parametric",
               "-np",
-              type=click.Choice(['kruskal', 'mann-whitney-u']))
+              type=click.Choice(['kruskal', 'mann-whitney-u']),help="Non-parametric significance test. kruksal for mutiple solvers and mann-whitney-u for two solvers.")
 @click.option("--post_hoc_parametric",
               "-php",
               type=click.Choice(
@@ -1119,6 +1142,26 @@ import src.analysis.significance_testing as sig
 def significance(tag, task, benchmark, solver, filter, combine, parametric,
                  non_parametric, post_hoc_parametric, post_hoc_non_parametric,
                  alpha, export, save_to, p_adjust, equal_sample_size, last):
+    """Parmatric and non-parametric significance and post-hoc tests.
+
+    Args:
+        tag ([type]): [description]
+        task ([type]): [description]
+        benchmark ([type]): [description]
+        solver ([type]): [description]
+        filter ([type]): [description]
+        combine ([type]): [description]
+        parametric ([type]): [description]
+        non_parametric ([type]): [description]
+        post_hoc_parametric ([type]): [description]
+        post_hoc_non_parametric ([type]): [description]
+        alpha ([type]): [description]
+        export ([type]): [description]
+        save_to ([type]): [description]
+        p_adjust ([type]): [description]
+        equal_sample_size ([type]): [description]
+        last ([type]): [description]
+    """
 
     if not save_to:
         save_to = os.getcwd()
@@ -1147,21 +1190,20 @@ def significance(tag, task, benchmark, solver, filter, combine, parametric,
     significance_tests = [ x for x in significance_tests if x is not None]
 
     if significance_tests:
-        sig_results_list = [ clean.groupby(grouping,as_index=False).apply(lambda df_: sig.test(kind_test,df_,equal_sample_size)) for kind_test in significance_tests]
+        sig_results_list = [ clean.groupby(grouping,as_index=False).apply(lambda df_: sig.test(kind_test,df_,equal_sample_size=True)) for kind_test in significance_tests]
         sig_results_df = pd.concat(sig_results_list)
-        sig_results_df.apply(lambda row: sig.print_significance_results(alpha,row),axis=1)
+        print(sig_results_df)
+        sig.print_result('significance',sig_results_df)
 
 
     post_hocs = list(post_hoc_parametric)
     post_hocs.extend(list(post_hoc_non_parametric))
     if post_hocs:
-        ph_results_list = [ (clean.groupby(grouping,as_index=False).apply(lambda df_: sig.test_post_hoc(df_,ph,False,p_adjust))) for ph in post_hocs]
+        ph_results_list = [ (clean.groupby(grouping,as_index=False).apply(lambda df_: sig.test_post_hoc(df_,ph,True,p_adjust))) for ph in post_hocs]
         ph_res_df = pd.concat(ph_results_list)
         ph_res_df.apply(lambda row: sig.print_post_hoc_results(row),axis=1)
 
 
-
-    #TODO: Ausgabe für post-hoc und significance test implementieren, Exporting refactoring
 
 
 @click.command()
@@ -1295,6 +1337,11 @@ def tasks():
 
 @click.command()
 def last():
+    """Shows basic information about the last finished experiment.
+
+        Infos include experiment tag, benchmark names, solved tasks, executed solvers and and the time when the experiment was finished
+
+    """
     if os.path.isfile(definitions.LAST_EXPERIMENT_JSON_PATH):
         with open(definitions.LAST_EXPERIMENT_JSON_PATH,'r') as file:
             json_string = file.read()
@@ -1305,8 +1352,13 @@ def last():
     else:
         print("No experiments finished yet.")
 @click.command()
-@click.option("--tag","-t")
+@click.option("--tag","-t",required=True, help="Experiment tag.")
 def experiment_info(tag):
+    """Prints some basic information about the experiment speficied with "--tag" option.
+
+    Args:
+        tag ([type]): [description]
+    """
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
     try:
@@ -1315,8 +1367,10 @@ def experiment_info(tag):
         print(e)
     finally:
         session.close()
-
-    print(stats.get_experiment_info(df))
+    if not df.empty:
+        print(stats.get_experiment_info(df))
+    else:
+        print(f"No experiment with tag {tag} found.")
 
 def recursive_help(cmd,text_dict,parent=None):
     #print(f'cmd dict: {cmd.__dict__}\n\n')

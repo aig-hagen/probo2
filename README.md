@@ -22,6 +22,11 @@ source probo2_env/bin/activate
  ```
 python setup.py install
 ```
+**Note**: If installation fails with this command, try the following command:
+```
+pip install -e .
+```
+
 ## Commands
 
 - [Probo2 - Evaluation tool for abstract argumentation solvers](#probo2---evaluation-tool-for-abstract-argumentation-solvers)
@@ -35,8 +40,14 @@ python setup.py install
     - [benchmarks](#benchmarks)
     - [delete-benchmark](#delete-benchmark)
     - [run](#run)
+    - [status](#status)
+    - [last](#last)
+    - [experiment-info](#experiment-info)
     - [plot](#plot)
     - [calculate](#calculate)
+    - [validate](#validate)
+    - [significance](#significance)
+
 ### add-solver
 Usage: *probo2 add-solver [OPTIONS]*
 
@@ -231,6 +242,45 @@ Usage: *probo2 delete-benchmark [OPTIONS]*
 probo2 run --all --benchmark my_benchmark --task EE-CO,EE-PR --tag MyExperiment --timeout 600 --notify my@mail.de
 ```
 
+### status
+Usage: *probo2 status*
+
+  Provides an overview of the progress of the currently running experiment.
+
+**Options**:
++ *--help*
+
+    Show this message and exit.
+
+### last
+Usage: *probo2 last*
+
+  Shows basic information about the last finished experiment.
+
+  Infos include experiment tag, benchmark names, solved tasks, executed
+  solvers and and the time when the experiment was finished
+
+**Options**:
++ *--help*
+
+    Show this message and exit.
+
+
+### experiment-info
+Usage: *probo2 experiment-info [OPTIONS]*
+
+  Prints some basic information about the experiment speficied with "--tag"
+  option.
+
+**Options**:
++ *-t, --tag*
+
+    Experiment tag.  [required]
++ *--help*
+
+    Show this message and exit.
+
+
 ### plot
 Usage: *probo2 plot[OPTIONS]*
 
@@ -371,5 +421,152 @@ probo2 calculate --tag MyExperiment -s timeouts -s errors -s solved --par 10 --c
 ```
 
 
+### validate
+Usage: *probo2 validate [OPTIONS]*
+
+  Validate experiments results.
+
+  With the validation, we have the choice between a pairwise comparison of
+  the results or a validation based on reference results. Pairwise
+  validation is useful when no reference results are available. For each
+  solver pair, the instances that were solved by both solvers are first
+  identified. The results are then compared and the percentage of accordance
+  is calculated and output in the form of a table. It is also possible to
+  show the accordance of the different solvers as a heatmap with the "--plot
+  heatmap" option. Note: The SE task is not supported here.
+
+  For the validation with references, we need to specify the path to our
+  references results with the option "--ref". It's important to note that
+  each reference instance has to follow a naming pattern to get matched with
+  the correct result instance. The naming of the reference instance has to
+  include (1) the full name of the instance to validate, (2) the task, and
+  (3) the specified extension. For example for the instance
+  "my_instance.apx",  the corresponding reference instance for the EE-PR
+  task would be named as follows: "my_instance_EE-PR.out" The order of name
+  and task does not matter. The extension is provided via the "--extension"
+  option.
+
+**Options**:
++ *--tag*
+
+    Experiment tag to be validated
++ *-t, --task*
+
+    Comma-separated list of task IDs or symbols to be validated.
++ *-b, --benchmark*
+
+    Benchmark name or id to be validated.  [required]
++ *-s, --solver*
+
+    Comma-separated list of solver IDs or names to be validated.  [required]
++ *-f, --filter*
+
+    Filter results in database. Format: [column:value]
++ *-r, --reference PATH*
+
+    Path to reference files.
++ *--update_db*
+
+    Update instances status (correct, incorrect, no reference) in database.
++ *-pw, --pairwise*
+
+    Pairwise comparision of results. Not supported for the SE task.
++ *-e, --export*
+
+    Export results in specified format.
+    Choices:  [json|latex|csv]
++ *--raw*
+
+    Export raw validation results in csv format.
++ *-p, --plot*
+
+    Create a heatmap for pairwise comparision results and a count plot for validation with references.
+    Choices:  [heatmap|count]
++ *-st, --save_to*
+
+    Directory to store plots and data in. Filenames will be generated automatically.
++ *-ext, --extension*
+
+    Reference file extension
++ *--compress*
+
+    Compress saved files.
+    Choices:  [tar|zip]
++ *--send*
+
+    Send plots and data via E-Mail.
++ *-v, --verbose*
+
+    Verbose output for validation with reference. For each solver the instance names of not validated and incorrect instances is printed to the console.
++ *--help*
+
+    Show this message and exit.
+
+**Example**
+
+Validation with references:
+```
+probo2 validate --tag MyExperiment --benchmark MyBenchmark --references /path/to/references --export latex --plot count --compress zip --send my@mail.de --save_to .
+```
+
+Pairwise validation:
+```
+probo2 validate --tag MyExperiment --benchmark MyBenchmark --pairwise --plot heatmap --save_to .
+```
+
+### significance
+Usage: *probo2 significance [OPTIONS]*
+
+  Parmatric and non-parametric significance and post-hoc tests.
+
+**Options**:
++ *--tag*
+
+    Experiment tag to be tested.
++ *-t, --task*
+
+    Comma-separated list of task IDs or symbols to be tested.
++ *--benchmark*
+
+    Benchmark name or id to be tested.
++ *-s, --solver*
+
+    Comma-separated list of solver id.s  [required]
+
++ *-p, --parametric*
+
+    Parametric significance test. ANOVA for mutiple solvers and t-test for two solvers.
+    Choices: [ANOVA|t-test]
++ *-np, --non_parametric*
+
+    Non-parametric significance test. kruksal for mutiple solvers and mann-whitney-u for two solvers
+    Choices:  [kruskal|mann-whitney-u]
+
++ *-php, --post_hoc_parametric*
+
+    Parametric post-hoc tests.
+    Choices:  [scheffe|tamhane|ttest|tukey|tukey_hsd]
+
++ *-phn, --post_hoc_non_parametric*
+
+    Non-parametric post-hoc tests.
+    Choices:  [conover|dscf|mannwhitney|nemenyi|dunn|npm_test|vanwaerden|wilcoxon]
+
++ *-a, --alpha FLOAT*
+
+    Significance level.
+
++ *-l, --last*
+
+    Test the last finished experiment.
++ *--help*
+
+    Show this message and exit.
+
+**Example**
+
+```
+probo2 significance --tag MyExperiment --parametric ANOVA --php scheffe
+```
 
 
