@@ -59,7 +59,8 @@ Usage: *probo2 add-solver [OPTIONS]*
     Name of the solver  [required]
 + *-p, --path PATH*
 
-    Path to solver executable  [required]
+    Path to solver executable  [required].
+    
     Relative paths are automatically resolved. The executable can be a compiled binary, bash script or a python file. As long as the executable implements the ICCMA interface it should work.
     More information on the [ICCMA interface](http://argumentationcompetition.org/).
 + *-f, --format [apx|tgf]*
