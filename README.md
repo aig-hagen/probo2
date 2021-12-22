@@ -374,54 +374,54 @@ Usage: probo2 calculate [OPTIONS]
 
     Comma-separated list of solver IDs or names to be selected.
 
-  + *-p, --par*
++ *-p, --par*
 
     Penalty multiplier for PAR score
-  + *-s, --solver*
++ *-s, --solver*
     Comma-separated list of solver ids or names.
 
-  + *-pfmt, --print_format*
++ *-pfmt, --print_format*
 
     Table format for printing to console.
 
     Choices: [plain|simple|github|grid|fancy_grid|pipe|orgtbl|jira|presto|pretty|psql|rst|mediawiki|moinmoin|youtrack|html|unsafehtmllatex|latex_raw|latex_booktabs|textile]
 
-  + *-c, --combine*
++ *-c, --combine*
 
     Combine results on key.
 
     Choices: [task_id|benchmark_id|solver_id]
-  + *--vbs*
++ *--vbs*
 
     Create virtual best solver
 
-  + *-st, --save_to*
++ *-st, --save_to*
 
     Directory to store tables.
 
-  + *-e, --export*
++ *-e, --export*
 
     Export results in specified format.
 
     Choices: [latex|json|csv]
-  + *-s, --statistics*
++ *-s, --statistics*
 
     Stats to calculate.
 
     Choices:[mean|sum|min|max|median|var|std|coverage|timeouts|solved|errors|all]
-  + *-l, --last*
++ *-l, --last*
 
     Calculate stats for the last finished experiment.
 
-  + *--compress*
++ *--compress*
 
     Compress saved files.
     Choices: [tar|zip]
-  + *-s, --send*
++ *-s, --send*
 
     Send files via E-Mail
 
-  + *--help*
++ *--help*
 
   Show this message and exit.
 
