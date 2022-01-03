@@ -335,33 +335,35 @@ def csv_export(export_format, df_to_export,save_to):
 
 
 @dispatch_on_value
-def print_result(type:str, df: pd.DataFrame):
+def print_result(type:str, df: pd.DataFrame, alpha=None):
     pass
 
 
 @print_result.register('significance')
-def _print_significance_results(type:str, df: pd.DataFrame):
-    df.groupby('kind').apply(lambda _df: _print_result_per_test(_df))
+def _print_significance_results(type:str, df: pd.DataFrame, alpha=None):
+    if alpha is None:
+        alpha = 0.05
+    df.groupby('kind').apply(lambda _df: _print_result_per_test(_df, alpha))
 
-def _print_result_per_test(df):
+def _print_result_per_test(df,alpha):
     kind = df.kind.iloc[0]
     print(f'\n***** Test: {kind} *****')
-    df.groupby('tag').apply(lambda _df: _print_result_per_tag(_df))
+    df.groupby('tag').apply(lambda _df: _print_result_per_tag(_df, alpha))
 
-def _print_result_per_tag(df):
+def _print_result_per_tag(df,alpha):
     tag = df.tag.iloc[0]
     print(f'\n++++ Tag: {tag} ++++')
-    df.groupby('benchmark_id').apply(lambda _df: _print_result_per_benchmark(_df))
+    df.groupby('benchmark_id').apply(lambda _df: _print_result_per_benchmark(_df, alpha))
 
-def _print_result_per_benchmark(df):
+def _print_result_per_benchmark(df,alpha):
     benchmark = df.benchmark_name.iloc[0]
     benchmark_id = df.benchmark_id.iloc[0]
     print(f'\n--- Benchmark: {benchmark} (ID: {benchmark_id}) ---')
-    df.groupby('task').apply(lambda _df: _print_result_per_task(_df))
+    df.groupby('task').apply(lambda _df: _print_result_per_task(_df, alpha))
 
-def _print_result_per_task(df):
+def _print_result_per_task(df,alpha):
     task = df.task.iloc[0]
     task_id = df.task_id.iloc[0]
     print(f'\n· Task: {task} (ID: {task_id})\n')
-    print_significance_results(0.5,df.iloc[0])
+    print_significance_results(alpha,df.iloc[0])
     #df.groupby('benchmark_id').apply(lambda _df: _print_result_per_benchmark(_df))

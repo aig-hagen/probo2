@@ -60,9 +60,17 @@ def get_experiment_info(df:pd.DataFrame)->str:
     tag = df.tag.iloc[0]
     tasks_str = ",".join(list(df.task.unique()))
     solvers_str = ",".join(list(df.solver_full_name.unique()))
-    benchmarks_str = ",".join(list(df.benchmark_name.unique()))
+
+    solvers_zipped = list(zip(df.solver_full_name.unique(), df.solver_id.unique()))
+    solver_str_list = [ f'{s[0]} (ID:{s[1]})' for s in solvers_zipped]
+    solvers_str_joined = ', '.join(solver_str_list)
+
+    benchmark_zipped = list(zip(df.benchmark_name.unique(),df.benchmark_id.unique()))
+    benchmark_str_list = [ f'{b[0]} (ID:{b[1]})' for b in benchmark_zipped]
+    bechmark_str_joined = ', '.join(benchmark_str_list)
+    #bechmark_str_joined = ",".join(list(df.benchmark_name.unique()))
     unique_instances_str = len(list(df.instance.unique()))
-    return f'+++++SUMMARY+++++\nTag: {tag}\nBenchmarks: {benchmarks_str}\n#Unique Instances: {unique_instances_str}\nTasks: {tasks_str}\nSolvers: {solvers_str}\n\n'
+    return f'+++++SUMMARY+++++\nTag: {tag}\nBenchmarks: {bechmark_str_joined}\n#Unique Instances: {unique_instances_str}\nTasks: {tasks_str}\nSolvers: {solvers_str_joined}\n\n'
 
 def get_experiment_summary_as_string(df: pd.DataFrame) -> str:
     final_string = get_experiment_info(df)

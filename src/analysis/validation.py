@@ -162,7 +162,8 @@ def _compare_result_some_extension(actual,correct):
 #  -----------------------Pairwise comparision-----------------------
 @dispatch_on_value
 def pairwise_comparision(task,current_solver_result, other_solver_result):
-    print(f"Task {task} not supported for pairwise comparision.")
+    pass
+    #print(f"Task {task} not supported for pairwise comparision.")
 
 @pairwise_comparision.register("EE")
 def _ee_pairwise_comparision(task,current_solver_result: str, other_solver_result: str):

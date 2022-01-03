@@ -152,7 +152,12 @@ class Solver(Base):
         cmd_params = []
         arg_lookup = {}
         arg = ""
+        solver_dir = os.path.dirname(self.solver_path)
         if self.solver_path.endswith('.sh'):
+           
+            # cmd_params.append('cd')
+            # cmd_params.append(solver_dir)
+            # cmd_params.append('&&')
             cmd_params.append('bash')
         elif self.solver_path.endswith('.py'):
             cmd_params.append('python')
@@ -178,7 +183,7 @@ class Solver(Base):
 
                     start_time_current_run = time.perf_counter()
                     result = utils.run_process(final_param,
-                                       capture_output=True, timeout=timeout, check=True)
+                                       capture_output=True, timeout=timeout, check=True,cwd=solver_dir)
 
 
                     end_time_current_run = time.perf_counter()

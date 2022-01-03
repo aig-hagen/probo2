@@ -48,7 +48,8 @@ class Benchmark(Base):
             except IOError as err:
                 print(err)
 
-            instance_name = os.path.basename(file).removesuffix(f'.{self.extension_arg_files}')
+            suffix_length = len(self.extension_arg_files) + 1 # +1 for dot 
+            instance_name = os.path.basename(file)[:-suffix_length]
             lookup[instance_name] = argument_param
 
 
@@ -138,7 +139,6 @@ class Benchmark(Base):
 
         for attack in attacks:
             if attack:
-                print(f'{attack=}')
                 apx_attacks += 'att({},{}).\n'.format(*attack.split(" "))
 
         apx_instance_string = apx_args + apx_attacks
@@ -239,7 +239,10 @@ class Benchmark(Base):
         print(f"{num_generated_files} .{extension} files generated.")
 
     def _strip_extension_arg_files(self, instances):
-        return [ instance.removesuffix(f'.{self.extension_arg_files}') for instance in instances]
+        suffix_length = len(self.extension_arg_files) + 1 # +1 for dot 
+        return  [ instance[:-suffix_length] for instance in instances]
+        
+        #return [ instance.removesuffix(f'.{self.extension_arg_files}') for instance in instances]
     def strip_extension(self,instances):
         extensions_stripped = list()
         for instance in instances:
