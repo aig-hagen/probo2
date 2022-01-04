@@ -294,7 +294,7 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
 @click.option(
     "--benchmark",
     "-b",
-    required=False,
+    required=True,
     cls=CustomClickOptions.StringAsOption,
     default=[],
     help="Comma-seperated list of ids or names of benchmarks (in database) to run solvers on.")
@@ -729,10 +729,10 @@ def solvers(verbose,id):
         else:
             for solver in solvers:
                 tabulate_data.append(
-                    [solver.solver_id, solver.solver_name,solver.solver_format,solver.solver_path])
+                    [solver.solver_id, solver.solver_name,solver.solver_format,solver.solver_version])
 
             print(
-                tabulate(tabulate_data, headers=["ID", "Name", "Format","Path"]))
+                tabulate(tabulate_data, headers=["ID", "Name", "Format","Version"]))
 
     session.close()
 
