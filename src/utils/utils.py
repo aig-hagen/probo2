@@ -332,7 +332,10 @@ def run_process(*popenargs,
         except TimeoutExpired as exc:
             parent = psutil.Process(process.pid)
             for child in parent.children(recursive=True):  # or parent.children() for recursive=False
-                child.kill()
+                try:
+                    child.kill()
+                except psutil.NoSuchProcess:
+                    continue
             parent.kill()
             process.kill()
             if _mswindows:
