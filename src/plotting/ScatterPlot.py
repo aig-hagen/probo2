@@ -20,6 +20,7 @@ from six.moves import range
 import src.analysis.statistics as Stats
 import os
 import seaborn as sns
+import math
 #
 #==============================================================================
 class ScatterException(Exception):
@@ -74,8 +75,18 @@ class Scatter(Plot, object):
         """
 
         solvers = list(data.columns)
+        self.x_min = min(data[solvers[0]].min(),data[solvers[1]].min())
+        self.x_max = max(data[solvers[0]].max(),data[solvers[1]].max())
 
-        step = int((self.x_max - self.x_min) / 10)
+        self.y_min = self.x_min
+        self.y_max = self.x_max
+        # self.x_min = 0.001
+        # self.x_max = 5.0
+        # self.y_min = 0.001
+        # self.y_max = 5.0
+
+        step = math.ceil((self.x_max - self.x_min) / 10.0)
+        print(step)
         x = np.arange(self.x_min, self.x_max + self.x_min + step, step)
 
         # "good" area
@@ -85,53 +96,54 @@ class Scatter(Plot, object):
         plt.fill_between(x, 0.1 * x, 10 * x, facecolor='green', alpha=0.15,
             zorder=3)
 
+        print(self.x_min,self.x_max)
         plt.xlim([self.x_min, self.x_max])
         plt.ylim([self.y_min, self.y_max])
 
         # timeout lines
-        plt.axvline(self.timeout, linewidth=1, color='red', ls=':',
-            label=str(self.timeout), zorder=3)
-        plt.axhline(self.timeout, linewidth=1, color='red', ls=':',
-            label=str(self.timeout), zorder=3)
+        # plt.axvline(self.timeout, linewidth=1, color='red', ls=':',
+        #     label=str(self.timeout), zorder=3)
+        # plt.axhline(self.timeout, linewidth=1, color='red', ls=':',
+        #     label=str(self.timeout), zorder=3)
 
-        if self.tlb_loc == 'after':
-            plt.text(2 * self.x_min, self.timeout + self.x_max / 40,
-                self.t_label, horizontalalignment='left',
-                verticalalignment='bottom', fontsize=self.f_props['size'] * 0.8)
-            plt.text(self.timeout + self.x_max / 40, 2 * self.x_min,
-                self.t_label, horizontalalignment='left',
-                verticalalignment='bottom', fontsize=self.f_props['size'] * 0.8,
-                rotation=90)
-        else:
-            plt.text(2 * self.x_min, self.timeout - self.x_max / 3.5,
-                self.t_label, horizontalalignment='left',
-                verticalalignment='bottom', fontsize=self.f_props['size'] * 0.8)
-            plt.text(self.timeout - self.x_max / 3.5, 2 * self.x_min,
-                self.t_label, horizontalalignment='left',
-                verticalalignment='bottom', fontsize=self.f_props['size'] * 0.8,
-                rotation=90)
+        # if self.tlb_loc == 'after':
+        #     plt.text(2 * self.x_min, self.timeout + self.x_max / 40,
+        #         self.t_label, horizontalalignment='left',
+        #         verticalalignment='bottom', fontsize=self.f_props['size'] * 0.8)
+        #     plt.text(self.timeout + self.x_max / 40, 2 * self.x_min,
+        #         self.t_label, horizontalalignment='left',
+        #         verticalalignment='bottom', fontsize=self.f_props['size'] * 0.8,
+        #         rotation=90)
+        # else:
+        #     plt.text(2 * self.x_min, self.timeout - self.x_max / 3.5,
+        #         self.t_label, horizontalalignment='left',
+        #         verticalalignment='bottom', fontsize=self.f_props['size'] * 0.8)
+        #     plt.text(self.timeout - self.x_max / 3.5, 2 * self.x_min,
+        #         self.t_label, horizontalalignment='left',
+        #         verticalalignment='bottom', fontsize=self.f_props['size'] * 0.8,
+        #         rotation=90)
 
         # scatter
         # plt.scatter(data[0][1], data[1][1], c=self.marker_style['color'],
         #     marker=self.marker_style['marker'], s=self.marker_style['size'],
         #     alpha=self.alpha, zorder=5)
 
-        ax = sns.scatter_plot(data=data, x=solvers[0],y=solvers[1], c=self.marker_style['color'],
+        ax = sns.scatterplot(data=data, x=solvers[0],y=solvers[1],
         marker=self.marker_style['marker'], s=self.marker_style['size'],
         alpha=self.alpha, zorder=5)
 
         plt.suptitle(self.title)
 
-        # axes' labels
-        if self.x_label:
-            plt.xlabel(self.x_label)
-        else:
-            plt.xlabel(data[0][0])
+        # # axes' labels
+        # if self.x_label:
+        #     plt.xlabel(self.x_label)
+        # else:
+        #     plt.xlabel(solvers[0])
 
-        if self.y_label:
-            plt.ylabel(self.y_label)
-        else:
-            plt.ylabel(data[1][0])
+        # if self.y_label:
+        #     plt.ylabel(self.y_label)
+        # else:
+        #     plt.ylabel(solvers[1])
 
         # turning the grid on
         if not self.no_grid:
@@ -139,8 +151,8 @@ class Scatter(Plot, object):
 
         # choosing logarithmic scales
         ax = plt.gca()
-        ax.set_xscale('log')
-        ax.set_yscale('log')
+        # ax.set_xscale('log')
+        # ax.set_yscale('log')
 
         # setting ticks font properties
         # set_*ticklables() seems to be not needed in matplotlib 1.5.0
@@ -156,7 +168,7 @@ class Scatter(Plot, object):
         # setting frame thickness
         for i in six.itervalues(ax.spines):
             i.set_linewidth(1)
-
+        print(self.save_to)
         plt.savefig(self.save_to, bbox_inches='tight', transparent=self.transparent)
         plt.clf()
 

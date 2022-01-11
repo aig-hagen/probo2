@@ -570,7 +570,7 @@ def calculate(par, solver, task, benchmark,
 @click.option("--combine",
               "-c",
               type=click.Choice(['tag','task_id','benchmark_id']),help='Combine results on specified key.')
-@click.option("--kind",'-k',type=click.Choice(['cactus','count','dist','pie','box','all']),multiple=True)
+@click.option("--kind",'-k',type=click.Choice(['cactus','count','dist','pie','box','scatter','all']),multiple=True)
 @click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
 @click.option("--send", "-s", required=False, help="Send plots via E-Mail.")
 @click.option("--last", "-l",is_flag=True,help="Plot results for the last finished experiment.")
@@ -637,11 +637,18 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs, backend,combin
 
     for plot_kind in list(kind):
         saved_files.append(pl_util.create_plots(plot_kind, df, save_to, default_options, grouping))
-
     saved_files_df = pd.concat(saved_files).to_frame().rename(columns={0:'saved_files'})
 
-    saved_files_paths = [f'{x}.{backend}' for x in saved_files_df.saved_files.to_list()]
+    saved_files_paths = []
+    for file in saved_files_df.saved_files.to_list():
+        if isinstance(file,list):
+            saved_files_paths.extend([  f'{x}.{backend}' for x in file ])
+        else:
+            saved_files_paths.append( f'{file}.{backend}')
 
+
+    # saved_files_paths = [ f'{x}.{backend}' for x in saved_files_df.saved_files.to_list()]
+    # print(saved_files_paths)
 
 
     if compress:
@@ -1128,8 +1135,12 @@ import src.analysis.significance_testing as sig
 @click.option('--export',
               '-e',
               type=click.Choice(
-                  ['json', 'latex', 'excel', 'html', 'heatmap', 'csv']),
-              multiple=True)
+                  ['json', 'latex','csv']),multiple=True)
+@click.option('--plot',
+              '-p',
+              type=click.Choice(
+                  ['heatmap']),
+              multiple=True,help="Create a heatmap for pairwise comparision results and a count plot for validation with references.")
 @click.option(
     "--save_to",
     "-st",
@@ -1137,11 +1148,10 @@ import src.analysis.significance_testing as sig
     required=False,
     help=
     "Directory to store plots in. Filenames will be generated automatically.")
-@click.option("--equal_sample_size",is_flag=True)
 @click.option("--last", "-l",is_flag=True,help="Test the last finished experiment.")
 def significance(tag, task, benchmark, solver, filter, combine, parametric,
                  non_parametric, post_hoc_parametric, post_hoc_non_parametric,
-                 alpha, export, save_to, p_adjust, equal_sample_size, last):
+                 alpha, export, save_to, p_adjust,last):
     """Parmatric and non-parametric significance and post-hoc tests.
 
     Args:
@@ -1192,7 +1202,6 @@ def significance(tag, task, benchmark, solver, filter, combine, parametric,
     if significance_tests:
         sig_results_list = [ clean.groupby(grouping,as_index=False).apply(lambda df_: sig.test(kind_test,df_,equal_sample_size=True)) for kind_test in significance_tests]
         sig_results_df = pd.concat(sig_results_list)
-        print(sig_results_df)
         sig.print_result('significance',sig_results_df)
 
 
@@ -1202,6 +1211,9 @@ def significance(tag, task, benchmark, solver, filter, combine, parametric,
         ph_results_list = [ (clean.groupby(grouping,as_index=False).apply(lambda df_: sig.test_post_hoc(df_,ph,True,p_adjust))) for ph in post_hocs]
         ph_res_df = pd.concat(ph_results_list)
         ph_res_df.apply(lambda row: sig.print_post_hoc_results(row),axis=1)
+
+    if export:
+        pass
 
 
 

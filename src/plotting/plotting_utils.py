@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import json
 import shutil
+from src import data
 from src.utils import utils
 from src.plotting import CactusPlot, DistributionPlot, ScatterPlot
 from src.analysis.statistics import get_info_as_strings
@@ -68,16 +69,97 @@ def prep_scatter_data(df):
 
     return pd.DataFrame.from_dict(runtimes_solver).fillna(0)
 
-def scatter_plot(df: pd.DataFrame, save_to: str, options: dict, grouping: list):
-    pass
+# def scatter_plot(df: pd.DataFrame, save_to: str, options: dict, grouping: list):
+#     pass
 
-def create_scatter_plot(df: pd.DataFrame, save_to: str, options: dict)->str:
+# def create_scatter_plot(df: pd.DataFrame, save_to: str, options: dict)->str:
+#     info = get_info_as_strings(df)
+#     df['Solver'] = df['solver_full_name']
+#     options['title'] = info['task'] + " " + info['benchmark']
+#     save_file_name = create_file_name(df,info,save_to,'cactus')
+#     options['save_to'] = save_file_name
+#     ScatterPlot.Scatter(options).create(df)
+
+def _get_intersection_instances(df):
+    set_list = []
+    for name, group in df.groupby('solver_id'):
+        set_list.append(set(group['instance'].unique()))
+
+    return list(set.intersection(*set_list))
+
+def _prep_data_sactter_plot(df):
+    df_solved  = df[(df.exit_with_error == False) & (df.timed_out == False) ]
+    intersection_solved = _get_intersection_instances(df_solved)
+    return df_solved[df_solved.instance.isin(intersection_solved)]
+def _create_scatter_plot(df, save_to, options):
+    solver_name_x = df.columns[0]
+    solver_name_y = df.columns[1]
+    save_file_name = f'{save_to}_{solver_name_x}_{solver_name_y}_scatter_new'
+    #options['settings']['save_to'] = save_file_name
+    #ScatterPlot.Scatter(options).create(df)
+
+    max_lim = max(df[solver_name_x].max(),df[solver_name_y].max())
+    sns.set_style('darkgrid')
+
+    scatter = sns.scatterplot(data=df,x=solver_name_x,y=solver_name_y)
+    #scatter.plot(scatter.get_xlim(),scatter.get_ylim(),ls='--')
+
+    scatter.set(xscale= 'log')
+    scatter.set(yscale= 'log')
+    scatter.set(ylim=(0.001,max_lim*10))
+    scatter.set(xlim=(0.001,max_lim*10))
+    scatter.plot(scatter.get_xlim(),scatter.get_ylim(),ls='--')
+
+          # formatter
+    majorFormatter = plt.LogFormatterMathtext(base=10)
+    scatter.xaxis.set_major_formatter(majorFormatter)
+    scatter.yaxis.set_major_formatter(majorFormatter)
+    figure = scatter.get_figure()
+    figure.savefig(f'{save_file_name}.png',
+                    bbox_inches='tight'
+                    )
+    plt.clf()
+    return save_file_name
+def _create_pairwise_scatter_plot(df, save_to, options):
+    saved_files_list = []
+    unique_solver_ids = list(df.solver_id.unique())
+    remaining_solver_ids = unique_solver_ids.copy()
     info = get_info_as_strings(df)
-    df['Solver'] = df['solver_full_name']
-    options['title'] = info['task'] + " " + info['benchmark']
-    save_file_name = create_file_name(df,info,save_to,'cactus')
-    options['save_to'] = save_file_name
-    ScatterPlot.Scatter(options).create(df)
+    save_file_name = create_file_name(df,info,save_to,'scatter')
+    clean_df = _prep_data_sactter_plot(df)
+    for current_solver_id in unique_solver_ids:
+        current_solver_data = clean_df[clean_df.solver_id == current_solver_id]
+        current_solver_data['instance'].sort_values()
+        if current_solver_data.empty:
+                continue
+        current_solver_name = current_solver_data.solver_full_name.iloc[0]
+
+        remaining_solver_ids.remove(current_solver_id)
+        for remaining_solver_id in remaining_solver_ids:
+            remaining_solver_data = clean_df[clean_df.solver_id == remaining_solver_id]
+            if remaining_solver_data.empty:
+                continue
+            remaining_solver_data['instance'].sort_values()
+            remaining_solver_name = remaining_solver_data.solver_full_name.iloc[0]
+
+            data_dict = {current_solver_name:current_solver_data.runtime.values, remaining_solver_name: remaining_solver_data.runtime.values}
+            scatter_data = pd.DataFrame(data_dict)
+            saved_files_list.append(_create_scatter_plot(scatter_data,save_file_name,options))
+
+    return saved_files_list
+
+
+
+
+
+@create_plots.register("scatter")
+def _scatter_plot(kind, df, save_to, options,grouping):
+    scatter_grouping = grouping.copy()
+    if 'solver_id' in scatter_grouping:
+        scatter_grouping.remove('solver_id')
+    return df.groupby(scatter_grouping).apply(lambda _df: _create_pairwise_scatter_plot(_df,save_to,options))
+
+
 
 # Cactus plots
 @create_plots.register("cactus")
