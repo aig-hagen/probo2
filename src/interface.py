@@ -1423,7 +1423,13 @@ def get_help(cmd,ctx):
     cmd.format_help(ctx, formatter)
     return formatter.getvalue().rstrip("\n")
 
+@click.command()
+def logs():
+    with open(definitions.LOG_FILE_PATH,"r") as log_file:
+        print(log_file.read())
 
+
+cli.add_command(logs)
 cli.add_command(dumphelp_markdown)
 cli.add_command(experiment_info)
 cli.add_command(last)

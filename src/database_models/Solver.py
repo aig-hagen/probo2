@@ -92,9 +92,10 @@ class Solver(Base):
             cmd_params.append('python3')
         cmd_params.append(self.solver_path)
         cmd_params.append("--{}".format(prop))
+        solver_dir = os.path.dirname(self.solver_path)
         try:
             solver_output = utils.run_process(cmd_params,
-                                        capture_output=True, check=True)
+                                        capture_output=True, check=True,cwd=solver_dir)
             solver_output = re.sub("\s+", " ",
                                 solver_output.stdout.decode("utf-8")).strip(" ")
 
@@ -154,7 +155,7 @@ class Solver(Base):
         arg = ""
         solver_dir = os.path.dirname(self.solver_path)
         if self.solver_path.endswith('.sh'):
-           
+
             # cmd_params.append('cd')
             # cmd_params.append(solver_dir)
             # cmd_params.append('&&')

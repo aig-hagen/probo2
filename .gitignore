@@ -7,11 +7,12 @@ __pycache__/
 
 # Distribution / packaging
 *.csv
+*.db
 *.ipynb
 .vscode/
 .idea/
 
-databases/
+.probo2/
 .Python
 build/
 develop-eggs/
@@ -29,6 +30,7 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
 MANIFEST
 
 
@@ -39,8 +41,12 @@ MANIFEST
 *.spec
 
 # Installer logs
+probo2_old.db
+probo2.db
 pip-log.txt
-probo2-log.txt
+probo2_log.txt
+.probo2_status.json
+probo2_last_experiment.json
 pip-delete-this-directory.txt
 #JSON
 status.json

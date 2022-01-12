@@ -326,8 +326,10 @@ def _gen_file_name(df):
      return (f'{"_".join(df.tag)}_{"_".join(df.task)}_{"_".join(df.benchmark_name)}_ {(df.kind)}')
 
 @dispatch_on_value
-def export(export_format, df_to_export, save_to):
+def export(export_format: str,df:pd.DataFrame, save_to,file_name_suffix=""):
     pass
+
+
 
 @export.register('csv')
 def csv_export(export_format, df_to_export,save_to):
