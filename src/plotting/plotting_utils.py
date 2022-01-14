@@ -21,7 +21,7 @@ def read_default_options(path: str) -> dict:
 def set_user_options(user_options, default_options):
     for key, value in user_options.params.items():
         if value is not None:
-            default_options[key] = value
+            default_options['settings'][key] = value
 
 def create_archive_from_plots(save_to: str, name,saved_files_paths,compress):
     temp_path = os.path.join(save_to,'_temp_plots')
@@ -88,44 +88,52 @@ def _get_intersection_instances(df):
     return list(set.intersection(*set_list))
 
 def _prep_data_sactter_plot(df):
-    df_solved  = df[(df.exit_with_error == False) & (df.timed_out == False) ]
+    df_solved  = df[(df.exit_with_error == False)]
     intersection_solved = _get_intersection_instances(df_solved)
     return df_solved[df_solved.instance.isin(intersection_solved)]
 def _create_scatter_plot(df, save_to, options):
     solver_name_x = df.columns[0]
     solver_name_y = df.columns[1]
     save_file_name = f'{save_to}_{solver_name_x}_{solver_name_y}_scatter_new'
-    #options['settings']['save_to'] = save_file_name
-    #ScatterPlot.Scatter(options).create(df)
+    data = [[solver_name_x,df[solver_name_x].values],[solver_name_y,df[solver_name_y].values]]
+    options['settings']['save_to'] = save_file_name
+    ScatterPlot.Scatter(options).create(data)
 
-    max_lim = max(df[solver_name_x].max(),df[solver_name_y].max())
-    sns.set_style('darkgrid')
+    # max_lim = max(df[solver_name_x].max(),df[solver_name_y].max())
+    # sns.set_style('darkgrid')
 
-    scatter = sns.scatterplot(data=df,x=solver_name_x,y=solver_name_y)
-    #scatter.plot(scatter.get_xlim(),scatter.get_ylim(),ls='--')
+    # scatter = sns.scatterplot(data=df,x=solver_name_x,y=solver_name_y)
+    # #scatter.plot(scatter.get_xlim(),scatter.get_ylim(),ls='--')
 
-    scatter.set(xscale= 'log')
-    scatter.set(yscale= 'log')
-    scatter.set(ylim=(0.001,max_lim*10))
-    scatter.set(xlim=(0.001,max_lim*10))
-    scatter.plot(scatter.get_xlim(),scatter.get_ylim(),ls='--')
+    # scatter.set(xscale= 'log')
+    # scatter.set(yscale= 'log')
+    # scatter.set(ylim=(0.001,max_lim*10))
+    # scatter.set(xlim=(0.001,max_lim*10))
+    # scatter.plot(scatter.get_xlim(),scatter.get_ylim(),ls='--')
 
-          # formatter
-    majorFormatter = plt.LogFormatterMathtext(base=10)
-    scatter.xaxis.set_major_formatter(majorFormatter)
-    scatter.yaxis.set_major_formatter(majorFormatter)
-    figure = scatter.get_figure()
-    figure.savefig(f'{save_file_name}.png',
-                    bbox_inches='tight'
-                    )
-    plt.clf()
+    #       # formatter
+    # majorFormatter = plt.LogFormatterMathtext(base=10)
+    # scatter.xaxis.set_major_formatter(majorFormatter)
+    # scatter.yaxis.set_major_formatter(majorFormatter)
+    # figure = scatter.get_figure()
+    # figure.savefig(f'{save_file_name}.png',
+    #                 bbox_inches='tight'
+    #                 )
+    # plt.clf()
     return save_file_name
 def _create_pairwise_scatter_plot(df, save_to, options):
+    timeout = df.cut_off.max()
+    options['settings']['timeout'] = timeout
+
+
     saved_files_list = []
     unique_solver_ids = list(df.solver_id.unique())
     remaining_solver_ids = unique_solver_ids.copy()
     info = get_info_as_strings(df)
     save_file_name = create_file_name(df,info,save_to,'scatter')
+    if options['settings']['gen_title']:
+        options['settings']['title'] = info['task'] + " " + info['benchmark']
+
     clean_df = _prep_data_sactter_plot(df)
     for current_solver_id in unique_solver_ids:
         current_solver_data = clean_df[clean_df.solver_id == current_solver_id]
@@ -133,6 +141,7 @@ def _create_pairwise_scatter_plot(df, save_to, options):
         if current_solver_data.empty:
                 continue
         current_solver_name = current_solver_data.solver_full_name.iloc[0]
+        current_solver_data['runtime'] = np.where(current_solver_data.timed_out == True,timeout,current_solver_data.runtime)
 
         remaining_solver_ids.remove(current_solver_id)
         for remaining_solver_id in remaining_solver_ids:
@@ -141,6 +150,8 @@ def _create_pairwise_scatter_plot(df, save_to, options):
                 continue
             remaining_solver_data['instance'].sort_values()
             remaining_solver_name = remaining_solver_data.solver_full_name.iloc[0]
+
+            remaining_solver_data['runtime'] = np.where(remaining_solver_data.timed_out == True,timeout,remaining_solver_data.runtime)
 
             data_dict = {current_solver_name:current_solver_data.runtime.values, remaining_solver_name: remaining_solver_data.runtime.values}
             scatter_data = pd.DataFrame(data_dict)
@@ -154,10 +165,13 @@ def _create_pairwise_scatter_plot(df, save_to, options):
 
 @create_plots.register("scatter")
 def _scatter_plot(kind, df, save_to, options,grouping):
+    print("Creating scatter plots...",end="")
     scatter_grouping = grouping.copy()
     if 'solver_id' in scatter_grouping:
         scatter_grouping.remove('solver_id')
-    return df.groupby(scatter_grouping).apply(lambda _df: _create_pairwise_scatter_plot(_df,save_to,options))
+    saved_files = df.groupby(scatter_grouping).apply(lambda _df: _create_pairwise_scatter_plot(_df,save_to,options))
+    print("finished.")
+    return saved_files
 
 
 

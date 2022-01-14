@@ -33,6 +33,7 @@ class Plot:
     self.y_log = settings['y_log']
     self.y_max = settings['y_max']
     self.y_min = settings['y_min']
+    self.axis_scale = settings['axis_scale']
 
     self.lgd_loc = settings['lgd_loc']
     self.lgd_ncol = settings['lgd_ncol']

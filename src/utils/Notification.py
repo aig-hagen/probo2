@@ -32,9 +32,13 @@ class Notification:
     def send(self):
         context = ssl.create_default_context()
         text = self.message.as_string()
-        with smtplib.SMTP_SSL(self.smtp_server, self.port, context=context) as server:
-            server.login(self.sender_email, self.password)
-            server.sendmail(self.sender_email, self.receiver_email, text)
+        try:
+            with smtplib.SMTP_SSL(self.smtp_server, self.port, context=context) as server:
+                server.login(self.sender_email, self.password)
+                server.sendmail(self.sender_email, self.receiver_email, text)
+        except Exception:
+            print("Notification e-mail could not be sent due to issues with credentials.")
+
     def add_attachment(self,file):
         # Open PDF file in binary mode
         with open(file, "rb") as attachment:

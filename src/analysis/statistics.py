@@ -211,6 +211,60 @@ def create_vbs(df,vbs_id):
 
 
     return row
+@dispatch_on_value
+def _verbose_output(to_call,df):
+    pass
+
+def _instance_list_to_string(instances):
+    instances_str = ''
+    for i in instances:
+        instances_str += f'{i}\n'
+    return instances_str
+
+def _timeouts_verbose_solver(df):
+    solver_name = df.solver_full_name.iloc[0]
+    instances = df[df.timed_out == True].instance.values
+    if len(instances):
+        print(f'+++++ {solver_name} +++++\n#Instances: {len(instances)}\nInstances:\n{_instance_list_to_string(instances)}')
+
+
+@_verbose_output.register('timeouts')
+def _timeouts_verbose(to_call, df):
+    info = get_info_as_strings(df)
+    tasks = info['task']
+    benchmark = info['benchmark']
+    print(f'***** Timed out instances for task {tasks} on benchmark {benchmark}' )
+    df.groupby('solver_id').apply(lambda _df: _timeouts_verbose_solver(_df))
+
+
+@_verbose_output.register('errors')
+def _timeouts_verbose(to_call, df):
+    info = get_info_as_strings(df)
+    tasks = info['task']
+    benchmark = info['benchmark']
+    print(f'*****  Instances with errors for task {tasks} on benchmark {benchmark}' )
+    df.groupby('solver_id').apply(lambda _df: _errors_verbose_solver(_df))
+
+def _errors_verbose_solver(df):
+    solver_name = df.solver_full_name.iloc[0]
+    instances = df[df.exit_with_error == True].instance.values
+    if len(instances):
+        print(f'+++++ {solver_name} +++++\n#Instances: {len(instances)}\nInstances:\n{_instance_list_to_string(instances)}')
+
+@_verbose_output.register('solved')
+def _solved_verbose(to_call, df):
+    info = get_info_as_strings(df)
+    tasks = info['task']
+    benchmark = info['benchmark']
+    print(f'*****  Solved instances for task {tasks} on benchmark {benchmark}' )
+    df.groupby('solver_id').apply(lambda _df: _solved_verbose_solver(_df))
+
+def _solved_verbose_solver(df):
+    solver_name = df.solver_full_name.iloc[0]
+    instances = df[(df.timed_out == False)&(df.exit_with_error == False)].instance.values
+    if len(instances):
+        print(f'+++++ {solver_name} +++++\n#Instances: {len(instances)}\nInstances:\n{_instance_list_to_string(instances)}')
+
 
 @dispatch_on_value
 def export(export_format: str,df, save_to, calculated,par):

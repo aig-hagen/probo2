@@ -1,3 +1,4 @@
+from email.policy import default
 import itertools
 import click
 import json
@@ -453,11 +454,12 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
 @click.option("--export","-e",type=click.Choice(['latex','csv','json']),default=None,multiple=True)
 #@click.option("--css",default="styled-table.css",help="CSS file for table style.")
 @click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors','all']),multiple=True)
+@click.option("--verbose",'-v',is_flag=True,help='Show additional information for some statistics.')
 @click.option("--last", "-l",is_flag=True,help="Calculate stats for the last finished experiment.")
 @click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
 @click.option("--send", required=False, help="Send plots via E-Mail.")
 def calculate(par, solver, task, benchmark,
-              tag,combine, vbs, export, save_to, statistics,print_format,filter,last, send, compress):
+              tag,combine, vbs, export, save_to, statistics,print_format,filter,last, send, compress, verbose):
 
     if last:
         tag.append(utils.get_from_last_experiment("Tag"))
@@ -503,6 +505,14 @@ def calculate(par, solver, task, benchmark,
     print_headers = ['solver','task','benchmark']
     print_headers.extend(functions_to_call)
     utils.print_df(stats_df,['tag','benchmark','task'],headers=print_headers,format=print_format)
+
+    if verbose:
+        verbose_grouping = grouping.copy()
+        if 'solver_id' in verbose_grouping:
+            verbose_grouping.remove('solver_id')
+        verbose_stats_to_call = set.intersection(set(functions_to_call),{'timeouts','errors','solved'})
+        for to_call in verbose_stats_to_call:
+            df.groupby(verbose_grouping).apply(lambda _df: stats._verbose_output(to_call,_df))
 
     saved_files = []
     if export:
@@ -572,9 +582,10 @@ def calculate(par, solver, task, benchmark,
               type=click.Choice(['tag','task_id','benchmark_id']),help='Combine results on specified key.')
 @click.option("--kind",'-k',type=click.Choice(['cactus','count','dist','pie','box','scatter','all']),multiple=True)
 @click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
-@click.option("--send", "-s", required=False, help="Send plots via E-Mail.")
+@click.option("--send", required=False, help="Send plots via E-Mail.")
 @click.option("--last", "-l",is_flag=True,help="Plot results for the last finished experiment.")
-def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs, backend,combine, kind, compress, send, last):
+@click.option("--axis_scale",'-as',type=click.Choice(['linear','log']),default='log',help="Scale of x and y axis." )
+def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs, backend,combine, kind, compress, send, last, axis_scale):
     """Create plots of experiment results.
 
     The --tag option is used to specify which experiment the plots should be created for.

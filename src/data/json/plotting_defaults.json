@@ -41,7 +41,7 @@
     },
     "settings":
     {
-        "alpha": 0.3,
+        "alpha": 0.5,
         "backend": "png",
         "dry_run": false,
         "font": "times",
@@ -77,9 +77,11 @@
         "x_max": null,
         "y_label": null,
         "y_log": false,
-        "y_min": 0.000000001,
+        "y_min": 0.001,
         "y_max": null,
-        "title": ""
+        "title": "",
+        "axis_scale": "log",
+        "gen_title": true
     },
     "pie_options":
      {
