@@ -1,4 +1,5 @@
 from email.policy import default
+from importlib.resources import path
 import itertools
 import click
 import json
@@ -24,7 +25,8 @@ import logging
 from itertools import chain
 from glob import glob
 
-from random import choice
+from random import choice, random
+from src.utils import fetching
 
 
 from src.reporting.validation_report import Validation_Report
@@ -233,13 +235,6 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
         instances_ = (chain.from_iterable(glob(os.path.join(x[0], f'*.{current}')) for x in os.walk(path_resolved)))
         for i in instances_:
             print(i)
-    #exit()
-
-
-
-
-
-
 
     new_benchmark = Benchmark(benchmark_name=name,
                               benchmark_path=path_resolved,
@@ -1439,7 +1434,23 @@ def logs():
     with open(definitions.LOG_FILE_PATH,"r") as log_file:
         print(log_file.read())
 
+@click.command()
+@click.option('--name','-n', type=click.Choice(['ICCMA15']),multiple=True,required=True, help='Name of benchmark to fetch')
+@click.option(
+    "--save_to",
+    "-st",
+    type=click.Path(exists=True, resolve_path=True),
+    help="Directory to store benchmark in. Default is the current working directory.")
+@click.pass_context
+def fetch(ctx,name, save_to):
+    if not save_to:
+        save_to = os.getcwd()
+    for n in name:
+        path_benchmark  = fetching.fetch_benchmark(n,save_to)
+        ctx.invoke(add_benchmark,name=n,path=path_benchmark,format=('tgf','apx'),random_arguments=True,extension_arg_files='arg')
 
+
+cli.add_command(fetch)
 cli.add_command(logs)
 cli.add_command(dumphelp_markdown)
 cli.add_command(experiment_info)

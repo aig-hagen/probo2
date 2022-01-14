@@ -152,7 +152,7 @@ def add_benchmark(session, benchmark):
         session.flush()
         session.refresh(new_benchmark)
     else:
-        raise ValueError("Solver already in Database!")
+        raise ValueError("Benchmark already in Database!")
 
     return new_benchmark.id
 
