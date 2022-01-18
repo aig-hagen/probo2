@@ -1,6 +1,8 @@
 from email.policy import default
 from importlib.resources import path
 import itertools
+from socket import send_fds
+from tabnanny import verbose
 import click
 import json
 import os
@@ -317,7 +319,7 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
 )
 @click.option(
     "--tag",
-    required=True,
+    required=False,
     help=
     "Tag for individual experiments.This tag is used to identify the experiment."
 )
@@ -328,9 +330,10 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
 )
 #@click.option("--report", is_flag=True,help="Create summary report of experiment.")
 @click.option("--n_times","-n",required=False,type=click.types.INT,default=1, help="Number of repetitions per instance. Run time is the avg of the n runs.")
+@click.option("--rerun",'-rn',is_flag=True, help='Rerun last experiment')
 @click.pass_context
 def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
-        notify, track, n_times):
+        notify, track, n_times, rerun):
     """Run solver.
     \f
     Args:
@@ -348,33 +351,53 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
         track (str): Comma-seperated list of tracks to solve.
 
     """
-    run_parameter = ctx.params.copy()
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
-    benchmarks = DatabaseHandler.get_benchmarks(session, benchmark)
-    if track:
-        tasks = DatabaseHandler.get_tasks(session, track)
-    else:
+    run_parameter = ctx.params.copy()
+    if rerun:
+        last_json = utils.get_last_experiment_json()
+        utils.set_run_parameters(run_parameter, last_json)
 
-        tasks = DatabaseHandler.get_tasks(session, task)
 
-    if DatabaseHandler.tag_in_database(session, tag) and not(dry):
+
+    if run_parameter['tag'] is None and not(dry):
+        print("Please specify a experiment tag via the --tag option.")
+        sys.exit()
+    if DatabaseHandler.tag_in_database(session, run_parameter['tag']) and not(dry):
         print("Tag is already used. Please use another tag.")
         sys.exit()
+
+
+
+    benchmarks = DatabaseHandler.get_benchmarks(session, run_parameter['benchmark'])
+    if run_parameter['track']:
+        tasks = DatabaseHandler.get_tasks(session, run_parameter['track'])
+    else:
+
+        tasks = DatabaseHandler.get_tasks(session, run_parameter['task'])
+
 
 
     run_parameter['benchmark'] = benchmarks
     run_parameter['task'] = tasks
     run_parameter['session'] = session
 
-    if select:
-        solvers =  DatabaseHandler.get_solvers(session, solver)
+    if run_parameter['select']:
+        solvers =  DatabaseHandler.get_solvers(session, run_parameter['solver'])
+        #Status.init_status_file(tasks, benchmarks, tag, solvers)
         run_parameter['solver'] = solvers
-        Status.init_status_file(tasks, benchmarks, tag, solvers)
+
     else:
         solvers_all_tasks = [ (t.solvers) for t in tasks]
         solver_to_run = [ solver for sub_list_solver in solvers_all_tasks for solver in sub_list_solver]
-        Status.init_status_file(tasks, benchmarks, tag, solver_to_run)
+        run_parameter['solver'] = solver_to_run
+
+    run_parameter['solver'] = utils.check_solver_paths(run_parameter['solver'])
+
+    Status.init_status_file(tasks, benchmarks, run_parameter['tag'], run_parameter['solver'])
+
+    tag = run_parameter['tag']
+
     logging.info(f"Stared to run Experiment {tag}")
     utils.run_experiment(run_parameter)
     logging.info(f"Finished to run Experiment {tag}")
@@ -387,24 +410,43 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
             summary = stats.get_experiment_summary_as_string(df)
             print("")
             print(summary)
+            with open(definitions.LAST_EXPERIMENT_SUMMARY_JSON_PATH,'w') as f:
+                f.write(summary)
             now = datetime.datetime.now()
-            last_experiment_dict = {'Tag': tag,
+            mode = 'select' if run_parameter['select'] else 'all'
+
+
+
+            last_experiment_dict = {'Tag':  run_parameter['tag'],
                                     'Benchmarks' : list(df.benchmark_name.unique()),
+                                    'Benchmark IDs': [ int(b_id) for b_id in list(df.benchmark_id.unique())],
                                     'Tasks' : list(df.task.unique()),
+                                    'Track' :  run_parameter['track'],
                                     'Solvers': list(df.solver_full_name.unique()),
-                                    'Finished': now.strftime("%m/%d/%Y, %H:%M:%S")
+                                    'Solver IDs': [ int(s_id) for s_id in list(df.solver_id.unique())],
+                                    'Finished': now.strftime("%m/%d/%Y, %H:%M:%S"),
+                                    'Timeout':  run_parameter['timeout'],
+                                    'n_times': run_parameter['n_times'],
+                                    'Mode': mode,
+                                    'Notify': run_parameter['notify'],
+                                    'Dry': run_parameter['dry']
+
                                    }
+
+
+
             with open(definitions.LAST_EXPERIMENT_JSON_PATH,'w') as f:
                 json.dump(last_experiment_dict,f)
         else:
             summary = 'Something went wrong. Please check the logs for more information.'
 
-    if notify:
+    if run_parameter['notify']:
         id_code = int(hashlib.sha256(tag.encode('utf-8')).hexdigest(), 16) % 10**8
-        notification = Notification(notify,message=f"Here a little summary of your experiment:\n{summary}",id=id_code)
+        notification = Notification(run_parameter['notify'],message=f"Here a little summary of your experiment:\n{summary}",id=id_code)
 
         notification.send()
-        logging.info(f'Sended Notfication e-mail to {notify}\nID: {id_code}')
+        send_to = run_parameter['notify']
+        logging.info(f'Sended Notfication e-mail to {send_to}\nID: {id_code}')
         print(f"\n{notification.foot}\nYour e-mail identification code: {id_code}")
 
 @click.command()
@@ -1354,7 +1396,8 @@ def tasks():
    print(tasks_in_db)
 
 @click.command()
-def last():
+@click.option('--verbose','-v',is_flag=True, help='Show summary of whole experiment.')
+def last(verbose):
     """Shows basic information about the last finished experiment.
 
         Infos include experiment tag, benchmark names, solved tasks, executed solvers and and the time when the experiment was finished
@@ -1364,9 +1407,15 @@ def last():
         with open(definitions.LAST_EXPERIMENT_JSON_PATH,'r') as file:
             json_string = file.read()
         json_obj = json.loads(json_string)
-        print("Last experiment:")
+        print("Last experiment configuration:\n")
         for key,value in json_obj.items():
             print(f'{key}: {str(value)}')
+        if verbose:
+            if os.path.isfile(definitions.LAST_EXPERIMENT_SUMMARY_JSON_PATH):
+                with open(definitions.LAST_EXPERIMENT_SUMMARY_JSON_PATH,'r') as file:
+                    summary = file.read()
+
+                print(f'\n{summary}')
     else:
         print("No experiments finished yet.")
 @click.command()

@@ -1,0 +1,47 @@
++++++SUMMARY+++++
+Tag: rerun_test_17_rerun
+Benchmarks: MY_BENCHMARK_STANDARD (ID:1)
+#Unique Instances: 4
+Tasks: SE-CO
+Solvers: ArgSemSAT_1.4 (ID:3), MY_SOLVER_2_1.4 (ID:1), MY_SOLVER_3_1.4 (ID:2)
+
+#####MY_BENCHMARK_STANDARD#####
+
+*****SE-CO*****
+
+Solver: ArgSemSAT_1.4,MY_SOLVER_2_1.4,MY_SOLVER_3_1.4
+#Solved: 12
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----MY_SOLVER_2_1.4-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 2.242357015609741
+Mean runtime: 0.5605892539024353
+Min runtime: 0.00773382605984807
+Max runtime: 1.7952606678009033
+
+-----MY_SOLVER_3_1.4-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 2.283207893371582
+Mean runtime: 0.5708019733428955
+Min runtime: 0.007675946224480867
+Max runtime: 1.8363099098205566
+
+-----ArgSemSAT_1.4-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 4.240190505981445
+Mean runtime: 1.0600476264953613
+Min runtime: 0.014892229810357094
+Max runtime: 2.3456711769104004
+

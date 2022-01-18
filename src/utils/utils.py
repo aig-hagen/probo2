@@ -7,6 +7,7 @@ import shutil
 
 import click
 import pandas
+
 from src.utils import definitions as definitions
 from src.utils import Status
 
@@ -212,7 +213,7 @@ def run_experiment(parameters: dict):
                     set(parameters['solver']))
             else:
 
-                solvers_to_run = task.solvers
+                solvers_to_run = parameters['solver']
 
             for solver in solvers_to_run:
                 click.echo(solver.solver_full_name, nl=False)
@@ -367,4 +368,44 @@ def get_from_last_experiment(key):
 
     if key in json_obj.keys():
         return json_obj[key]
+
+def get_last_experiment_json():
+    with open(definitions.LAST_EXPERIMENT_JSON_PATH,'r') as file:
+        json_string = file.read()
+    json_obj = json.loads(json_string)
+
+    return json_obj
+
+def set_run_parameters(run_parameter, config):
+    run_parameter['track'] = config['Track']
+    run_parameter['task'] = config['Tasks']
+    run_parameter['benchmark'] = config['Benchmark IDs']
+    run_parameter['solver'] = config['Solver IDs']
+    run_parameter['timeout'] = config['Timeout']
+    run_parameter['notify'] = config['Notify']
+    run_parameter['n_times'] = config['n_times']
+
+    if config['Mode'] == 'select':
+        run_parameter['select'] = True
+        run_parameter['all'] = False
+    else:
+        run_parameter['select'] = False
+        run_parameter['all'] = True
+
+    last_tag = config['Tag']
+    run_parameter['tag'] = f'{last_tag}_rerun'
+
+def check_solver_paths(solvers):
+    valid_solver_paths = []
+    for solver in solvers:
+        if os.path.isfile(solver.solver_path):
+            valid_solver_paths.append(solver)
+        else:
+            print(f'Solver {solver.solver_full_name} was excluded because of a invalid path to the executable.')
+
+    return valid_solver_paths
+
+
+
+
 
