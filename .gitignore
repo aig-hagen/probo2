@@ -45,8 +45,10 @@ probo2_old.db
 probo2.db
 pip-log.txt
 probo2_log.txt
+probo2-log.txt
 .probo2_status.json
 probo2_last_experiment.json
+probo2_last_experiment_summary.json
 pip-delete-this-directory.txt
 #JSON
 status.json
