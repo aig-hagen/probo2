@@ -28,7 +28,7 @@ LAST_EXPERIMENT_SUMMARY_JSON_PATH = files(src.data).joinpath('probo2_last_experi
 SUPPORTED_TASKS = ["EE-ST", "EE-CO", "EE-PR", "EE-GR", "EE-SST", "EE-STG",
                       "SE-ST", "SE-SST", "SE-STG", "SE-CO", "SE-PR", "SE-GR", "SE-ID",
                       "DC-ST", "DC-SST", "DC-STG", "DC-CO", "DC-PR", "DC-ID", "DC-GR",
-                      "DS-ST", "DS-SST", "DS-STG", "DS-CO", "DS-PR", "DS-GR",
+                      "DS-ST", "DS-SST", "DS-STG", "DS-CO", "DS-PR", "DS-GR","DS-ID",
                       "CE-CO", "CE-ST","CE-PR","CE-SST","CE-STG",
                         "ES-ST", "ES-SST", "ES-STG", "ES-CO", "ES-PR", "ES-GR",
                          "EC-ST", "EC-SST", "EC-STG", "EC-CO", "EC-PR", "EC-ID", "EC-GR"]
@@ -38,5 +38,6 @@ SUPPORTED_TRACKS = {'CO': ['EE-CO', 'SE-CO', 'DC-CO', 'DS-CO',"CE-CO",'EC-CO','E
                     'PR': ['EE-PR','SE-PR','DC-PR','DS-PR','CE-PR','EC-PR','ES-PR'],
                     'ST':  ['EE-ST', 'SE-ST', 'DC-ST', 'DS-ST',"CE-ST",'EC-ST','ES-ST'],
                     'SST': ["EE-SST","SE-SST","DC-SST","DS-SST","CE-SST",'EC-SST','ES-SST'],
-                    'STG': ["EE-STG","SE-STG","DC-STG","DS-STG","CE-STG",'EC-STG','ES-STG']
+                    'STG': ["EE-STG","SE-STG","DC-STG","DS-STG","CE-STG",'EC-STG','ES-STG'],
+                    'ID':["SE-ID","DS-ID" ]
                     }
