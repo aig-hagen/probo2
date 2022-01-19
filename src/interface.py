@@ -1,7 +1,7 @@
 from email.policy import default
 from importlib.resources import path
 import itertools
-from socket import send_fds
+
 from tabnanny import verbose
 import click
 import json
