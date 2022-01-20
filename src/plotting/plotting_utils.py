@@ -69,16 +69,7 @@ def prep_scatter_data(df):
 
     return pd.DataFrame.from_dict(runtimes_solver).fillna(0)
 
-# def scatter_plot(df: pd.DataFrame, save_to: str, options: dict, grouping: list):
-#     pass
 
-# def create_scatter_plot(df: pd.DataFrame, save_to: str, options: dict)->str:
-#     info = get_info_as_strings(df)
-#     df['Solver'] = df['solver_full_name']
-#     options['title'] = info['task'] + " " + info['benchmark']
-#     save_file_name = create_file_name(df,info,save_to,'cactus')
-#     options['save_to'] = save_file_name
-#     ScatterPlot.Scatter(options).create(df)
 
 def _get_intersection_instances(df):
     set_list = []

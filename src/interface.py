@@ -1,51 +1,39 @@
-from email.policy import default
-from importlib.resources import path
+import datetime
+import hashlib
 import itertools
-
-from tabnanny import verbose
-import click
 import json
+import logging
 import os
+import pathlib
 import sys
+import timeit
+from email.policy import default
+from glob import glob
+from importlib.resources import path
+from itertools import chain
+
+import click
+import pandas as pd
+import tabulate
 from click.core import iter_params_for_processing
 from click.decorators import command
-import pandas as pd
-import shutil
-import tabulate
-import hashlib
-import pathlib
-import datetime
-from sqlalchemy import and_, or_
-from sqlalchemy import engine
+from sqlalchemy import and_, engine, or_
 from sqlalchemy.sql.expression import false
-from jinja2 import Environment, FileSystemLoader
-from src.utils import utils
 from tabulate import tabulate
-from src.utils import definitions
-import timeit
-import logging
-from itertools import chain
-from glob import glob
-
-from random import choice, random
-from src.utils import fetching
-
-
-from src.reporting.validation_report import Validation_Report
 
 import src.analysis.statistics as stats
 import src.analysis.validation as validation
 import src.database_models.DatabaseHandler as DatabaseHandler
 import src.plotting.plotting_utils as pl_util
 import src.utils.CustomClickOptions as CustomClickOptions
-import src.utils.Status as Status
 import src.utils.definitions as definitions
+import src.utils.Status as Status
 from src.database_models.Base import Base, Supported_Tasks
 from src.database_models.Benchmark import Benchmark
 from src.database_models.Result import Result
 from src.database_models.Solver import Solver
+from src.utils import definitions, fetching, utils
 from src.utils.Notification import Notification
-
 
 logging.basicConfig(filename=definitions.LOG_FILE_PATH,format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.INFO)
 #TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks und solvers überarbeiten, Logging system,

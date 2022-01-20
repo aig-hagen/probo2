@@ -1,0 +1,714 @@
+Usage: probo2 run [OPTIONS]
+Try 'probo2 run --help' for help.
+
+Error: no such option: --tag_all_nohup_test
+Usage: probo2 run [OPTIONS]
+Try 'probo2 run --help' for help.
+
+Error: no such option: --tag_all_nohup_test_2
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+Solver MU_Toksia_resolver_path_test_1.0 was excluded because of a invalid path to the executable.
+**********EE-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+MY_SOLVER_2_1.4---FINISHED
+MY_SOLVER_3_1.4---FINISHED
+ArgSemSAT_1.4---FINISHED
+ArgSemSat_2_2.0---FINISHED
+ArgSemSat_2_2.1---FINISHED
+ASPARTIX-V_2021-1---FINISHED
+ConArg_1.2---FINISHED
+ASPARTIX-V-Test_2021-1---FINISHED
+MY_SOLVER_2_1.4---FINISHED
+MY_SOLVER_3_1.4---FINISHED
+ArgSemSAT_1.4---FINISHED
+test_solver_time_out_1.1Traceback (most recent call last):
+  File "/home/jklein/miniconda3/bin/probo2", line 33, in <module>
+    sys.exit(load_entry_point('Probo2', 'console_scripts', 'probo2')())
+  File "/home/jklein/miniconda3/lib/python3.9/site-packages/click/core.py", line 829, in __call__
+    return self.main(*args, **kwargs)
+  File "/home/jklein/miniconda3/lib/python3.9/site-packages/click/core.py", line 782, in main
+    rv = self.invoke(ctx)
+  File "/home/jklein/miniconda3/lib/python3.9/site-packages/click/core.py", line 1259, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+  File "/home/jklein/miniconda3/lib/python3.9/site-packages/click/core.py", line 1066, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/home/jklein/miniconda3/lib/python3.9/site-packages/click/core.py", line 610, in invoke
+    return callback(*args, **kwargs)
+  File "/home/jklein/miniconda3/lib/python3.9/site-packages/click/decorators.py", line 21, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/home/jklein/new_dev/Probo2_1.0/src/interface.py", line 402, in run
+    utils.run_experiment(run_parameter)
+  File "/home/jklein/new_dev/Probo2_1.0/src/utils/utils.py", line 220, in run_experiment
+    solver.run(task,
+  File "/home/jklein/new_dev/Probo2_1.0/src/database_models/Solver.py", line 217, in run
+    Status.increment_instances_counter(task.symbol, self.solver_id)
+  File "/home/jklein/new_dev/Probo2_1.0/src/utils/Status.py", line 64, in increment_instances_counter
+    status_data['tasks'][task]['solvers'][str(solver_id)]['solved'] += 1
+KeyError: '8'
+**********EE-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+**********EE-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+**********EE-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+**********EE-SST***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+**********EE-STG***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********SE-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+A-Folio_DPDB_0.1---FINISHED
+taas-fudge_2.4---FINISHED
+**********SE-SST***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+**********SE-STG***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********SE-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+A-Folio_DPDB_0.1---FINISHED
+taas-fudge_2.4---FINISHED
+**********SE-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+taas-fudge_2.4---FINISHED
+**********SE-ID***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********DC-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+A-Folio_DPDB_0.1---FINISHED
+**********DC-SST***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+**********DC-STG***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********DC-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+A-Folio_DPDB_0.1---FINISHED
+taas-fudge_2.4---FINISHED
+**********DC-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+taas-fudge_2.4---FINISHED
+**********DS-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+A-Folio_DPDB_0.1---FINISHED
+**********DS-SST***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+**********DS-STG***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********DS-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+A-Folio_DPDB_0.1---FINISHED
+taas-fudge_2.4---FINISHED
+**********DS-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+ArgSemSat_2_2.1---FINISHED
+taas-fudge_2.4---FINISHED
+**********CE-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+A-Folio_DPDB_0.1
+Error occured: Command '['bash', '/home/jklein/new_dev/iccma_21_solvers/dp_on_dbs-master/solver.sh', '-p', 'CE-CO', '-f', '/mnt/c/Users/jonas/Entwicklung/Benchmark/small_subset/C-1-WS_200_28_70_10.apx', '-fo', 'apx']' returned non-zero exit status 1.
+
+Error occured: Command '['bash', '/home/jklein/new_dev/iccma_21_solvers/dp_on_dbs-master/solver.sh', '-p', 'CE-CO', '-f', '/mnt/c/Users/jonas/Entwicklung/Benchmark/small_subset/C-1-grd_489_5_8.apx', '-fo', 'apx']' returned non-zero exit status 1.
+
+Error occured: Command '['bash', '/home/jklein/new_dev/iccma_21_solvers/dp_on_dbs-master/solver.sh', '-p', 'CE-CO', '-f', '/mnt/c/Users/jonas/Entwicklung/Benchmark/small_subset/C-1-grd_8034_1_2.apx', '-fo', 'apx']' returned non-zero exit status 1.
+
+Error occured: Command '['bash', '/home/jklein/new_dev/iccma_21_solvers/dp_on_dbs-master/solver.sh', '-p', 'CE-CO', '-f', '/mnt/c/Users/jonas/Entwicklung/Benchmark/small_subset/C-2-afinput_exp_acyclic_indvary1_step2_batch_yyy07.apx', '-fo', 'apx']' returned non-zero exit status 1.
+---FINISHED
+taas-fudge_2.4---FINISHED
+**********CE-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+A-Folio_DPDB_0.1
+Error occured: Command '['bash', '/home/jklein/new_dev/iccma_21_solvers/dp_on_dbs-master/solver.sh', '-p', 'CE-ST', '-f', '/mnt/c/Users/jonas/Entwicklung/Benchmark/small_subset/C-1-WS_200_28_70_10.apx', '-fo', 'apx']' returned non-zero exit status 1.
+
+Error occured: Command '['bash', '/home/jklein/new_dev/iccma_21_solvers/dp_on_dbs-master/solver.sh', '-p', 'CE-ST', '-f', '/mnt/c/Users/jonas/Entwicklung/Benchmark/small_subset/C-1-grd_489_5_8.apx', '-fo', 'apx']' returned non-zero exit status 1.
+
+Error occured: Command '['bash', '/home/jklein/new_dev/iccma_21_solvers/dp_on_dbs-master/solver.sh', '-p', 'CE-ST', '-f', '/mnt/c/Users/jonas/Entwicklung/Benchmark/small_subset/C-1-grd_8034_1_2.apx', '-fo', 'apx']' returned non-zero exit status 1.
+
+Error occured: Command '['bash', '/home/jklein/new_dev/iccma_21_solvers/dp_on_dbs-master/solver.sh', '-p', 'CE-ST', '-f', '/mnt/c/Users/jonas/Entwicklung/Benchmark/small_subset/C-2-afinput_exp_acyclic_indvary1_step2_batch_yyy07.apx', '-fo', 'apx']' returned non-zero exit status 1.
+---FINISHED
+taas-fudge_2.4---FINISHED
+**********CE-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********CE-SST***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********CE-STG***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********EC-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********EC-STG***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********EC-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********EC-SST***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********ES-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********ES-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********ES-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********ES-SST***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********EC-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********ES-STG***********
+Benchmark: MY_BENCHMARK_STANDARD
+/home/jklein/miniconda3/lib/python3.9/site-packages/numpy/lib/nanfunctions.py:1117: RuntimeWarning: Mean of empty slice
+  return np.nanmean(a, axis, out=out, keepdims=keepdims)
+/home/jklein/miniconda3/lib/python3.9/site-packages/numpy/lib/nanfunctions.py:1117: RuntimeWarning: Mean of empty slice
+  return np.nanmean(a, axis, out=out, keepdims=keepdims)
+
++++++SUMMARY+++++
+Tag: ICCMA21_solvers_ICCMA15_benchmark_test
+Benchmarks: MY_BENCHMARK_STANDARD (ID:1)
+#Unique Instances: 5
+Tasks: EE-ST,EE-CO,EE-PR,EE-SST,SE-ST,SE-SST,SE-CO,SE-PR,SE-ID,DC-ST,DC-SST,DC-CO,DC-PR,DS-ST,DS-SST,DS-CO,DS-PR,CE-CO,CE-ST,CE-PR
+Solvers: ArgSemSat_2_2.1 (ID:21), A-Folio_DPDB_0.1 (ID:22), taas-fudge_2.4 (ID:23)
+
+#####MY_BENCHMARK_STANDARD#####
+
+*****EE-ST*****
+
+Solver: ArgSemSat_2_2.1
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 3.7321949005126953
+Mean runtime: 0.9330487251281738
+Min runtime: 0.013559886254370213
+Max runtime: 2.27618145942688
+
+*****EE-CO*****
+
+Solver: ArgSemSat_2_2.1
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 4.153501033782959
+Mean runtime: 1.0383752584457397
+Min runtime: 0.013548482209444046
+Max runtime: 2.276765823364258
+
+*****EE-PR*****
+
+Solver: ArgSemSat_2_2.1
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 5.600513458251953
+Mean runtime: 1.4001283645629883
+Min runtime: 0.01960590109229088
+Max runtime: 3.073721408843994
+
+*****EE-SST*****
+
+Solver: ArgSemSat_2_2.1
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 4.216089248657227
+Mean runtime: 1.0540223121643066
+Min runtime: 0.015811024233698845
+Max runtime: 2.664530038833618
+
+*****SE-ST*****
+
+Solver: ArgSemSat_2_2.1,A-Folio_DPDB_0.1,taas-fudge_2.4
+#Solved: 13
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 3.79068660736084
+Mean runtime: 0.94767165184021
+Min runtime: 0.01471386943012476
+Max runtime: 2.3414456844329834
+
+-----A-Folio_DPDB_0.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 2.4115147590637207
+Mean runtime: 0.6028786897659302
+Min runtime: 0.08808951079845428
+Max runtime: 1.6942678689956665
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 0.9558843374252319
+Mean runtime: 0.1911768615245819
+Min runtime: 0.0041596172377467155
+Max runtime: 0.4478808641433716
+
+*****SE-SST*****
+
+Solver: ArgSemSat_2_2.1
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 4.166086196899414
+Mean runtime: 1.0415215492248535
+Min runtime: 0.01562923938035965
+Max runtime: 2.619615077972412
+
+*****SE-CO*****
+
+Solver: ArgSemSat_2_2.1,A-Folio_DPDB_0.1,taas-fudge_2.4
+#Solved: 13
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 4.1989641189575195
+Mean runtime: 1.0497410297393799
+Min runtime: 0.013590177521109581
+Max runtime: 2.3419761657714844
+
+-----A-Folio_DPDB_0.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 2.365666627883911
+Mean runtime: 0.5914166569709778
+Min runtime: 0.07915723323822021
+Max runtime: 1.6699975728988647
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 0.49149569869041443
+Mean runtime: 0.09829913824796677
+Min runtime: 0.004087845329195261
+Max runtime: 0.3450774550437927
+
+*****SE-PR*****
+
+Solver: ArgSemSat_2_2.1,taas-fudge_2.4
+#Solved: 9
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 3.6457600593566895
+Mean runtime: 0.9114400148391724
+Min runtime: 0.015761567279696465
+Max runtime: 2.540104866027832
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 55.29952621459961
+Mean runtime: 11.059905052185059
+Min runtime: 0.004181679338216782
+Max runtime: 54.443763732910156
+
+*****SE-ID*****
+
+Solver: taas-fudge_2.4
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 1.230455994606018
+Mean runtime: 0.24609120190143585
+Min runtime: 0.004111837595701218
+Max runtime: 0.7410393357276917
+
+*****DC-ST*****
+
+Solver: ArgSemSat_2_2.1,A-Folio_DPDB_0.1
+#Solved: 8
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 3.82258939743042
+Mean runtime: 0.955647349357605
+Min runtime: 0.01690475083887577
+Max runtime: 2.669389247894287
+
+-----A-Folio_DPDB_0.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 2.334827423095703
+Mean runtime: 0.5837068557739258
+Min runtime: 0.0817677304148674
+Max runtime: 1.6897220611572266
+
+*****DC-SST*****
+
+Solver: ArgSemSat_2_2.1
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 4.34318733215332
+Mean runtime: 1.08579683303833
+Min runtime: 0.018493402749300003
+Max runtime: 3.0653131008148193
+
+*****DC-CO*****
+
+Solver: ArgSemSat_2_2.1,A-Folio_DPDB_0.1,taas-fudge_2.4
+#Solved: 13
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 3.123882532119751
+Mean runtime: 0.7809706330299377
+Min runtime: 0.013791898265480995
+Max runtime: 2.244427442550659
+
+-----A-Folio_DPDB_0.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 2.6608164310455322
+Mean runtime: 0.6652041077613831
+Min runtime: 0.07811663299798965
+Max runtime: 1.9658586978912354
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 0.49992266297340393
+Mean runtime: 0.0999845340847969
+Min runtime: 0.00402830122038722
+Max runtime: 0.32266971468925476
+
+*****DC-PR*****
+
+Solver: ArgSemSat_2_2.1,taas-fudge_2.4
+#Solved: 9
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 3.1390092372894287
+Mean runtime: 0.7847523093223572
+Min runtime: 0.013809137977659702
+Max runtime: 2.2593586444854736
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 0.5372985601425171
+Mean runtime: 0.10745970904827118
+Min runtime: 0.004324851091951132
+Max runtime: 0.33801403641700745
+
+*****DS-ST*****
+
+Solver: ArgSemSat_2_2.1,A-Folio_DPDB_0.1
+#Solved: 8
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 4.005557537078857
+Mean runtime: 1.0013893842697144
+Min runtime: 0.016968024894595146
+Max runtime: 2.694398880004883
+
+-----A-Folio_DPDB_0.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 3.38161563873291
+Mean runtime: 0.8454039096832275
+Min runtime: 0.08175626397132874
+Max runtime: 1.7543960809707642
+
+*****DS-SST*****
+
+Solver: ArgSemSat_2_2.1
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 4.510090351104736
+Mean runtime: 1.127522587776184
+Min runtime: 0.018156852573156357
+Max runtime: 3.0839860439300537
+
+*****DS-CO*****
+
+Solver: ArgSemSat_2_2.1,A-Folio_DPDB_0.1,taas-fudge_2.4
+#Solved: 13
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 3.1783664226531982
+Mean runtime: 0.7945916056632996
+Min runtime: 0.012653532437980175
+Max runtime: 2.3167901039123535
+
+-----A-Folio_DPDB_0.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 2.6630969047546387
+Mean runtime: 0.6657742261886597
+Min runtime: 0.08006501942873001
+Max runtime: 2.0054991245269775
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 0.46466273069381714
+Mean runtime: 0.09293254464864731
+Min runtime: 0.004270017147064209
+Max runtime: 0.3227314054965973
+
+*****DS-PR*****
+
+Solver: ArgSemSat_2_2.1,taas-fudge_2.4
+#Solved: 9
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----ArgSemSat_2_2.1-----
+#Solved: 4
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 3.177699089050293
+Mean runtime: 0.7944247722625732
+Min runtime: 0.023285159841179848
+Max runtime: 2.305889844894409
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 0.5440946221351624
+Mean runtime: 0.10881892591714859
+Min runtime: 0.004105127416551113
+Max runtime: 0.3598491847515106
+
+*****CE-CO*****
+
+Solver: A-Folio_DPDB_0.1,taas-fudge_2.4
+#Solved: 5
+#Timeout: 0
+#Errors: 4
+Coverage: 55.55555555555556%
+
+-----A-Folio_DPDB_0.1-----
+#Solved: 0
+#Timeout: 0
+#Errors: 4
+Coverage: 0.0%
+Total runtime: 0.0
+Mean runtime: nan
+Min runtime: nan
+Max runtime: nan
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 3.196077585220337
+Mean runtime: 0.6392155289649963
+Min runtime: 0.004133093170821667
+Max runtime: 2.5395472049713135
+
+*****CE-ST*****
+
+Solver: A-Folio_DPDB_0.1,taas-fudge_2.4
+#Solved: 5
+#Timeout: 0
+#Errors: 4
+Coverage: 55.55555555555556%
+
+-----A-Folio_DPDB_0.1-----
+#Solved: 0
+#Timeout: 0
+#Errors: 4
+Coverage: 0.0%
+Total runtime: 0.0
+Mean runtime: nan
+Min runtime: nan
+Max runtime: nan
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 1.2479262351989746
+Mean runtime: 0.24958524107933044
+Min runtime: 0.004131257068365812
+Max runtime: 0.648189902305603
+
+*****CE-PR*****
+
+Solver: taas-fudge_2.4
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 55.22581481933594
+Mean runtime: 11.04516315460205
+Min runtime: 0.004173359367996454
+Max runtime: 53.809051513671875
+
+

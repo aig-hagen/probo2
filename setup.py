@@ -6,6 +6,7 @@ with open("requirements.txt", "r") as req_file:
 setup(
     name='Probo2',
     version='1.0',
+    #python_requires='>=3.9.5',
     packages=find_packages(),
     url='',
     license='',

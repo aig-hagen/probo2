@@ -7,7 +7,11 @@ from importlib_resources import files
 ROOT_DIR = os.path.abspath(os.curdir)  # Root of project
 SRC_DIR = os.path.join(ROOT_DIR,"src")
 DATABASE_DIR = files(src.data).joinpath(".probo2")
-TEST_DATABASE_PATH = os.path.join(DATABASE_DIR, "probo2_old.db")
+# print(type(DATABASE_DIR.as_posix()))
+# print(DATABASE_DIR.as_posix())
+# print(DATABASE_DIR.__dict__)
+TEST_DATABASE_PATH = os.path.join(DATABASE_DIR.as_posix(), "probo2_old.db")
+#TEST_DATABASE_PATH = files(DATABASE_DIR).joinpath("probo2_old.db")
 
 TEST_INSTANCES_REF_PATH = files(src.data.test).joinpath("reference")
 TEST_INSTANCE_ARG = files(src.data.test).joinpath("a.arg")
