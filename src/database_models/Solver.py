@@ -148,7 +148,7 @@ class Solver(Base):
         print("Name: {} \nVersion: {} \nsolver_path: {} \nFormat: {} \nProblems: {}".format(self.solver_name,self.solver_version, self.solver_path, self.solver_format,
                                                                                                                     self.get_supported_tasks()))
 
-    def run(self,task,benchmark,timeout, save_db=True, tag=None, session=None, update_status=True,n=1):
+    def run(self,task,benchmark,timeout, save_db=True, tag=None, session=None, update_status=True,n=1,first_n_instances=None):
         results = {}
         cmd_params = []
         arg_lookup = {}
@@ -164,6 +164,9 @@ class Solver(Base):
             cmd_params.append('python')
 
         instances = benchmark.get_instances(self.solver_format)
+
+        if first_n_instances is not None:
+            instances = instances[0:first_n_instances]
 
         if "DS" in task.symbol or "DC" in task.symbol:
             arg_lookup = benchmark.generate_additional_argument_lookup(self.solver_format)

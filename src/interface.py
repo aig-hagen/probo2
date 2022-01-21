@@ -319,9 +319,10 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
 #@click.option("--report", is_flag=True,help="Create summary report of experiment.")
 @click.option("--n_times","-n",required=False,type=click.types.INT,default=1, help="Number of repetitions per instance. Run time is the avg of the n runs.")
 @click.option("--rerun",'-rn',is_flag=True, help='Rerun last experiment')
+@click.option("--subset","-ss",type=click.types.INT, help="Run only the first n instances of a benchmark.")
 @click.pass_context
 def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
-        notify, track, n_times, rerun):
+        notify, track, n_times, rerun, subset):
     """Run solver.
     \f
     Args:

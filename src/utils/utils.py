@@ -202,6 +202,7 @@ def run_experiment(parameters: dict):
     session = parameters['session']
     select = parameters['select']
     n = parameters['n_times']
+    first_n_instances = parameters['subset']
 
     for task in tasks:
         task_symbol = task.symbol.upper()
@@ -223,7 +224,8 @@ def run_experiment(parameters: dict):
                            save_db=(not dry),
                            tag=tag,
                            session=session,
-                           n=n)
+                           n=n,
+                           first_n_instances=first_n_instances)
                 click.echo("---FINISHED")
         Status.increment_task_counter()
 

@@ -712,3 +712,267 @@ Min runtime: 0.004173359367996454
 Max runtime: 53.809051513671875
 
 
+**********EE-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********EE-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********EE-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********SE-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********SE-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********SE-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********SE-ID***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********DC-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********DC-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********DC-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********DS-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********DS-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********DS-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********CE-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********CE-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********CE-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+taas-fudge_2.4---FINISHED
+**********EC-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********EC-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********ES-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********ES-ST***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********ES-PR***********
+Benchmark: MY_BENCHMARK_STANDARD
+**********EC-CO***********
+Benchmark: MY_BENCHMARK_STANDARD
+
++++++SUMMARY+++++
+Tag: fudge_all_tracks_back
+Benchmarks: MY_BENCHMARK_STANDARD (ID:1)
+#Unique Instances: 5
+Tasks: SE-ST,SE-CO,SE-PR,SE-ID,DC-CO,DC-PR,DS-CO,DS-PR,CE-CO,CE-ST,CE-PR
+Solvers: taas-fudge_2.4 (ID:23)
+
+#####MY_BENCHMARK_STANDARD#####
+
+*****SE-ST*****
+
+Solver: taas-fudge_2.4
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 1.0014995336532593
+Mean runtime: 0.20029990375041962
+Min runtime: 0.005196410231292248
+Max runtime: 0.4724206328392029
+
+*****SE-CO*****
+
+Solver: taas-fudge_2.4
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 0.4733861982822418
+Mean runtime: 0.09467723965644836
+Min runtime: 0.004593359772115946
+Max runtime: 0.33601629734039307
+
+*****SE-PR*****
+
+Solver: taas-fudge_2.4
+#Solved: 4
+#Timeout: 1
+#Errors: 0
+Coverage: 80.0%
+
+-----taas-fudge_2.4-----
+#Solved: 4
+#Timeout: 1
+#Errors: 0
+Coverage: 80.0%
+Total runtime: 0.8129590749740601
+Mean runtime: 0.20323976874351501
+Min runtime: 0.0050029088743031025
+Max runtime: 0.4157472848892212
+
+*****SE-ID*****
+
+Solver: taas-fudge_2.4
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 1.2851163148880005
+Mean runtime: 0.25702327489852905
+Min runtime: 0.005235669203102589
+Max runtime: 0.7436656355857849
+
+*****DC-CO*****
+
+Solver: taas-fudge_2.4
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 0.5176959037780762
+Mean runtime: 0.10353918373584747
+Min runtime: 0.004984789062291384
+Max runtime: 0.3352426588535309
+
+*****DC-PR*****
+
+Solver: taas-fudge_2.4
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 0.5424571633338928
+Mean runtime: 0.1084914356470108
+Min runtime: 0.0053118388168513775
+Max runtime: 0.3459996283054352
+
+*****DS-CO*****
+
+Solver: taas-fudge_2.4
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 0.4671788811683655
+Mean runtime: 0.09343577921390533
+Min runtime: 0.0047790599055588245
+Max runtime: 0.3264577388763428
+
+*****DS-PR*****
+
+Solver: taas-fudge_2.4
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 0.4805484116077423
+Mean runtime: 0.09610968083143234
+Min runtime: 0.005036020185798407
+Max runtime: 0.30157291889190674
+
+*****CE-CO*****
+
+Solver: taas-fudge_2.4
+#Solved: 4
+#Timeout: 1
+#Errors: 0
+Coverage: 80.0%
+
+-----taas-fudge_2.4-----
+#Solved: 4
+#Timeout: 1
+#Errors: 0
+Coverage: 80.0%
+Total runtime: 0.6364051699638367
+Mean runtime: 0.15910129249095917
+Min runtime: 0.005119629204273224
+Max runtime: 0.46407800912857056
+
+*****CE-ST*****
+
+Solver: taas-fudge_2.4
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+
+-----taas-fudge_2.4-----
+#Solved: 5
+#Timeout: 0
+#Errors: 0
+Coverage: 100.0%
+Total runtime: 1.2248458862304688
+Mean runtime: 0.2449691742658615
+Min runtime: 0.005237448960542679
+Max runtime: 0.6454249024391174
+
+*****CE-PR*****
+
+Solver: taas-fudge_2.4
+#Solved: 4
+#Timeout: 1
+#Errors: 0
+Coverage: 80.0%
+
+-----taas-fudge_2.4-----
+#Solved: 4
+#Timeout: 1
+#Errors: 0
+Coverage: 80.0%
+Total runtime: 1.4996060132980347
+Mean runtime: 0.37490150332450867
+Min runtime: 0.005000220146030188
+Max runtime: 0.9786311984062195
+
+
