@@ -214,7 +214,7 @@ def run_experiment(parameters: dict):
                     set(parameters['solver']))
             else:
 
-                solvers_to_run = parameters['solver']
+                solvers_to_run = task.solvers
 
             for solver in solvers_to_run:
                 click.echo(solver.solver_full_name, nl=False)
