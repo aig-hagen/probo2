@@ -59,8 +59,8 @@ def increment_task_counter():
 
 
 def increment_instances_counter(task, solver_id):
-    with open(definitions.STATUS_FILE_DIR) as status_json_file:
+    with open(str(definitions.STATUS_FILE_DIR)) as status_json_file:
         status_data = json.load(status_json_file)
         status_data['tasks'][task]['solvers'][str(solver_id)]['solved'] += 1
-    with open(definitions.STATUS_FILE_DIR, 'w') as outfile:
+    with open(str(definitions.STATUS_FILE_DIR), 'w') as outfile:
         json.dump(status_data, outfile)

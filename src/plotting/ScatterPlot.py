@@ -162,3 +162,4 @@ class Scatter(Plot, object):
         plt.savefig(self.save_to, bbox_inches='tight', transparent=self.transparent)
         plt.clf()
 
+
