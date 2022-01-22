@@ -50,9 +50,9 @@ class Solver(Base):
         cmd_params = _init_cmd_params(self.solver_path)
 
         if self.solver_format == 'apx':
-            instance = definitions.TEST_INSTANCE_APX
+            instance = str(definitions.TEST_INSTANCE_APX)
         elif self.solver_format == 'tgf':
-            instance = definitions.TEST_INSTANCE_TGF
+            instance = str(definitions.TEST_INSTANCE_TGF)
         else:
             raise FormatNotSupported(f'Format {format} is not supported for solver {self.solver_name}')
 
@@ -64,7 +64,7 @@ class Solver(Base):
                   "-fo", self.solver_format])
 
         if 'DS' or 'DC' in test_task:
-            with open(definitions.TEST_INSTANCE_ARG,'r') as arg_file:
+            with open(str(definitions.TEST_INSTANCE_ARG),'r') as arg_file:
                 arg = arg_file.read().rstrip('\n')
                 cmd_params.extend(["-a",arg])
 

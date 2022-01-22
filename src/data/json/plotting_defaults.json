@@ -1,46 +1,333 @@
 {
-    "cactus_linestyle":
-    [
-        {"c": "green",   "marker": "H", "ms": 5, "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "green",   "mew": 0.75},
-        {"c": "red",     "marker": "^", "ms": 5, "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "red",     "mew": 0.75},
-        {"c": "blue",    "marker": "x", "ms": 5, "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "blue",    "mew": 0.75},
-        {"c": "brown",   "marker": "+", "ms": 5, "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "brown",   "mew": 0.75},
-        {"c": "orange",  "marker": "D", "ms": 5, "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "orange",  "mew": 0.75},
-        {"c": "magenta", "marker": "*", "ms": 5, "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "magenta", "mew": 0.75},
-        {"c": "cyan",    "marker": "o", "ms": 5, "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "cyan",    "mew": 0.75},
-        {"c": "black",   "marker": "d", "ms": 5, "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "black",   "mew": 0.75},
-        {"c": "#666aee", "marker": "v", "ms": 5, "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "#666aee", "mew": 0.75},
-        {"c": "grey",    "marker": ">", "ms": 5, "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "grey",    "mew": 0.75},
-        {"c": "green",   "marker": "^", "ms": 5, "ls": "--", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "green",   "mew": 0.75},
-        {"c": "red",     "marker": "H", "ms": 5, "ls": "--", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "red",     "mew": 0.75},
-        {"c": "blue",    "marker": "+", "ms": 5, "ls": "--", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "blue",    "mew": 0.75},
-        {"c": "brown",   "marker": "x", "ms": 5, "ls": "--", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "brown",   "mew": 0.75},
-        {"c": "orange",  "marker": "*", "ms": 5, "ls": "--", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "orange",  "mew": 0.75},
-        {"c": "magenta", "marker": "D", "ms": 5, "ls": "--", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "magenta", "mew": 0.75},
-        {"c": "cyan",    "marker": "d", "ms": 5, "ls": "--", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "cyan",    "mew": 0.75},
-        {"c": "black",   "marker": "o", "ms": 5, "ls": "--", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "black",   "mew": 0.75},
-        {"c": "#666aee", "marker": ">", "ms": 5, "ls": "--", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "#666aee", "mew": 0.75},
-        {"c": "grey",    "marker": "v", "ms": 5, "ls": "--", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "grey",    "mew": 0.75},
-        {"c": "green",   "marker": "v", "ms": 5, "ls": ":", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "green",   "mew": 0.75},
-        {"c": "red",     "marker": ">", "ms": 5, "ls": ":", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "red",     "mew": 0.75},
-        {"c": "blue",    "marker": "o", "ms": 5, "ls": ":", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "blue",    "mew": 0.75},
-        {"c": "brown",   "marker": "d", "ms": 5, "ls": ":", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "brown",   "mew": 0.75},
-        {"c": "orange",  "marker": "D", "ms": 5, "ls": ":", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "orange",  "mew": 0.75},
-        {"c": "magenta", "marker": "*", "ms": 5, "ls": ":", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "magenta", "mew": 0.75},
-        {"c": "cyan",    "marker": "x", "ms": 5, "ls": ":", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "cyan",    "mew": 0.75},
-        {"c": "black",   "marker": "+", "ms": 5, "ls": ":", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "black",   "mew": 0.75},
-        {"c": "#666aee", "marker": "H", "ms": 5, "ls": ":", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "#666aee", "mew": 0.75},
-        {"c": "grey",    "marker": "^", "ms": 5, "ls": ":", "lw": 1, "alpha": 0.7, "mfc": "white", "mec": "grey",    "mew": 0.75}
+    "cactus_linestyle": [
+        {
+            "c": "green",
+            "marker": "H",
+            "ms": 5,
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "green",
+            "mew": 0.75
+        },
+        {
+            "c": "red",
+            "marker": "^",
+            "ms": 5,
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "red",
+            "mew": 0.75
+        },
+        {
+            "c": "blue",
+            "marker": "x",
+            "ms": 5,
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "blue",
+            "mew": 0.75
+        },
+        {
+            "c": "brown",
+            "marker": "+",
+            "ms": 5,
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "brown",
+            "mew": 0.75
+        },
+        {
+            "c": "orange",
+            "marker": "D",
+            "ms": 5,
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "orange",
+            "mew": 0.75
+        },
+        {
+            "c": "magenta",
+            "marker": "*",
+            "ms": 5,
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "magenta",
+            "mew": 0.75
+        },
+        {
+            "c": "cyan",
+            "marker": "o",
+            "ms": 5,
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "cyan",
+            "mew": 0.75
+        },
+        {
+            "c": "black",
+            "marker": "d",
+            "ms": 5,
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "black",
+            "mew": 0.75
+        },
+        {
+            "c": "#666aee",
+            "marker": "v",
+            "ms": 5,
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "#666aee",
+            "mew": 0.75
+        },
+        {
+            "c": "grey",
+            "marker": ">",
+            "ms": 5,
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "grey",
+            "mew": 0.75
+        },
+        {
+            "c": "green",
+            "marker": "^",
+            "ms": 5,
+            "ls": "--",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "green",
+            "mew": 0.75
+        },
+        {
+            "c": "red",
+            "marker": "H",
+            "ms": 5,
+            "ls": "--",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "red",
+            "mew": 0.75
+        },
+        {
+            "c": "blue",
+            "marker": "+",
+            "ms": 5,
+            "ls": "--",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "blue",
+            "mew": 0.75
+        },
+        {
+            "c": "brown",
+            "marker": "x",
+            "ms": 5,
+            "ls": "--",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "brown",
+            "mew": 0.75
+        },
+        {
+            "c": "orange",
+            "marker": "*",
+            "ms": 5,
+            "ls": "--",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "orange",
+            "mew": 0.75
+        },
+        {
+            "c": "magenta",
+            "marker": "D",
+            "ms": 5,
+            "ls": "--",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "magenta",
+            "mew": 0.75
+        },
+        {
+            "c": "cyan",
+            "marker": "d",
+            "ms": 5,
+            "ls": "--",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "cyan",
+            "mew": 0.75
+        },
+        {
+            "c": "black",
+            "marker": "o",
+            "ms": 5,
+            "ls": "--",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "black",
+            "mew": 0.75
+        },
+        {
+            "c": "#666aee",
+            "marker": ">",
+            "ms": 5,
+            "ls": "--",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "#666aee",
+            "mew": 0.75
+        },
+        {
+            "c": "grey",
+            "marker": "v",
+            "ms": 5,
+            "ls": "--",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "grey",
+            "mew": 0.75
+        },
+        {
+            "c": "green",
+            "marker": "v",
+            "ms": 5,
+            "ls": ":",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "green",
+            "mew": 0.75
+        },
+        {
+            "c": "red",
+            "marker": ">",
+            "ms": 5,
+            "ls": ":",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "red",
+            "mew": 0.75
+        },
+        {
+            "c": "blue",
+            "marker": "o",
+            "ms": 5,
+            "ls": ":",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "blue",
+            "mew": 0.75
+        },
+        {
+            "c": "brown",
+            "marker": "d",
+            "ms": 5,
+            "ls": ":",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "brown",
+            "mew": 0.75
+        },
+        {
+            "c": "orange",
+            "marker": "D",
+            "ms": 5,
+            "ls": ":",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "orange",
+            "mew": 0.75
+        },
+        {
+            "c": "magenta",
+            "marker": "*",
+            "ms": 5,
+            "ls": ":",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "magenta",
+            "mew": 0.75
+        },
+        {
+            "c": "cyan",
+            "marker": "x",
+            "ms": 5,
+            "ls": ":",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "cyan",
+            "mew": 0.75
+        },
+        {
+            "c": "black",
+            "marker": "+",
+            "ms": 5,
+            "ls": ":",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "black",
+            "mew": 0.75
+        },
+        {
+            "c": "#666aee",
+            "marker": "H",
+            "ms": 5,
+            "ls": ":",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "#666aee",
+            "mew": 0.75
+        },
+        {
+            "c": "grey",
+            "marker": "^",
+            "ms": 5,
+            "ls": ":",
+            "lw": 1,
+            "alpha": 0.7,
+            "mfc": "white",
+            "mec": "grey",
+            "mew": 0.75
+        }
     ],
-    "scatter_style":
-    {
+    "scatter_style": {
         "color": "r",
         "edgecolor": "black",
         "marker": "o",
         "size": 25
     },
-    "settings":
-    {
+    "settings": {
         "alpha": 0.5,
         "backend": "png",
         "dry_run": false,
@@ -81,10 +368,11 @@
         "y_max": null,
         "title": "",
         "axis_scale": "log",
-        "gen_title": true
+        "gen_title": true,
+        "default_dir": null
     },
-    "pie_options":
-     {
-       "color_palette": "Blues_r"
-     }
+    "pie_options": {
+        "color_palette": "Blues_r"
+    },
+    "def_path": "/home/jklein/new_dev/Probo2_1.0/src/data/json/plotting_defaults.json"
 }

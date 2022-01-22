@@ -172,7 +172,7 @@ def export_html(df: pandas.DataFrame,
     save_path = os.path.join(save_to, f'{file_name}.html')
 
     if css_file:
-        css_file_path = os.path.join(definitions.CSS_TEMPLATES_PATH,"tables",css_file)
+        css_file_path = os.path.join(str(definitions.CSS_TEMPLATES_PATH),"tables",css_file)
         name_css_file = Path(css_file_path).stem
         table_html_string = df.to_html(escape=False,
                                        index=index,

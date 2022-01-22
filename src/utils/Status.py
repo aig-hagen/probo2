@@ -20,15 +20,15 @@ def init_status_file(tasks, benchmarks, tag, solvers):
 
             status_dict['tasks'][task.symbol]['solvers'][solver.solver_id] = {'name': solver.solver_name, 'version': solver.solver_version,
                                                                         'solved': 0, 'total': total_num_instances}
-    if os.path.exists(definitions.STATUS_FILE_DIR):
-        os.remove(definitions.STATUS_FILE_DIR)
-    with open(definitions.STATUS_FILE_DIR, 'w') as outfile:
+    if os.path.exists(str(definitions.STATUS_FILE_DIR)):
+        os.remove(str(definitions.STATUS_FILE_DIR))
+    with open(str(definitions.STATUS_FILE_DIR), 'w') as outfile:
         json.dump(status_dict, outfile)
 
 
 def print_status_summary():
-    print(definitions.STATUS_FILE_DIR)
-    with open(definitions.STATUS_FILE_DIR) as status_json_file:
+    print(str(definitions.STATUS_FILE_DIR))
+    with open(str(definitions.STATUS_FILE_DIR)) as status_json_file:
         status_data = json.load(status_json_file)
         print("**********STATUS SUMMARY*********")
         print("Tag: ", status_data['tag'])
@@ -50,11 +50,11 @@ def print_status_summary():
 
 
 def increment_task_counter():
-    with open(definitions.STATUS_FILE_DIR) as status_json_file:
+    with open(str(definitions.STATUS_FILE_DIR)) as status_json_file:
         status_data = json.load(status_json_file)
         status_data['finished_tasks'] += 1
 
-    with open(definitions.STATUS_FILE_DIR, 'w') as outfile:
+    with open(str(definitions.STATUS_FILE_DIR), 'w') as outfile:
         json.dump(status_data, outfile)
 
 

@@ -24,8 +24,8 @@ STATUS_FILE_DIR = files(src.data.json).joinpath(".probo2_status.json")
 PLOT_JSON_DEFAULTS =  files(src.data.json).joinpath("plotting_defaults.json")
 
 LOG_FILE_PATH = files(src.data).joinpath('probo2_log.txt')
-LAST_EXPERIMENT_JSON_PATH = files(src.data).joinpath('probo2_last_experiment.json')
-LAST_EXPERIMENT_SUMMARY_JSON_PATH = files(src.data).joinpath('probo2_last_experiment_summary.json')
+LAST_EXPERIMENT_JSON_PATH = str(files(src.data).joinpath('probo2_last_experiment.json'))
+LAST_EXPERIMENT_SUMMARY_JSON_PATH = str(files(src.data).joinpath('probo2_last_experiment_summary.json'))
 
 
 

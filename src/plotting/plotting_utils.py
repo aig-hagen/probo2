@@ -13,7 +13,7 @@ import functools
 from src.utils.utils import dispatch_on_value
 #TODO: Json defaults for all plots, finish Scatter plot implementation,pie chart titles
 def read_default_options(path: str) -> dict:
-    with path.open('rb') as fp:
+    with open(path,'rb') as fp:
         options =json.load(fp)
         options['def_path'] = path
     return options
@@ -92,7 +92,10 @@ def _prep_data_sactter_plot(df):
 def _create_scatter_plot(df, save_to, options):
     solver_name_x = df.columns[0]
     solver_name_y = df.columns[1]
-    save_file_name = f'{save_to}_{solver_name_x}_{solver_name_y}_scatter_new'
+
+    solver_name_x_file_name = str(df.columns[0]).replace(".","-")
+    solver_name_y_file_name = str(df.columns[1]).replace(".","-")
+    save_file_name = f'{save_to}_{solver_name_x_file_name}_{solver_name_y_file_name}_scatter'
     data = [[solver_name_x,df[solver_name_x].values],[solver_name_y,df[solver_name_y].values]]
     options['settings']['save_to'] = save_file_name
     ScatterPlot.Scatter(options).create(data)

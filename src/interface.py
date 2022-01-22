@@ -11,6 +11,7 @@ from email.policy import default
 from glob import glob
 from importlib.resources import path
 from itertools import chain
+from random import choice
 
 import click
 import pandas as pd
@@ -35,7 +36,7 @@ from src.database_models.Solver import Solver
 from src.utils import definitions, fetching, utils
 from src.utils.Notification import Notification
 
-logging.basicConfig(filename=definitions.LOG_FILE_PATH,format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.INFO)
+logging.basicConfig(filename=str(definitions.LOG_FILE_PATH),format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.INFO)
 #TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks und solvers überarbeiten, Logging system,
 
 
@@ -611,7 +612,8 @@ def calculate(par, solver, task, benchmark,
 @click.option("--send", required=False, help="Send plots via E-Mail.")
 @click.option("--last", "-l",is_flag=True,help="Plot results for the last finished experiment.")
 @click.option("--axis_scale",'-as',type=click.Choice(['linear','log']),default='log',help="Scale of x and y axis." )
-def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs, backend,combine, kind, compress, send, last, axis_scale):
+@click.option("--set_default", is_flag=True)
+def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs, backend,combine, kind, compress, send, last, axis_scale, set_default):
     """Create plots of experiment results.
 
     The --tag option is used to specify which experiment the plots should be created for.
@@ -639,13 +641,25 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs, backend,combin
         send ([type]): [description]
         last ([type]): [description]
     """
+    if set_default and (save_to is not None):
+        def_options =  pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
+        def_options['settings']['default_dir'] = save_to
+        with open(def_options['def_path'],'w') as option_file:
+            json.dump(def_options,option_file,indent=4)
+        print(f'Default path for plots set to: {save_to}')
+        exit()
+
+    default_options = pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
+    pl_util.set_user_options(ctx, default_options)
     if not save_to:
-        save_to = os.getcwd()
+        if default_options['settings']['default_dir'] is not None:
+            save_to = default_options['settings']['default_dir']
+        else:
+            save_to = os.getcwd()
     if last:
         tag.append(utils.get_from_last_experiment("Tag"))
 
-    default_options = pl_util.read_default_options(definitions.PLOT_JSON_DEFAULTS)
-    pl_util.set_user_options(ctx, default_options)
+
 
     if 'all' in kind:
         kind = ['cactus','count','dist','scatter','pie','box']
@@ -944,7 +958,7 @@ def status():
     """Provides an overview of the progress of the currently running experiment.
 
     """
-    if os.path.exists(definitions.STATUS_FILE_DIR):
+    if os.path.exists(str(definitions.STATUS_FILE_DIR)):
         Status.print_status_summary()
     else:
         print("No status query is possible.")
@@ -1469,7 +1483,7 @@ def get_help(cmd,ctx):
 
 @click.command()
 def logs():
-    with open(definitions.LOG_FILE_PATH,"r") as log_file:
+    with open(str(definitions.LOG_FILE_PATH),"r") as log_file:
         print(log_file.read())
 
 @click.command()
