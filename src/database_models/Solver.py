@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 import subprocess
@@ -9,14 +10,12 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import column_property, relationship
 from pathlib import Path
 from sqlalchemy.sql.expression import null, update
-from src.data import test
+
 from src.utils import utils
 
 from src.database_models.Base import Base, Supported_Tasks
 from src.database_models.Result import Result
-from src.database_models import DatabaseHandler
 from src.utils import Status
-import src.analysis.validation as validation
 import src.utils.definitions as definitions
 
 class TaskNotSupported(ValueError):
@@ -148,17 +147,20 @@ class Solver(Base):
         print("Name: {} \nVersion: {} \nsolver_path: {} \nFormat: {} \nProblems: {}".format(self.solver_name,self.solver_version, self.solver_path, self.solver_format,
                                                                                                                     self.get_supported_tasks()))
 
-    def run(self,task,benchmark,timeout, save_db=True, tag=None, session=None, update_status=True,n=1,first_n_instances=None):
+    def run(self,task,benchmark,timeout, save_db=True, tag=None, session=None, update_status=True,n=1,first_n_instances=None, multi=False):
         results = {}
         cmd_params = []
         arg_lookup = {}
         arg = ""
         solver_dir = os.path.dirname(self.solver_path)
-        if self.solver_path.endswith('.sh'):
+        res_file_paths = []
+        if multi:
+            temp_result_path = os.path.join('_temp_results',self.solver_full_name,task.symbol,benchmark.benchmark_name)
+            if not os.path.exists(temp_result_path):
+                os.makedirs(temp_result_path)
 
-            # cmd_params.append('cd')
-            # cmd_params.append(solver_dir)
-            # cmd_params.append('&&')
+
+        if self.solver_path.endswith('.sh'):
             cmd_params.append('bash')
         elif self.solver_path.endswith('.py'):
             cmd_params.append('python')
@@ -206,7 +208,25 @@ class Solver(Base):
                 logging.exception(f'Something went wrong running solver {self.solver_name}')
                 print("\nError occured:",err)
                 results[instance_name] = {'timed_out':False,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode}
-            if save_db:
+            if multi:
+                _data = results[instance_name]
+                _data['tag'] = tag
+                _data['solver_id'] = self.solver_id
+                _data['benchmark_id'] = benchmark.id
+                _data['task_id'] = task.id
+                _data['instance'] = instance_name
+                _data['timeout'] = timeout
+                _temp_file_path = os.path.join(temp_result_path,f'{instance_name}_res.json')
+                with open(_temp_file_path,'w') as res_file:
+                    json.dump(_data,res_file)
+                res_file_paths.append(_temp_file_path)
+                del _data
+                del results[instance_name]
+
+
+
+
+            elif save_db:
                 data = results[instance_name]
                 result = Result(tag=tag,solver_id=self.solver_id,benchmark_id = benchmark.id,task_id = task.id,
                             instance=instance_name,cut_off=timeout, timed_out = data['timed_out'],
@@ -216,6 +236,10 @@ class Solver(Base):
                 session.commit()
                 del data
                 del results[instance_name]
-            if update_status:
+            if update_status and not multi:
                 Status.increment_instances_counter(task.symbol, self.solver_id)
-        return results
+        if multi:
+            return res_file_paths
+        else:
+
+            return results

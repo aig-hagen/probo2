@@ -13,20 +13,20 @@ DATABASE_DIR = files(src.data).joinpath(".probo2")
 TEST_DATABASE_PATH = os.path.join(str(DATABASE_DIR), "probo2_old.db")
 #TEST_DATABASE_PATH = files(DATABASE_DIR).joinpath("probo2_old.db")
 
-TEST_INSTANCES_REF_PATH = files(src.data.test).joinpath("reference")
-TEST_INSTANCE_ARG = files(src.data.test).joinpath("a.arg")
-TEST_INSTANCE_APX = files(src.data.test).joinpath("a.apx")
-TEST_INSTANCE_TGF = files(src.data.test).joinpath("a.tgf")
+TEST_INSTANCES_REF_PATH = str(files(src.data.test).joinpath("reference"))
+TEST_INSTANCE_ARG = str(files(src.data.test).joinpath("a.arg"))
+TEST_INSTANCE_APX = str(files(src.data.test).joinpath("a.apx"))
+TEST_INSTANCE_TGF = str(files(src.data.test).joinpath("a.tgf"))
 
-CSS_TEMPLATES_PATH = files(src.data).joinpath("css")
+CSS_TEMPLATES_PATH = str(files(src.data).joinpath("css"))
 
-STATUS_FILE_DIR = files(src.data.json).joinpath(".probo2_status.json")
-PLOT_JSON_DEFAULTS =  files(src.data.json).joinpath("plotting_defaults.json")
+STATUS_FILE_DIR = str(files(src.data.json).joinpath(".probo2_status.json"))
+PLOT_JSON_DEFAULTS =  str(files(src.data.json).joinpath("plotting_defaults.json"))
+FETCH_BENCHMARK_DEFAULTS_JSON = str(files(src.data.json).joinpath('probo2_fetch_benchmark_defaults.json'))
 
-LOG_FILE_PATH = files(src.data).joinpath('probo2_log.txt')
+LOG_FILE_PATH = str(files(src.data).joinpath('probo2_log.txt'))
 LAST_EXPERIMENT_JSON_PATH = str(files(src.data).joinpath('probo2_last_experiment.json'))
 LAST_EXPERIMENT_SUMMARY_JSON_PATH = str(files(src.data).joinpath('probo2_last_experiment_summary.json'))
-
 
 
 SUPPORTED_TASKS = ["EE-ST", "EE-CO", "EE-PR", "EE-GR", "EE-SST", "EE-STG",

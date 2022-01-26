@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import pathlib
+from re import S
 import sys
 import timeit
 from email.policy import default
@@ -12,9 +13,12 @@ from glob import glob
 from importlib.resources import path
 from itertools import chain
 from random import choice
+import time
 
 import click
+from numpy import append
 import pandas as pd
+import psutil
 import tabulate
 from click.core import iter_params_for_processing
 from click.decorators import command
@@ -36,13 +40,13 @@ from src.database_models.Solver import Solver
 from src.utils import definitions, fetching, utils
 from src.utils.Notification import Notification
 
-logging.basicConfig(filename=str(definitions.LOG_FILE_PATH),format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.INFO)
+
 #TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks und solvers überarbeiten, Logging system,
+logging.basicConfig(filename=str(definitions.LOG_FILE_PATH),format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.INFO)
 
 
 @click.group()
 def cli():
-
     if not os.path.exists(definitions.DATABASE_DIR):
         os.makedirs(definitions.DATABASE_DIR)
         logging.info("Database directory created.")
@@ -217,7 +221,8 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
     else:
         format = format[0]
 
-    path_resolved = os.fspath(pathlib.Path(path).resolve())
+    path_resolved = path
+
     if replace_extension:
         current_replace = replace_extension.split(',')
         current = current_replace[0]
@@ -320,10 +325,11 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
 #@click.option("--report", is_flag=True,help="Create summary report of experiment.")
 @click.option("--n_times","-n",required=False,type=click.types.INT,default=1, help="Number of repetitions per instance. Run time is the avg of the n runs.")
 @click.option("--rerun",'-rn',is_flag=True, help='Rerun last experiment')
-@click.option("--subset","-ss",type=click.types.INT, help="Run only the first n instances of a benchmark.")
+@click.option("--subset","-sub",type=click.types.INT, help="Run only the first n instances of a benchmark.")
+@click.option("--multi", is_flag=True,help="Run experiment on mutiple cores.")
 @click.pass_context
 def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
-        notify, track, n_times, rerun, subset):
+        notify, track, n_times, rerun, subset, multi):
     """Run solver.
     \f
     Args:
@@ -341,6 +347,8 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
         track (str): Comma-seperated list of tracks to solve.
 
     """
+
+
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
     run_parameter = ctx.params.copy()
@@ -389,7 +397,16 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
     tag = run_parameter['tag']
 
     logging.info(f"Stared to run Experiment {tag}")
-    utils.run_experiment(run_parameter)
+    if multi:
+        start = time.time()
+        utils._multiprocess_run_experiment(run_parameter)
+        end = time.time()
+        print(f'\nTotal runtime:{end - start}')
+    else:
+        start = time.time()
+        utils.run_experiment(run_parameter)
+        end = time.time()
+        print(f'\nTotal runtime:{end - start}')
     logging.info(f"Finished to run Experiment {tag}")
     df = stats.prepare_data(
         DatabaseHandler.get_results(session, [], [], [], [tag],
@@ -487,7 +504,6 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
 @click.option("--send", required=False, help="Send plots via E-Mail.")
 def calculate(par, solver, task, benchmark,
               tag,combine, vbs, export, save_to, statistics,print_format,filter,last, send, compress, verbose):
-
     if last:
         tag.append(utils.get_from_last_experiment("Tag"))
 
@@ -696,10 +712,6 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs, backend,combin
             saved_files_paths.extend([  f'{x}.{backend}' for x in file ])
         else:
             saved_files_paths.append( f'{file}.{backend}')
-
-
-    # saved_files_paths = [ f'{x}.{backend}' for x in saved_files_df.saved_files.to_list()]
-    # print(saved_files_paths)
 
 
     if compress:
@@ -1487,7 +1499,7 @@ def logs():
         print(log_file.read())
 
 @click.command()
-@click.option('--name','-n', type=click.Choice(['ICCMA15']),multiple=True,required=True, help='Name of benchmark to fetch')
+@click.option('--name','-n', type=click.Choice(['ICCMA15','ICCMA19','ICCMA21']),multiple=True,required=True, help='Name of benchmark to fetch')
 @click.option(
     "--save_to",
     "-st",
@@ -1495,12 +1507,32 @@ def logs():
     help="Directory to store benchmark in. Default is the current working directory.")
 @click.pass_context
 def fetch(ctx,name, save_to):
+    """Download ICCMA competition benchmakrs and add them to the database.
+
+    Args:
+        ctx ([type]): [description]
+        name ([type]): [description]
+        save_to ([type]): [description]
+    """
+
+    with open(definitions.FETCH_BENCHMARK_DEFAULTS_JSON,'r') as file:
+        json_string = file.read()
+    fetch_options = json.loads(json_string)
+
     if not save_to:
         save_to = os.getcwd()
-    for n in name:
-        path_benchmark  = fetching.fetch_benchmark(n,save_to)
-        ctx.invoke(add_benchmark,name=n,path=path_benchmark,format=('tgf','apx'),random_arguments=True,extension_arg_files='arg')
-
+    for benchmark_name in name:
+        current_benchmark_options = fetch_options[benchmark_name]
+        path_benchmark = fetching._fetch_benchmark(benchmark_name,save_to,current_benchmark_options)
+        if path_benchmark:
+            ctx.invoke(add_benchmark,
+                   name=benchmark_name,
+                   path=path_benchmark,
+                   format=tuple(current_benchmark_options['format']),
+                   random_arguments=current_benchmark_options['random_arguments'],
+                   extension_arg_files=current_benchmark_options['extension_arg_files'],
+                   generate=current_benchmark_options['generate']
+                   )
 
 cli.add_command(fetch)
 cli.add_command(logs)

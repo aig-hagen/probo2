@@ -18,11 +18,7 @@ python3 -m venv probo2_env
 source probo2_env/bin/activate
 ```
 
-4. Install setup.py
- ```
-python setup.py install
-```
-**Note**: If installation fails with this command, try the following command:
+4. Install
 ```
 pip install -e .
 ```
@@ -60,7 +56,7 @@ Usage: *probo2 add-solver [OPTIONS]*
 + *-p, --path PATH*
 
     Path to solver executable  [required].
-    
+
     Relative paths are automatically resolved. The executable can be a compiled binary, bash script or a python file. As long as the executable implements the ICCMA interface it should work.
     More information on the [ICCMA interface](http://argumentationcompetition.org/).
 + *-f, --format [apx|tgf]*
@@ -72,7 +68,7 @@ Usage: *probo2 add-solver [OPTIONS]*
 + *-v, --version*
 
     Version of solver [required].
-    
+
     This option has to be specified to make sure the same solver with different versions can be added to the database.
 + *-g, --guess*
 
@@ -241,6 +237,15 @@ Usage: *probo2 delete-benchmark [OPTIONS]*
   + *-n, --n_times*
 
     Number of repetitions per instance. Run time is the avg of the n runs.
+
+  + *-sub, --subset*
+
+    Run only the first n instances of a benchmark.
+
+  + *--multi*
+
+    Run experiment on mutiple CPU cores. The number of cores to use is #physical cores - 1 or 1. This is a heuristic to avoid locking up the system.
+
 
   + *--help*
 

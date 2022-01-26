@@ -10,6 +10,7 @@ from pathlib import Path
 from sqlalchemy.sql.expression import null
 from itertools import chain
 from src.database_models.Base import Base, Supported_Tasks
+from functools import reduce
 
 class Benchmark(Base):
     __tablename__ = "benchmarks"
@@ -48,7 +49,7 @@ class Benchmark(Base):
             except IOError as err:
                 print(err)
 
-            suffix_length = len(self.extension_arg_files) + 1 # +1 for dot 
+            suffix_length = len(self.extension_arg_files) + 1 # +1 for dot
             instance_name = os.path.basename(file)[:-suffix_length]
             lookup[instance_name] = argument_param
 
@@ -239,9 +240,9 @@ class Benchmark(Base):
         print(f"{num_generated_files} .{extension} files generated.")
 
     def _strip_extension_arg_files(self, instances):
-        suffix_length = len(self.extension_arg_files) + 1 # +1 for dot 
+        suffix_length = len(self.extension_arg_files) + 1 # +1 for dot
         return  [ instance[:-suffix_length] for instance in instances]
-        
+
         #return [ instance.removesuffix(f'.{self.extension_arg_files}') for instance in instances]
     def strip_extension(self,instances):
         extensions_stripped = list()
@@ -266,6 +267,7 @@ class Benchmark(Base):
 
                 return np.logical_and( (apx_instances_names==tgf_instances_names).all(), (tgf_instances_names==arg_instances_names).all() )
             else:
+
                 return False
         else:
             preset_format = self.get_formats()[0]
@@ -337,17 +339,23 @@ class Benchmark(Base):
             if arg_missing:
                 self.generate_argument_files(extension=self.extension_arg_files,to_generate=arg_missing)
 
+    def _print_missing(self,missing_files):
+        print("The following files are missing:")
+        for formats,missing_instances in missing_files.items():
+
+            if missing_instances:
+                num_missing = len(missing_instances['names'])
+
+
+                print(f"Format: {formats}\n#Missing: {num_missing}\nInstances: {missing_instances['names']}\n\n")
+            else:
+                continue
+
     def check(self):
         if not self.is_complete():
             missing_files = self.get_missing_files_per_format()
-            print("The following files are missing:")
-            for formats,missing_instances in missing_files.items():
-                if missing_instances:
-                    num_missing = len(missing_instances['names'])
+            self._print_missing(missing_files)
 
-                    print(f"Format: {formats}\n#Missing: {num_missing}\nInstances: {missing_instances['names']}\n\n")
-                else:
-                    continue
             if click.confirm("Do you want to create the missing files?"):
                 self.generate_missing_files(missing_files)
                 if not self.is_complete():

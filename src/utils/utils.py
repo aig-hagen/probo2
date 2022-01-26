@@ -7,6 +7,7 @@ import shutil
 
 import click
 import pandas
+from src.database_models import DatabaseHandler
 
 from src.utils import definitions as definitions
 from src.utils import Status
@@ -15,6 +16,8 @@ from subprocess import Popen
 from subprocess import TimeoutExpired
 from subprocess import CalledProcessError
 from subprocess import CompletedProcess
+
+from src.database_models.Result import Result
 
 def create_archive_from_files(save_to: str, name: str,saved_files_paths: list,compress: str, archive_type:str):
     temp_path = os.path.join(save_to,'_temp_files')
@@ -187,6 +190,103 @@ def export_html(df: pandas.DataFrame,
     else:
         df.to_html(save_path, index=index, encoding=encoding)
 
+import multiprocessing as mp
+
+def _multiprocess_run_experiment(parameters: dict):
+    """[summary]
+
+    Args:
+        parameters (dict): [description]
+    """
+    tag = parameters['tag']
+    tasks = parameters['task']
+    benchmarks = parameters['benchmark']
+    timeout = parameters['timeout']
+    dry = parameters['dry']
+    session = parameters['session']
+    select = parameters['select']
+    n = parameters['n_times']
+    first_n_instances = parameters['subset']
+    runs = []
+    for task in tasks:
+        task_symbol = task.symbol.upper()
+        click.echo(f"**********{task_symbol}***********")
+        for bench in benchmarks:
+
+            click.echo(f"Benchmark: {bench.benchmark_name}")
+            if select:
+                solvers_to_run = set(task.solvers).intersection(
+                    set(parameters['solver']))
+            else:
+
+                solvers_to_run = task.solvers
+
+            for solver in solvers_to_run:
+                #click.echo(solver.solver_full_name, nl=False)
+                runs.append((solver,task,bench,timeout,(not dry),tag,n,first_n_instances,True))
+    if runs:
+        # TODO splitting runs in num_cores - 1 batches
+        pool = mp.Pool((psutil.cpu_count(logical=False) - 1) or 1) #  to avoid locking up the system
+        res_paths_1 = pool.starmap(_single_run,runs)
+        _bulk_instert_results(res_paths_1,session)
+        session.commit()
+        try:
+            shutil.rmtree('_temp_results')
+        except:
+            print('Error while deleting _temp_results directory')
+
+
+
+
+def _create_result_obj_from_json(file_path,session):
+
+    with open(file_path,'r') as result_json:
+        data = json.load(result_json)
+    benchmark = DatabaseHandler.get_benchmark(session,data['benchmark_id'])
+    solver = DatabaseHandler.get_solver(session,data['solver_id'])
+    task = DatabaseHandler.get_task(session,data['task_id'])
+
+    result_obj = Result(tag=data['tag'],
+                    solver_id=data['solver_id'],
+                    benchmark_id = data['benchmark_id'],
+                    task_id = data['task_id'],
+                    instance=data['instance'],
+                    cut_off=data['timeout'],
+                    timed_out = data['timed_out'],
+                    runtime=data['runtime'],
+                    result=data['result'],
+                    additional_argument = data['additional_argument'],
+                    benchmark=benchmark,
+                    solver=solver,
+                    task=task,
+                    exit_with_error=
+                    data['exit_with_error'],
+                    error_code=data['error_code'])
+    return result_obj
+
+def _bulk_instert_results(result_paths,session):
+    for solver_result_paths in result_paths:
+        for result_file in solver_result_paths:
+            session.add(_create_result_obj_from_json(result_file,session))
+
+    #session.commit()
+
+
+
+def _single_run(solver,task,bench,timeout,save_db,tag,n,first_n_instances,multi):
+
+    paths = solver.run(task,
+                           bench,
+                           timeout,
+                           save_db=save_db,
+                           tag=tag,
+                           session=None,
+                           n=n,
+                           first_n_instances=first_n_instances,
+                           multi=multi)
+
+    click.echo(f"{solver.solver_full_name} Task: {task.symbol}---FINISHED")
+    return paths
 
 def run_experiment(parameters: dict):
     """[summary]
@@ -406,6 +506,9 @@ def check_solver_paths(solvers):
             print(f'Solver {solver.solver_full_name} was excluded because of a invalid path to the executable.')
 
     return valid_solver_paths
+
+def init_files():
+    pass
 
 
 
