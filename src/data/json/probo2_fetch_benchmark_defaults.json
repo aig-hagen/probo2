@@ -1,0 +1,30 @@
+{
+    "ICCMA15":{
+        "format": ["apx","tgf"],
+        "extension_arg_files": "arg",
+        "random_arguments": true,
+        "generate": null,
+        "url": "http://argumentationcompetition.org/2015/iccma2015_benchmarks.zip",
+        "archive_type": "zip"
+
+    },
+    "ICCMA19":{
+        "format": ["apx","tgf"],
+        "extension_arg_files": "apx.arg",
+        "random_arguments": false,
+        "generate": null,
+        "url": "http://argumentationcompetition.org/2019/iccma-instances.tar.gz",
+        "archive_type": "tar.gz"
+
+    },
+    "ICCMA21":{
+        "format": ["apx","tgf"],
+        "extension_arg_files": "apx_arg",
+        "random_arguments": false,
+        "generate": null,
+        "url": "http://argumentationcompetition.org/2021/instances.tar.gz",
+        "archive_type": "tar.gz"
+
+    }
+
+}
