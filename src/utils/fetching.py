@@ -16,10 +16,10 @@ def fetch_benchmark(benchmark_name, save_to, options):
 
 
 def _fetch_from_url(url,save_to):
-    # try:
-    #     request.urlretrieve(url,save_to)
-    # except Exception as e:
-    #     print(f"Something went wrong downloading the benchmark:\n{e}")
+    try:
+        request.urlretrieve(url,save_to)
+    except Exception as e:
+        print(f"Something went wrong downloading the benchmark:\n{e}")
     return save_to
 
 @fetch_benchmark.register('ICCMA15')
