@@ -11,3 +11,4 @@ fpdf
 typing-extensions
 psutil
 importlib-resources
+multiprocess
