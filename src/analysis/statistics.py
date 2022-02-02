@@ -147,6 +147,15 @@ def num_solved(df):
     total = df.instance.shape[0]
     return total -(sum_timed_out(df) + sum_exit_with_error(df))
 
+def num_best(df):
+    pass
+
+def calculate_stats(df,grouping,functions_to_call,par_penalty=10):
+    return (df
+                 .groupby(grouping,as_index=False)
+                 .apply(lambda df: dispatch_function(df,functions_to_call,par_penalty=par_penalty))
+                 )
+
 
 def dispatch_function(df,functions,par_penalty=10):
 
@@ -161,7 +170,8 @@ def dispatch_function(df,functions,par_penalty=10):
                     'coverage': coverage(df),
                     'timeouts': sum_timed_out(df),
                     'errors': sum_exit_with_error(df),
-                    'solved': num_solved(df)
+                    'solved': num_solved(df),
+                    'best': num_best(df)
     }
     functions_to_call = {key: dispatch_map[key] for key in functions}
     info = get_info_as_strings(df)

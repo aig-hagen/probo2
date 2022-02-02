@@ -40,6 +40,10 @@ from src.database_models.Solver import Solver
 from src.utils import definitions, fetching, utils
 from src.utils.Notification import Notification
 
+import src.custom.register as register
+import src.custom.calculate
+
+
 
 #TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks und solvers überarbeiten, Logging system,
 logging.basicConfig(filename=str(definitions.LOG_FILE_PATH),format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.INFO)
@@ -497,13 +501,14 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
 @click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
 @click.option("--export","-e",type=click.Choice(['latex','csv','json']),default=None,multiple=True)
 #@click.option("--css",default="styled-table.css",help="CSS file for table style.")
-@click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors','all']),multiple=True)
+@click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors','all','best']),multiple=True)
 @click.option("--verbose",'-v',is_flag=True,help='Show additional information for some statistics.')
 @click.option("--last", "-l",is_flag=True,help="Calculate stats for the last finished experiment.")
 @click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
 @click.option("--send", required=False, help="Send plots via E-Mail.")
+@click.option("--custom","-cs",type=click.Choice(register.stat_dict.keys()),multiple=True)
 def calculate(par, solver, task, benchmark,
-              tag,combine, vbs, export, save_to, statistics,print_format,filter,last, send, compress, verbose):
+              tag,combine, vbs, export, save_to, statistics,print_format,filter,last, send, compress, verbose, custom):
     if last:
         tag.append(utils.get_from_last_experiment("Tag"))
 
@@ -518,7 +523,7 @@ def calculate(par, solver, task, benchmark,
         grouping = [x for x in grouping if x not in combine]
 
     if 'all' in statistics:
-        functions_to_call = ['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors']
+        functions_to_call = ['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors','best']
     else:
         functions_to_call = list(statistics)
 
@@ -539,15 +544,24 @@ def calculate(par, solver, task, benchmark,
         functions_to_call.append(f'PAR{par}')
     else:
         par=0
+    custom_stats_df = []
+    for custom_stat_func in custom:
+        custom_stats_df.append(register.stat_dict[custom_stat_func](df))
+    for _df in custom_stats_df:
+        print(tabulate(_df[_df.columns.values],headers='keys',tablefmt=print_format,showindex=False))
 
-    stats_df = (df
-                .groupby(grouping,as_index=False)
-                .apply(lambda df: stats.dispatch_function(df,functions_to_call,par_penalty=par))
-                )
+    if functions_to_call:
+        stats_df = stats.calculate_stats(df,grouping,functions_to_call,par_penalty=par)
+    # stats_df = (df
+    #             .groupby(grouping,as_index=False)
+    #             .apply(lambda df: stats.dispatch_function(df,functions_to_call,par_penalty=par))
+    #             )
 
-    print_headers = ['solver','task','benchmark']
-    print_headers.extend(functions_to_call)
-    utils.print_df(stats_df,['tag','benchmark','task'],headers=print_headers,format=print_format)
+
+    if functions_to_call:
+        print_headers = ['solver','task','benchmark']
+        print_headers.extend(functions_to_call)
+        utils.print_df(stats_df,['tag','benchmark','task'],headers=print_headers,format=print_format)
 
     if verbose:
         verbose_grouping = grouping.copy()
@@ -869,7 +883,12 @@ def results(verbose, solver, task, benchmark, tag, filter,only_tags):
 
 
 @click.command()
-@click.option("--save_to", "-st", required=True)
+@click.option("--save_to",
+    "-st",
+    type=click.Path(resolve_path=True,exists=True),
+    required=False,
+    help=
+    "Directory to store plots and data in. Filenames will be generated automatically.")
 @click.option("--solver",
               "-s",
               required=False,
@@ -917,8 +936,14 @@ def results(verbose, solver, task, benchmark, tag, filter,only_tags):
               default=[])
 @click.option("--only_solved", is_flag=True, default=False)
 @click.option("--all_columns",is_flag=True)
+@click.option("--last",'-l',is_flag=True,help='Export results of last experiment')
 def export(save_to, solver, filter, problem, benchmark, tag, task, format,
-           group_by, file_name, include_column, exclude_column, only_solved,all_columns):
+           group_by, file_name, include_column, exclude_column, only_solved,all_columns,last):
+
+    if last:
+        tag.append(utils.get_from_last_experiment("Tag"))
+    if not save_to:
+        save_to = os.getcwd()
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
     colums_to_export = [

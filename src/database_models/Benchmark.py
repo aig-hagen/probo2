@@ -203,12 +203,19 @@ class Benchmark(Base):
         """
         with open(present_instance_path) as present_file:
             present_file_content = present_file.read()
+        present_file.close()
         random_argument = self.__get_random_argument(present_file_content, present_format)
+
+        if random_argument is None or random_argument == "":
+            #print(f'{present_instance_path=}\n{random_argument=}')
+            random_argument = self.__get_random_argument(present_file_content, present_format)
+
 
         with open(generate_instance_path,'w') as argument_file:
             argument_file.write(random_argument)
 
         argument_file.close()
+
 
     def generate_argument_files(self, extension=None,to_generate=None):
         """Generate argument file with random arguments from existing files.
