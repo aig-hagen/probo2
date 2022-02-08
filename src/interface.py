@@ -127,7 +127,7 @@ def add_solver(name, path, format, tasks, version, guess):
         new_solver.print_summary()
         click.confirm(
             "Are you sure you want to add this solver to the database?"
-            ,abort=True)
+            ,abort=True,default=True)
         session.commit()
 
         print("Solver {0} added to database with ID: {1}".format(
@@ -251,7 +251,7 @@ def add_benchmark(name, path, graph_type, format, hardness, competition,
 
     click.confirm(
         "Are you sure you want to add this benchmark to the database?",
-        abort=True)
+        abort=True,default=True)
 
     engine = DatabaseHandler.get_engine()
     session = DatabaseHandler.create_session(engine)
@@ -400,7 +400,7 @@ def run(ctx, all, select, benchmark, task, solver, timeout, dry, tag,
 
     tag = run_parameter['tag']
 
-    logging.info(f"Stared to run Experiment {tag}")
+    logging.info(f"Started to run Experiment {tag}")
     if multi:
         start = time.time()
         utils._multiprocess_run_experiment(run_parameter)
@@ -1327,7 +1327,7 @@ def delete_solver(id, all):
         if all:
             click.confirm(
                 "Are you sure you want to delete all solvers in the database?",
-                abort=True)
+                abort=True,default=True)
             session.query(Solver).delete()
             session.commit()
             print("All solvers deleted.")
@@ -1366,14 +1366,14 @@ def delete_benchmark(id, all):
         if all:
             click.confirm(
                 "Are you sure you want to delete all benchmarks in the database?",
-                abort=True)
+                abort=True,default=True)
             session.query(Benchmark).delete()
             session.commit()
             print("All benchmarks deleted.")
         else:
             click.confirm(
                 "Are you sure you want to delete this benchmark in the database?",
-                abort=True)
+                abort=True,default=True)
             DatabaseHandler.delete_benchmark(session, id)
             session.commit()
             print("Benchmark deleted.")
@@ -1391,7 +1391,7 @@ def add_task(symbol):
     session = DatabaseHandler.create_session(engine)
     click.confirm(
         "Are you sure you want to add this task to the database?",
-        abort=True)
+        abort=True, default=True)
 
     try:
         for new_symbol in list(symbol):
