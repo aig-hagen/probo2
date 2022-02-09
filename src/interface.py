@@ -14,6 +14,7 @@ from importlib.resources import path
 from itertools import chain
 from random import choice
 import time
+from urllib import request
 
 import click
 from numpy import append
@@ -1558,7 +1559,33 @@ def fetch(ctx,name, save_to):
                    extension_arg_files=current_benchmark_options['extension_arg_files'],
                    generate=current_benchmark_options['generate']
                    )
+@click.command()
+@click.option("--num","-n",required=True, help='Number of instances to generate')
+@click.option("--size","-s", help='Fixed number of arguments per instances')
+@click.option("--random_size","-rs", help='Random number of arguments per instances. Usage: -rs [min] [max]')
+def stable_gen(num,size,random_size):
+    """ Python port of the original StableGenerator of probo by Matthias Thimm.
+        This is the generator for abstract argumentation graphs used
+        in ICCMA'15 for the second group of problems (testcases 4-6). It generates
+        graphs that (likely) possess many stable, preferred, and complete extensions.
+        It works roughly as follows:
+        1.) A set of arguments is identified to form an acyclic subgraph, containing
+         the likely grounded extension
+        2.) a subset of arguments is randomly selected and attacks are randomly added
+          from some arguments within this set to all arguments outside the set (except
+          to the arguments identified in 1.)
+        3.) Step 2 is repeated until a number of desired stable extensions is reached *
+        For more details see the code.
 
+        This generator can be used by adapting the variables in the configuration block in the
+        beginning of the class. Once started, this generator generates graphs continuously
+        (it will not terminate on its own, the application has to be terminated forcefully).
+
+         Matthias Thimm
+    """
+    pass
+
+cli.add_command(stable_gen)
 cli.add_command(fetch)
 cli.add_command(logs)
 cli.add_command(dumphelp_markdown)
