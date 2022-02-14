@@ -96,7 +96,8 @@ def get_experiment_summary_as_string(df: pd.DataFrame) -> str:
                 solver_sum_str += cur_solver
 
             benchmark_sum_str += task_sum_str + solver_sum_str
-    return final_string + benchmark_sum_str
+            final_string += benchmark_sum_str
+    return final_string
 
 
 def get_info_as_strings(df: pd.DataFrame) -> dict:
