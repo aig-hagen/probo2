@@ -1,4 +1,4 @@
-import src.custom.register as register
+import src.functions.register as register
 import pandas as pd
 
 
@@ -23,6 +23,7 @@ def get_number_best_runtime(df):
 
     res_df = pd.DataFrame.from_dict(solver_dict,orient='index').reset_index()
     res_df.columns = ['solver','#best']
+
     return res_df
 
 def get_number_worst_runtime(df):

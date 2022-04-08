@@ -1,0 +1,38 @@
+{
+    "general":{
+        "name": "scc_instances",
+        "save_to": "",
+        "save": true,
+        "num_args": 3,
+        "generate_solutions": false,
+        "generate_arg_files": false,
+        "solver": 1,
+        "timeout": null,
+        "timemin": null,
+        "format": ["apx","tgf"],
+        "num": 2,
+        "num_scc_instances": 30,
+        "num_grounded_instances": 50,
+        "num_stable_instances": 20,
+        "random_size": [500, 1000],
+        "tasks": ["SE-CO","SE-ST"],
+        "step_size_num_args": 50,
+        "batch_size": 5,
+        "threshold": 0.2
+        },
+    "scc":{
+      "max_scc": 400,
+      "step_size_max_scc": 50,
+      "inner_attack_prob": 0.3,
+      "outer_attack_prob": 0.6,
+      "step_size_prob": 0.01
+    },
+    "stable":{
+        "num_extension": [400,800],
+        "size_extension": [420,640],
+        "size_grounded": [420,640]
+    },
+    "grounded": {
+        "attack_prob": 0.9
+    }
+}

@@ -3,6 +3,7 @@ import logging
 import re
 import subprocess
 import os
+from sys import stderr
 from timeit import default_timer as timer
 import time
 
@@ -53,7 +54,7 @@ class Solver(Base):
         elif self.solver_format == 'tgf':
             instance = str(definitions.TEST_INSTANCE_TGF)
         else:
-            raise FormatNotSupported(f'Format {format} is not supported for solver {self.solver_name}')
+            raise FormatNotSupported(f'Format {self.solver_format} is not supported for solver {self.solver_name}')
 
 
 
@@ -62,7 +63,7 @@ class Solver(Base):
                   "-f", instance,
                   "-fo", self.solver_format])
 
-        if 'DS' or 'DC' in test_task:
+        if 'DS' in test_task or 'DC' in test_task:
             with open(str(definitions.TEST_INSTANCE_ARG),'r') as arg_file:
                 arg = arg_file.read().rstrip('\n')
                 cmd_params.extend(["-a",arg])
@@ -74,7 +75,7 @@ class Solver(Base):
             print(f'Solver interface test timed out.')
             return False
         except subprocess.CalledProcessError as err:
-            print(f'Something went wrong when testing the interface: {err}')
+            print(f'Something went wrong when testing the interface: {err}\nOutput:{err.output}')
             return False
 
         return True
@@ -147,7 +148,7 @@ class Solver(Base):
         print("Name: {} \nVersion: {} \nsolver_path: {} \nFormat: {} \nProblems: {}".format(self.solver_name,self.solver_version, self.solver_path, self.solver_format,
                                                                                                                     self.get_supported_tasks()))
 
-    def run(self,task,benchmark,timeout, save_db=True, tag=None, session=None, update_status=True,n=1,first_n_instances=None, multi=False):
+    def run(self,task,benchmark,timeout, save_db=True, tag=None, session=None, update_status=True,n=1,first_n_instances=None, multi=False, multiple_runs=False):
         results = {}
         cmd_params = []
         arg_lookup = {}
@@ -184,21 +185,14 @@ class Solver(Base):
                 params.extend(["-a",arg])
             final_param = cmd_params + params
             try:
-                total_run_time = 0
-                for i in range(1,n+1):
-
-                    start_time_current_run = time.perf_counter()
-                    result = utils.run_process(final_param,
-                                       capture_output=True, timeout=timeout, check=True,cwd=solver_dir)
 
 
-                    end_time_current_run = time.perf_counter()
-                    run_time_current_run = end_time_current_run - start_time_current_run
-                    total_run_time+=run_time_current_run
 
-
-                run_time = total_run_time / n
-
+                start_time_current_run = time.perf_counter()
+                result = utils.run_process(final_param,
+                                   capture_output=True, timeout=timeout, check=True,cwd=solver_dir)
+                end_time_current_run = time.perf_counter()
+                run_time = end_time_current_run - start_time_current_run
                 solver_output = re.sub("\s+", "",
                                    result.stdout.decode("utf-8"))
                 results[instance_name] = {'timed_out':False,'additional_argument': arg, 'runtime': run_time, 'result': solver_output, 'exit_with_error': False, 'error_code': None}
@@ -231,7 +225,7 @@ class Solver(Base):
                 result = Result(tag=tag,solver_id=self.solver_id,benchmark_id = benchmark.id,task_id = task.id,
                             instance=instance_name,cut_off=timeout, timed_out = data['timed_out'],
                             runtime=data['runtime'], result=data['result'], additional_argument = data['additional_argument'],
-                            benchmark=benchmark, solver=self, task=task, exit_with_error=data['exit_with_error'], error_code=data['error_code'])
+                            benchmark=benchmark, solver=self, task=task, exit_with_error=data['exit_with_error'], error_code=data['error_code'], num_run=n, multiple_runs=multiple_runs)
                 session.add(result)
                 session.commit()
                 del data
@@ -243,3 +237,106 @@ class Solver(Base):
         else:
 
             return results
+
+    def run_dynamic(self,task,benchmark,timeout, save_db=True, tag=None, session=None, update_status=True,n=1,first_n_instances=None, multi=False):
+        results = {}
+        cmd_params = []
+        arg_lookup = {}
+        arg = ""
+        solver_dir = os.path.dirname(self.solver_path)
+        res_file_paths = []
+        # if multi:
+        #     temp_result_path = os.path.join('_temp_results',self.solver_full_name,task.symbol,benchmark.benchmark_name)
+        #     if not os.path.exists(temp_result_path):
+        #         os.makedirs(temp_result_path)
+
+
+        if self.solver_path.endswith('.sh'):
+            cmd_params.append('bash')
+        elif self.solver_path.endswith('.py'):
+            cmd_params.append('python')
+
+        instances = benchmark.get_instances(self.solver_format)
+
+        if first_n_instances is not None:
+            instances = instances[0:first_n_instances]
+
+        if "DS" in task.symbol or "DC" in task.symbol:
+            arg_lookup = benchmark.generate_additional_argument_lookup(self.solver_format)
+
+        dynamic_file = benchmark.generate_dynamic_file_lookup(self.solver_format)
+
+
+        for instance in instances:
+            instance_name = Path(instance).stem
+            params = [self.solver_path,
+                  "-p", task.symbol,
+                  "-f", instance,
+                  "-fo", self.solver_format,
+                  "-m", dynamic_file[instance] ]
+            if arg_lookup:
+                arg = arg_lookup[instance_name]
+                params.extend(["-a",arg])
+            final_param = cmd_params + params
+            try:
+                total_run_time = 0
+                for i in range(1,n+1):
+
+                    start_time_current_run = time.perf_counter()
+                    result = utils.run_process(final_param,
+                                       capture_output=True, timeout=timeout, check=True,cwd=solver_dir)
+
+
+                    end_time_current_run = time.perf_counter()
+                    run_time_current_run = end_time_current_run - start_time_current_run
+                    total_run_time+=run_time_current_run
+
+
+                run_time = total_run_time / n
+
+                solver_output = re.sub("\s+", "",
+                                   result.stdout.decode("utf-8"))
+                print(solver_output)
+                results[instance_name] = {'timed_out':False,'additional_argument': arg, 'runtime': run_time, 'result': solver_output, 'exit_with_error': False, 'error_code': None}
+            except subprocess.TimeoutExpired as e:
+                results[instance_name] = {'timed_out':True,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': False, 'error_code': None}
+            except subprocess.CalledProcessError as err:
+                logging.exception(f'Something went wrong running solver {self.solver_name}')
+                print("\nError occured:",err)
+                results[instance_name] = {'timed_out':False,'additional_argument': arg, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode}
+            # if multi:
+            #     _data = results[instance_name]
+            #     _data['tag'] = tag
+            #     _data['solver_id'] = self.solver_id
+            #     _data['benchmark_id'] = benchmark.id
+            #     _data['task_id'] = task.id
+            #     _data['instance'] = instance_name
+            #     _data['timeout'] = timeout
+            #     _temp_file_path = os.path.join(temp_result_path,f'{instance_name}_res.json')
+            #     with open(_temp_file_path,'w') as res_file:
+            #         json.dump(_data,res_file)
+            #     res_file_paths.append(_temp_file_path)
+            #     del _data
+            #     del results[instance_name]
+
+
+
+
+            if save_db:
+                data = results[instance_name]
+                result = Result(tag=tag,solver_id=self.solver_id,benchmark_id = benchmark.id,task_id = task.id,
+                            instance=instance_name,cut_off=timeout, timed_out = data['timed_out'],
+                            runtime=data['runtime'], result=data['result'], additional_argument = data['additional_argument'],
+                            benchmark=benchmark, solver=self, task=task, exit_with_error=data['exit_with_error'], error_code=data['error_code'])
+                session.add(result)
+                session.commit()
+                del data
+                del results[instance_name]
+            if update_status and not multi:
+                Status.increment_instances_counter(task.symbol, self.solver_id)
+        # if multi:
+        #     return res_file_paths
+        # else:
+
+        return results
+

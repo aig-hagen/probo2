@@ -1,0 +1,7 @@
+name: default_experiment
+task: ['DS-PR']
+solver: [1, 'PYGLAF']
+benchmark: [2]
+timeout: 600
+repetitions: 5
+result_format: csv

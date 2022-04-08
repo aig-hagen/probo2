@@ -137,6 +137,8 @@ __pycache__/
 
 
 # Distribution / packaging
+*.yaml
+!default_config.yaml
 *.csv
 *.db
 *.ipynb
@@ -184,6 +186,9 @@ pip-delete-this-directory.txt
 #JSON
 status.json
 last_experiment.json
+solvers.json
+benchmarks.json
+
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/

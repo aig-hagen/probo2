@@ -28,3 +28,6 @@ class Result(Base):
     benchmark = relationship("Benchmark", back_populates="results")
     solver = relationship("Solver", back_populates="solver_results")
     task = relationship("Task", back_populates="results")
+    num_run = Column(Integer,nullable=True)
+    multiple_runs = Column(Boolean,nullable=True)
+

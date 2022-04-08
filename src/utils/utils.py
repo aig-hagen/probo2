@@ -303,6 +303,10 @@ def run_experiment(parameters: dict):
     select = parameters['select']
     n = parameters['n_times']
     first_n_instances = parameters['subset']
+    if n > 1:
+        multiple_runs = True
+    else:
+        multiple_runs = False
 
     for task in tasks:
         task_symbol = task.symbol.upper()
@@ -315,18 +319,33 @@ def run_experiment(parameters: dict):
             else:
 
                 solvers_to_run = task.solvers
+            if task.symbol.endswith("-D"):
 
-            for solver in solvers_to_run:
-                click.echo(solver.solver_full_name, nl=False)
-                solver.run(task,
-                           bench,
-                           timeout,
-                           save_db=(not dry),
-                           tag=tag,
-                           session=session,
-                           n=n,
-                           first_n_instances=first_n_instances)
-                click.echo("---FINISHED")
+                for solver in solvers_to_run:
+                    click.echo(solver.solver_full_name, nl=False)
+                    for i in range(1,n+1):
+                        solver.run_dynamic(task,
+                                    bench,
+                                    timeout,
+                                    save_db=(not dry),
+                                    tag=tag,
+                                    session=session,
+                                    n=i,
+                                    first_n_instances=first_n_instances, multiple_runs=multiple_runs)
+                    click.echo("---FINISHED")
+            else:
+                for solver in solvers_to_run:
+                    click.echo(solver.solver_full_name, nl=False)
+                    for i in range(1,n+1):
+                        solver.run(task,
+                            bench,
+                            timeout,
+                            save_db=(not dry),
+                            tag=tag,
+                            session=session,
+                            n=i,
+                            first_n_instances=first_n_instances, multiple_runs=multiple_runs)
+                    click.echo("---FINISHED")
         Status.increment_task_counter()
 
 def create_file_name(df: pandas.DataFrame) -> str:
@@ -509,6 +528,7 @@ def check_solver_paths(solvers):
 
 def init_files():
     pass
+
 
 
 

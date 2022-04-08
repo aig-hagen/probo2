@@ -1,4 +1,5 @@
 import os
+
 import click
 import random
 import numpy as np
@@ -30,6 +31,28 @@ class Benchmark(Base):
 
     def get_argument_files(self):
         return self.get_instances(self.extension_arg_files)
+
+    def get_dynamic_instances(self,format):
+        return self.get_instances(f'{format}m')
+
+    def generate_dynamic_file_lookup(self, format):
+        lookup = {}
+        dynamic_instances = self.get_dynamic_instances(format)
+        dynamic_instances_names = [Path(x).stem for x in dynamic_instances]
+        d_names_path = dict(zip(dynamic_instances_names,dynamic_instances))
+        instances_paths = self.get_instances(format)
+        instances_names = [Path(x).stem for x in instances_paths]
+        names_path = dict(zip(instances_names,instances_paths))
+
+        for instance_name, instances_path in names_path.items():
+            if instance_name in d_names_path:
+                lookup[instances_path] = d_names_path[instance_name]
+
+        return lookup
+
+
+
+
 
     def generate_additional_argument_lookup(self, format: str) -> dict:
         """[summary]

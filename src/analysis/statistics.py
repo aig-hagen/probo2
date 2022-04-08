@@ -20,11 +20,13 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: [description]
     """
+
     calculate_cols = [
         'id', 'solver_id', 'anon_1', 'instance', 'solver_format', 'runtime',
        'task_id', 'symbol', 'cut_off', 'timed_out',
        'exit_with_error', 'error_code', 'additional_argument', 'benchmark_id',
-        'validated', 'benchmark_name', 'tag','correct_solved', 'incorrect_solved', 'no_reference','correct'
+        'validated', 'benchmark_name', 'tag','correct_solved', 'incorrect_solved', 'no_reference','correct',
+        'num_run', 'multiple_runs','solver_path','solver_format'
     ]
     return (df[calculate_cols]
             .rename(columns={

@@ -17,6 +17,25 @@ from src.database_models.Result import Result
 from src.database_models.Task import Task
 from src.database_models.Benchmark import Benchmark
 
+from alembic import config
+from alembic import script
+from alembic.runtime import migration
+import os
+
+
+
+def check_database_version():
+    engine = create_engine(f"sqlite:///{definitions.TEST_DATABASE_PATH}")
+    alembic_cfg = config.Config(definitions.ALEMBIC_INIT_FILE_PATH)
+    cwd = os.getcwd()
+    os.chdir(definitions.DATABASE_DIR)
+    script_ = script.ScriptDirectory.from_config(alembic_cfg)
+    with engine.begin() as conn:
+        context = migration.MigrationContext.configure(conn)
+        if context.get_current_revision() is not None and (context.get_current_revision() != script_.get_current_head()):
+           print(f"The database is not up-to-date. To update the database navigate to the following directory:\n{definitions.DATABASE_DIR}\n and run:\nalembic upgrade head")
+           exit()
+    os.chdir(cwd)
 def get_engine():
     engine = None
     try:
@@ -177,6 +196,8 @@ def get_results(session,solver,task, benchmark,tag,filter,only_solved=False,vali
     res  = session.query(Result.id,
                         Solver.solver_id,
                         Solver.solver_full_name,
+                        Solver.solver_path,
+                        Solver.solver_format,
                         Result.instance,
                         Solver.solver_format,
                         Result.runtime,
@@ -194,7 +215,10 @@ def get_results(session,solver,task, benchmark,tag,filter,only_solved=False,vali
                         Result.incorrect_solved,
                         Result.no_reference,
                         Result.validated,
+                        Result.num_run,
+                        Result.multiple_runs,
                         Benchmark.benchmark_name,
+
                         Result.tag).join(Solver,Solver.solver_id == Result.solver_id).join(Benchmark,Benchmark.id==Result.benchmark_id).join(Task, Task.id == Result.task_id)
 
     if tag:

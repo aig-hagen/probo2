@@ -12,3 +12,6 @@ typing-extensions
 psutil
 importlib-resources
 multiprocess
+alembic
+networkx
+yaml
