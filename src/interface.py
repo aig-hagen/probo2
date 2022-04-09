@@ -95,7 +95,7 @@ def cli():
               "-t",
               required=False,
               default=[],
-
+              callback=CustomClickOptions.check_problems,
               help="Supported computational problems")
 @click.option("--version",
               "-v",
@@ -133,6 +133,8 @@ def add_solver(name, path, format, tasks, version, guess):
         except ValueError as e:
             print(e)
             exit()
+    if not isinstance(format, list):
+        format = [format]
     solver_info = {'name': name,'version': version,
                    'path': path,'tasks': tasks,'format': format}
     print(solver_info)
