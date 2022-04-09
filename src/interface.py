@@ -128,6 +128,8 @@ def add_solver(name, path, format, tasks, version, guess):
                 tasks = solver_handler.fetch_tasks(path)
             if not format:
                 format = solver_handler.fetch_format(path)
+            else:
+                format = [format]
         except ValueError as e:
             print(e)
             exit()
