@@ -164,17 +164,6 @@ def check_problems(ctx, param, value, in_db=True):
     else:
         value = value.strip()
         problems = value.split(",")
-    if in_db:
-        engine = DatabaseHandler.get_engine()
-        session = DatabaseHandler.create_session(engine)
-        supported_task = DatabaseHandler.get_supported_tasks(session)
-    else:
-        supported_task = definitions.SUPPORTED_TASKS
-
-    session.close()
-    for problem in problems:
-        if problem not in supported_task:
-            raise click.BadParameter("Problem not supported!")
     return problems
 
 
