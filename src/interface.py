@@ -95,7 +95,7 @@ def cli():
               "-t",
               required=False,
               default=[],
-              callback=CustomClickOptions.check_problems,
+
               help="Supported computational problems")
 @click.option("--version",
               "-v",
