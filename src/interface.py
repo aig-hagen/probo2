@@ -287,9 +287,10 @@ def add_benchmark(name, path, format, extension_arg_files, no_check, generate, r
 @click.option("--rerun",'-rn',is_flag=True, help='Rerun last experiment')
 @click.option("--subset","-sub",type=click.types.INT, help="Run only the first n instances of a benchmark.")
 @click.option("--multi", is_flag=True,help="Run experiment on mutiple cores.")
+@click.option("--config",'-cfg',type=click.Path(exists=True,resolve_path=True))
 @click.pass_context
 def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
-        notify, track, n_times, rerun, subset, multi):
+        notify, track, n_times, rerun, subset, multi, config):
     """Run solver.
     \f
     Args:
@@ -307,9 +308,9 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
         track (str): Comma-seperated list of tracks to solve.
 
     """
-    config = experiment_config.load_config(os.path.join(definitions.CONFIGS_DIRECTORY,'WS_test.yaml'))
-    print(config.__dict__)
-    experiment_handler.run_experiment(config)
+    config_file = experiment_config.load_config(config)
+    print(config_file.__dict__)
+    experiment_handler.run_experiment(config_file)
     exit()
 
 
