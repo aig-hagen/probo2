@@ -14,4 +14,4 @@ importlib-resources
 multiprocess
 alembic
 networkx
-yaml
+pyyaml
