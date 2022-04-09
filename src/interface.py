@@ -130,7 +130,7 @@ def add_solver(name, path, format, tasks, version, guess):
             print(e)
             exit()
     solver_info = {'name': name,'version': version,
-                   'path': path,'tasks': tasks,'format': format}
+                   'path': path,'tasks': tasks,'format': [format]}
     is_working = solver_handler.check_interface(solver_info)
 
     if is_working:
