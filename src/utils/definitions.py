@@ -31,6 +31,7 @@ FETCH_BENCHMARK_DEFAULTS_JSON = str(files(src.data.json).joinpath('probo2_fetch_
 GENERATOR_DEFAULTS_JSON = str(files(src.generators).joinpath('generator_config.json'))
 
 LOG_FILE_PATH = str(files(src.data).joinpath('probo2_log.txt'))
+DEFAULT_CONFIG_PATH = str(os.path.join(CONFIGS_DIRECTORY,'default_config.yaml'))
 LAST_EXPERIMENT_JSON_PATH = str(files(src.data).joinpath('probo2_last_experiment.json'))
 LAST_EXPERIMENT_SUMMARY_JSON_PATH = str(files(src.data).joinpath('probo2_last_experiment_summary.json'))
 

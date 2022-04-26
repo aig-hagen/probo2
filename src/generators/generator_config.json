@@ -10,11 +10,11 @@
         "timeout": null,
         "timemin": null,
         "format": ["apx","tgf"],
-        "num": 2,
+        "num": 1000,
         "num_scc_instances": 30,
         "num_grounded_instances": 50,
         "num_stable_instances": 20,
-        "random_size": [500, 1000],
+        "random_size": [100, 800],
         "tasks": ["SE-CO","SE-ST"],
         "step_size_num_args": 50,
         "batch_size": 5,
@@ -28,9 +28,9 @@
       "step_size_prob": 0.01
     },
     "stable":{
-        "num_extension": [400,800],
-        "size_extension": [420,640],
-        "size_grounded": [420,640]
+        "num_extension": [5,30],
+        "size_extension": [5,40],
+        "size_grounded": [5,40]
     },
     "grounded": {
         "attack_prob": 0.9

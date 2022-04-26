@@ -43,14 +43,14 @@ from src.database_models.Base import Base, Supported_Tasks
 from src.database_models.Benchmark import Benchmark
 from src.database_models.Result import Result
 from src.database_models.Solver import Solver
-from src.utils import benchmark_handler, definitions, experiment_config, fetching, utils
+from src.utils import benchmark_handler, config_handler, definitions, fetching, utils
 from src.utils.Notification import Notification
 from src.generators import generator_utils as gen_utils
 from src.generators import generator
 import src.functions.register as register
 from src.functions import benchmark
 from src.utils import solver_handler, experiment_handler
-from src.utils import experiment_config
+from src.utils import config_handler
 
 
 #TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks und solvers überarbeiten, Logging system,
@@ -228,7 +228,7 @@ def add_benchmark(name, path, format, extension_arg_files, no_check, generate, r
     benchmark_handler.add_benchmark(benchmark_info)
     print(f"Benchmark {benchmark_info['name']} added to database with ID: {benchmark_info['id']}.")
     logging.info(f"Benchmark {benchmark_info['name']} added to database with ID: {benchmark_info['id']}.")
-    print(benchmark_handler.load_benchmark('all'))
+
 
 
 @click.command()
@@ -241,15 +241,15 @@ def add_benchmark(name, path, format, extension_arg_files, no_check, generate, r
 @click.option("--solver",
               "-s",
               required=False,
-              default=[],
+              default=None,
               cls=CustomClickOptions.StringAsOption,
               help=" Comma-seperated list of ids or names of solvers (in database) to run.")
 @click.option(
     "--benchmark",
     "-b",
-    required=True,
+    required=False,
     cls=CustomClickOptions.StringAsOption,
-    default=[],
+    default=None,
     help="Comma-seperated list of ids or names of benchmarks (in database) to run solvers on.")
 @click.option("--task",
               cls=CustomClickOptions.StringAsOption,
@@ -283,14 +283,15 @@ def add_benchmark(name, path, format, extension_arg_files, no_check, generate, r
     help=
     "Send a notification to the email address provided as soon as the experiments are finished."
 )
-@click.option("--n_times","-n",required=False,type=click.types.INT,default=1, help="Number of repetitions per instance. Run time is the avg of the n runs.")
+@click.option("--repetitions","-reps",required=False,type=click.types.INT, help="Number of repetitions per instance. Run time is the avg of the n runs.")
 @click.option("--rerun",'-rn',is_flag=True, help='Rerun last experiment')
 @click.option("--subset","-sub",type=click.types.INT, help="Run only the first n instances of a benchmark.")
 @click.option("--multi", is_flag=True,help="Run experiment on mutiple cores.")
 @click.option("--config",'-cfg',type=click.Path(exists=True,resolve_path=True))
+@click.option("--plot",'-plt')
 @click.pass_context
 def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
-        notify, track, n_times, rerun, subset, multi, config):
+        notify, track, repetitions, rerun, subset, multi, config,plot):
     """Run solver.
     \f
     Args:
@@ -308,10 +309,20 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
         track (str): Comma-seperated list of tracks to solve.
 
     """
-    config_file = experiment_config.load_config(config)
-    print(config_file.__dict__)
-    experiment_handler.run_experiment(config_file)
+    cfg = config_handler.load_default_config()
+    if config:
+        user_cfg_yaml = config_handler.load_config_yaml(config)
+        cfg.merge_user_input(user_cfg_yaml)
+    cfg.merge_user_input(ctx.params)
+    cfg.check()
+    print('========== Experiment Summary ==========')
+    cfg.print()
+    experiment_handler.run_experiment(cfg)
+
+
+
     exit()
+
 
 
     engine = DatabaseHandler.get_engine()

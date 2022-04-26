@@ -182,10 +182,18 @@ class SolverEncoder(JSONEncoder):
         return o.__dict__
 
 def load_solver(identifiers):
-    if identifiers == 'all':
-        return load_solver_json()
+    if isinstance(identifiers,str):
+        if identifiers == 'all':
+            return load_solver_json()
+    elif isinstance(identifiers,list):
+        if 'all' in identifiers:
+            return load_solver_json()
+        else:
+            return load_solver_by_identifier(identifiers)
     else:
-        return load_solver_by_identifier(identifiers)
+        print('Unable to load solvers.')
+        exit()
+
 
 def load_solver_json():
     with open(definitions.SOLVER_FILE_PATH,'r+') as solver_file:

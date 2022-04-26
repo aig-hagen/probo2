@@ -49,9 +49,17 @@ def command_required_tag_if_not(require_name):
 class StringAsOption(click.Option):
     def type_cast_value(self, ctx, value):
         if not value:
-            return []
+            return None
         else:
-            return value.split(",")
+            splitted =  value.split(",")
+            final_values = []
+            for v in splitted:
+                if v.isdigit():
+                    final_values.append(int(v))
+                else:
+                    final_values.append(v)
+            return final_values
+
 
 
 class FilterAsDictionary(click.Option):
