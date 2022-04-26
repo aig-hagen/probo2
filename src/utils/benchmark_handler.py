@@ -304,8 +304,8 @@ def get_missing_files_per_format(benchmark_info):
         missing_instances[benchmark_info['ext_additional']] = {'paths':arg_missing_path, 'names': arg_missing_names}
         return missing_instances
     else:
-        arg_instances_names = set(_strip_extension_arg_files(get_instances(benchmark_info['path'],benchmark_info['ext_additional'])))
-        present_instances =  set(strip_extension(get_instances(benchmark_info['path'],benchmark_info['format'][0])))
+        arg_instances_names = set(_strip_extension_arg_files(benchmark_info,get_instances(benchmark_info['path'],benchmark_info['ext_additional'])))
+        present_instances =  set(strip_extension(benchmark_info,get_instances(benchmark_info['path'],benchmark_info['format'][0])))
         arg_missing_path = present_instances.difference(arg_instances_names)
         arg_missing_names = [(os.path.basename(x) + f".{benchmark_info['ext_additional']}") for x in arg_missing_path]
         missing_instances[benchmark_info['ext_additional']] = {'paths':arg_missing_path, 'names': arg_missing_names}
