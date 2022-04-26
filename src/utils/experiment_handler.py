@@ -88,6 +88,8 @@ def run_experiment(config: config_handler.Config):
     result_path = init_result_path(config)
     config.raw_results_path = result_path
     config.dump(os.path.join(definitions.RESULT_DIRECTORY, config.name))
+    print('========== Experiment Summary ==========')
+    config.print()
     print('========== RUNNING EXPERIMENT ==========')
     for task in config.task:
         print(f'+TASK: {task}')
