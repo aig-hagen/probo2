@@ -2,10 +2,11 @@ from ftplib import error_perm
 import json
 from json import JSONEncoder
 import os
+from src.functions import statistics
 from src.utils import definitions
 import yaml
 class Config(object):
-    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,plot,yaml_file_name,raw_results_path=None):
+    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,plot,grouping,save_to,statistics,yaml_file_name,raw_results_path=None):
         self.task = task
         self.benchmark = benchmark
         self.solver = solver
@@ -14,9 +15,11 @@ class Config(object):
         self.name = name
         self.result_format = result_format
         self.plot = plot
+        self.grouping = grouping
         self.yaml_file_name = yaml_file_name
         self.raw_results_path = raw_results_path
-
+        self.save_to = save_to
+        self.statistics = statistics
 
     def write_config(self):
         save_to = os.path.join(definitions.CONFIGS_DIRECTORY,self.name)
@@ -26,8 +29,11 @@ class Config(object):
     def merge_user_input(self, cfg_to_merge):
         for key,value in cfg_to_merge.items():
             if key in self.__dict__.keys():
-                if value is not None:
-                    self.__dict__[key] = value
+                if value is not None or value:
+                    if not value:
+                        pass
+                    else:
+                        self.__dict__[key] = value
 
     def print(self):
         print(yaml.dump(self.__dict__))
@@ -74,20 +80,36 @@ class ConfigDecoder(JSONEncoder):
     def default(self, o):
         return o.__dict__
 
-def load_config_yaml(path: str) -> Config:
+def load_config_yaml(path: str, as_obj=False) -> Config:
     with open(path,'r') as config_file:
         if path.endswith('yaml'):
             configs = yaml.load(config_file, Loader=yaml.FullLoader)
             configs['yaml_file_name'] = os.path.basename(path)
-    return configs
+    if not as_obj:
+        return configs
+    else:
+        return Config(**configs)
+
 
 def load_default_config() -> Config:
     with open(definitions.DEFAULT_CONFIG_PATH,'r') as config_file:
         if definitions.DEFAULT_CONFIG_PATH.endswith('yaml'):
             configs = yaml.load(config_file, Loader=yaml.FullLoader)
             configs['yaml_file_name'] = os.path.basename(definitions.DEFAULT_CONFIG_PATH)
-
     return Config(**configs)
+
+
+def load_all_configs(directory: str) -> list:
+    configs = []
+    files_in_directory = os.listdir(directory)
+    for f in files_in_directory:
+        if f.endswith('.yaml'):
+            f_path = os.path.join(directory,f)
+            configs.append(load_config_yaml(f_path))
+    return configs
+
+
+
 
 
 

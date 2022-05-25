@@ -17,6 +17,7 @@ BENCHMARK_FILE_PATH = str(files(src.benchmarks).joinpath('benchmarks.json'))
 TEST_DATABASE_PATH = os.path.join(str(DATABASE_DIR), "probo2_old.db")
 CONFIGS_DIRECTORY = str(files(src.configs_experiment))
 RESULT_DIRECTORY = str(files(src.results))
+EXPERIMENT_INDEX = str(files(src.data).joinpath("experiment_index.csv"))
 
 TEST_INSTANCES_REF_PATH = str(files(src.data.test).joinpath("reference"))
 TEST_INSTANCE_ARG = str(files(src.data.test).joinpath("a.arg"))

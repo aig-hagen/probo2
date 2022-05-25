@@ -1,4 +1,5 @@
 
+import csv
 from genericpath import exists
 import json
 from csv import DictWriter, DictReader
@@ -29,14 +30,44 @@ def _format_benchmark_info(benchmark_info):
         formatted[f'benchmark_{key}'] = benchmark_info[key]
     return formatted
 
+def _append_result_directoy_suffix(config: config_handler.Config):
+    suffix = 1
+    while(True):
+        experiment_name =  f'{config.name}_{suffix}'
+        result_file_directory = os.path.join(definitions.RESULT_DIRECTORY, experiment_name)
+        if not os.path.exists(result_file_directory):
+            config.name = experiment_name
+            return result_file_directory
+        else:
+            suffix += 1
+
+
+
 def init_result_path(config: config_handler.Config):
     result_file_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
+    if os.path.exists(result_file_directory):
+        result_file_directory = _append_result_directoy_suffix(config)
+
     os.makedirs(result_file_directory,exist_ok=True)
     result_file_path = os.path.join(result_file_directory, f'raw.{config.result_format}')
     if os.path.exists(result_file_path):
         suffix = len(os.listdir(result_file_directory))
-        os.rename(result_file_path,os.path.join(result_file_directory, f'raw_{suffix}.{config.result_format}'))
+        result_file_path = os.path.join(result_file_directory, f'raw_{suffix}.{config.result_format}')
+
     return result_file_path
+
+def load_results_via_name(name):
+
+    experiment_index = pd.read_csv(definitions.EXPERIMENT_INDEX)
+
+    if name in experiment_index.name.values:
+        cfg_path = experiment_index[experiment_index.name == name]['config_path'].iloc[0]
+        cfg = config_handler.load_config_yaml(cfg_path,as_obj=True)
+        return load_experiments_results(cfg)
+    else:
+        print(f"Experiment with name {name} does not exist.")
+        exit()
+
 
 
 def _write(format,file,content):
@@ -77,6 +108,27 @@ def write_result(result, result_path, result_format):
             result_data.append(result)
             _write(result_format,result_file, result_data)
 
+def write_experiment_index(config: config_handler.Config, result_directory_path):
+
+
+    header = ['name','raw_path','config_path']
+    with open(definitions.EXPERIMENT_INDEX,'a') as fd:
+
+        writer = csv.writer(fd)
+        if os.stat(definitions.EXPERIMENT_INDEX).st_size == 0:
+            writer.writerow(header)
+        writer.writerow([config.name, config.raw_results_path,os.path.join(result_directory_path, config.yaml_file_name)])
+
+
+
+def load_experiments_results(config: config_handler.Config)->pd.DataFrame:
+    if os.path.exists(config.raw_results_path):
+        if config.result_format == 'json':
+            return pd.read_json(config.raw_results_path)
+        elif config.result_format == 'csv':
+            return pd.read_csv(config.raw_results_path)
+    else:
+        print(f'Results for experiment {config.name} not found!')
 
 
 
@@ -87,7 +139,10 @@ def run_experiment(config: config_handler.Config):
     dynamic_files_lookup = None
     result_path = init_result_path(config)
     config.raw_results_path = result_path
-    config.dump(os.path.join(definitions.RESULT_DIRECTORY, config.name))
+    cfg_path_result_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
+    config.dump(cfg_path_result_directory)
+    write_experiment_index(config, cfg_path_result_directory)
+
     print('========== Experiment Summary ==========')
     config.print()
     print('========== RUNNING EXPERIMENT ==========')
@@ -109,6 +164,7 @@ def run_experiment(config: config_handler.Config):
                             result = solver_handler.run_solver(solver, task, config.timeout, instance, format, additional_arguments_lookup,dynamic_files_lookup)
                             result.update(benchmark_info)
                             result['repetition'] = rep
+                            result['tag'] = config.name
                             write_result(result,result_path,config.result_format)
     print('========== DONE ==========')
 

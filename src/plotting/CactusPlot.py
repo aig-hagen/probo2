@@ -30,12 +30,13 @@ class Cactus(Plot, object):
         Cactus plot class.
     """
 
-    def __init__(self, options):
+    def __init__(self, options,save_to):
         """
             Cactus constructor.
         """
 
         super(Cactus, self).__init__(options)
+        self.save_to = save_to
 
 
         with open(self.def_path, 'r') as fp:
@@ -66,4 +67,5 @@ class Cactus(Plot, object):
 
         plt.savefig(self.save_to, bbox_inches='tight', transparent=self.transparent)
         plt.clf()
+        return self.save_to
 

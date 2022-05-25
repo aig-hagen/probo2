@@ -48,7 +48,7 @@ from src.utils.Notification import Notification
 from src.generators import generator_utils as gen_utils
 from src.generators import generator
 import src.functions.register as register
-from src.functions import benchmark
+from src.functions import benchmark, plot, statistics
 from src.utils import solver_handler, experiment_handler
 from src.utils import config_handler
 
@@ -259,7 +259,7 @@ def add_benchmark(name, path, format, extension_arg_files, no_check, generate, r
 @click.option("--timeout",
               "-t",
               required=False,
-              default=600,
+              default=None, type=click.types.INT,
               help=" Instance cut-off value in seconds. If cut-off is exceeded instance is marked as timed out.")
 @click.option("--dry",
               is_flag=True,
@@ -288,10 +288,14 @@ def add_benchmark(name, path, format, extension_arg_files, no_check, generate, r
 @click.option("--subset","-sub",type=click.types.INT, help="Run only the first n instances of a benchmark.")
 @click.option("--multi", is_flag=True,help="Run experiment on mutiple cores.")
 @click.option("--config",'-cfg',type=click.Path(exists=True,resolve_path=True))
-@click.option("--plot",'-plt')
+@click.option("--plot",'-plt',default=None, type=click.Choice(register.plot_dict.keys()),multiple=True)
+@click.option("--statistics",'-stats',default=None,type=click.Choice(register.stat_dict.keys()),multiple=True)
+@click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
+@click.option("--name_map","-n",cls=CustomClickOptions.StringAsOption,
+              required=False,default=None,help='Comma seperated list of solver names mapping. Format: <old>:<new>')
 @click.pass_context
 def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
-        notify, track, repetitions, rerun, subset, multi, config,plot):
+        notify, track, repetitions, rerun, subset, save_to, multi,statistics, config,plot,name_map):
     """Run solver.
     \f
     Args:
@@ -309,15 +313,46 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
         track (str): Comma-seperated list of tracks to solve.
 
     """
+
     cfg = config_handler.load_default_config()
+
+
+
     if config:
         user_cfg_yaml = config_handler.load_config_yaml(config)
         cfg.merge_user_input(user_cfg_yaml)
+
+
     cfg.merge_user_input(ctx.params)
+
+
     cfg.check()
-    print('========== Experiment Summary ==========')
+
+
+    if cfg.save_to is None:
+        cfg.save_to = os.getcwd()
     cfg.print()
     experiment_handler.run_experiment(cfg)
+
+    result_df = experiment_handler.load_results_via_name(cfg.name)
+
+    if name_map is not None:
+        name_map = { x.split(':')[0] : x.split(':')[1] for x in name_map}
+        result_df.solver_name.replace(name_map,inplace=True)
+
+    saved_file_paths = []
+    if cfg.plot is not None:
+        saved_plots = []
+        default_plt_options = pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
+        for plt in plot:
+            saved = register.plot_dict[plt](result_df,cfg,default_plt_options)
+            saved_plots.append(saved)
+        saved_files = pd.concat(saved_plots).to_frame().rename(columns={0:'saved_files'})
+        saved_file_paths = saved_files.saved_files.to_list()
+
+    if cfg.statistics is not None:
+        for stat in statistics:
+             print(register.stat_dict[stat](result_df))
 
 
 
@@ -435,6 +470,14 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
         print(f"\n{notification.foot}\nYour e-mail identification code: {id_code}")
 
 @click.command()
+@click.option("--load_experiment","-lde",is_flag=True)
+def debug(load_experiment):
+    if load_experiment:
+        resultd_df = experiment_handler.load_results_via_name('ba_500_800_2')
+        print(resultd_df.columns)
+
+
+@click.command()
 @click.option("--par",
               "-p",
               type=click.types.INT,
@@ -483,6 +526,12 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
 @click.option("--custom","-cs",type=click.Choice(register.stat_dict.keys()),multiple=True)
 def calculate(par, solver, task, benchmark,
               tag,combine, vbs, export, save_to, statistics,print_format,filter,last, send, compress, verbose, custom):
+
+    configs = config_handler.load_all_configs(definitions.CONFIGS_DIRECTORY)
+    for c in configs:
+        c.print()
+
+    exit()
     if last:
         tag.append(utils.get_from_last_experiment("Tag"))
 
@@ -1845,3 +1894,4 @@ cli.add_command(validate)
 cli.add_command(significance)
 cli.add_command(delete_solver)
 cli.add_command(add_task)
+cli.add_command(debug)
