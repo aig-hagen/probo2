@@ -26,57 +26,112 @@ pip install -e .
 ```
 ## Experiments
 In this section we describe the general workflow of probo2 and how experiments are managed.
-In probo2, a configuration file fully describes experiments. It contains information about which solvers to run, which benchmark to use, how the results should be validated, what statistics should be calculated, and the graphical representation of the results. This standardized pipeline allows easy and scaleable experiment management and reliably reproducing results.  All configuration options and their default values can be found in the [default_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/default_config.yaml) file. For further information on YAML files see the offical [specification](https://yaml.org/spec/1.2.2/). Next, we will take a closer look at the [default_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/default_config.yaml) file and how probo2 handles configuration files in general.
+In probo2, a configuration file fully describes experiments. It contains information about which solvers to run, which benchmark to use, how the results should be validated, what statistics should be calculated, and the graphical representation of the results. This standardized pipeline allows easy and scaleable experiment management and reliably reproducing results.  All configuration options and their default values can be found in the [default_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/default_config.yaml) file. The file format of the configuration files is YAML. For further information on YAML files see the offical [specification](https://yaml.org/spec/1.2.2/). Next, we will take a closer look at the [default_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/default_config.yaml) file and how probo2 handles configuration files in general.
 
 ### Configuration Files
 As mentioned before the [default_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/default_config.yaml) file contains all default configurations. User specifications (via command line or custom configuration files) overwrite the corresponding default configurations. To avoid conflicts between specifications from the command line and those in a (custom) configuration file, the specifications made by the user via the command line have priority.
-If the user does not specify any other options, the experiment will be performed with the default configurations. However, we recommend creating a separate configuration file for each experiment. The following options can be specified in a configuration file:
+If the user does not specify any other options, the experiment will be performed with the default configurations. However, we recommend creating a separate configuration file for each experiment. In general, options are specified as *key:value* pairs in YAML files. The following options can be specified :
 
 + *name*
 
-Name/tag of the experiment.
+   Name/tag of the experiment.
 
 + *task*
 
-Comma-separated list of computational tasks to solve.
+   Comma-separated list of computational tasks to solve.
 
 + *solver*
 
-Comma-seperated list of ids or names of solvers to run.
+   Comma-seperated list of ids or names of solvers to run.
 
 + *benchmark*
 
-Comma-separated list of ids or names of benchmarks to run solvers on.
+   Comma-separated list of ids or names of benchmarks to run solvers on.
 
 
 + *timeout*
 
-Instance cut-off value in seconds. If cut-off is exceeded instance is marked as timed out. (Default: 600)
+   Instance cut-off value in seconds. If cut-off is exceeded instance is marked as timed out. (Default: 600)
 
 + *repetitions*
 
 
-Specifies how often an instance should be repeated. (Default: 1)
+   Specifies how often an instance should be repeated. (Default: 1)
 
 + *result_format*:
 
-File format for results. (Default: csv)
+   File format for results. (Default: csv)
 
 + *plot*
 
-Comma-separated list of kinds of plots to be created.
+   Comma-separated list of kinds of plots to be created.
 
 + *statistics*
 
-Comma-separated list of statistics to be calculated.
+   Comma-separated list of statistics to be calculated.
 
 
 + *printing*
 
 
-Formatting of the command line output. (Default: 'default')
+   Formatting of the command line output. (Default: 'default')
 
 + *save_to*
+
+   Directory to store analysis results in. If not specified, the current working directory is used.
+
++ *copy_raws*
+
+   Copy raws result files to *save_to* destination. (Default: True)
+
+
+For a list of choices for an option, run the following command:
+ 
+ ```
+probo2 run --help
+```
+ 
+
+**Note**: The list is incomplete and constantly being expanded as probo2 is still under development.
+
+### Example
+
+Here is an example of a configuration file:
+
+```
+name: my_experiment
+task: ['DS-PR']
+solver: [1,2,'my_solver']
+benchmark: all
+timeout: 600
+repetitions: 3
+plot: ['cactus']
+statistics: 
+- mean
+- solved
+- timeouts
+- coverage
+```
+
+Here an experiment named "my_experiment" is configured. The solvers with the ids 1 and 2 and the solver with the name "my_solver" should be executed. In addition, all benchmarks should be used and the 'DS-PR' task should be solved. Each instance shall be repeated 3 times and the cut-off per instance is 600 seconds. After that, the results should be visualized using cactus plots. Since no path was specified by the *save_to* option, the plots are saved in a folder "my_experiment/plots" in the current working directory. In addition, the raw data will also be copied to the folder since the *copy_raws* option is true by default. Furthermore various statistics are calculated. The "statistics" option also shows an alternative syntax for lists.
+
+To run the experiment simply execute the following command:
+
+ ```
+probo2 run --config /path/to/my_config.yaml
+```
+
+If you want to change the configuration on the fly without changing the file again, we can do it from the command line. For example, if you want to calculate additional statistics ( sum of runtimes) just add the following Options:
+
+ ```
+probo2 run --config /path/to/my_config.yaml --statistics sum
+```
+
+
+Another example can be found in the [example_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/example_config.yaml)
+ 
+
+
 
 
 
