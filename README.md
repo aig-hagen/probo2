@@ -5,7 +5,9 @@ A python tool that bundles all functionalities needed to collect, validate, anal
 ## Table of Contents
 1.[Setup](#setup)
 
-2.[Commands](#commands)
+2.[Experiments](#experiments)
+
+3.[Commands](#commands)
 
 ## Setup
 1. Clone repository
@@ -22,6 +24,67 @@ source probo2_env/bin/activate
 ```
 pip install -e .
 ```
+## Experiments
+In this section we describe the general workflow of probo2 and how experiments are managed.
+In probo2, a configuration file fully describes experiments. It contains information about which solvers to run, which benchmark to use, how the results should be validated, what statistics should be calculated, and the graphical representation of the results. This standardized pipeline allows easy and scaleable experiment management and reliably reproducing results.  All configuration options and their default values can be found in the [default_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/default_config.yaml) file. For further information on YAML files see the offical [specification](https://yaml.org/spec/1.2.2/). Next, we will take a closer look at the [default_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/default_config.yaml) file and how probo2 handles configuration files in general.
+
+### Configuration Files
+As mentioned before the [default_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/default_config.yaml) file contains all default configurations. User specifications (via command line or custom configuration files) overwrite the corresponding default configurations. To avoid conflicts between specifications from the command line and those in a (custom) configuration file, the specifications made by the user via the command line have priority.
+If the user does not specify any other options, the experiment will be performed with the default configurations. However, we recommend creating a separate configuration file for each experiment. The following options can be specified in a configuration file:
+
++ *name*
+
+Name/tag of the experiment.
+
++ *task*
+
+Comma-separated list of computational tasks to solve.
+
++ *solver*
+
+Comma-seperated list of ids or names of solvers to run.
+
++ *benchmark*
+
+Comma-separated list of ids or names of benchmarks to run solvers on.
+
+
++ *timeout*
+
+Instance cut-off value in seconds. If cut-off is exceeded instance is marked as timed out. (Default: 600)
+
++ *repetitions*
+
+
+Specifies how often an instance should be repeated. (Default: 1)
+
++ *result_format*:
+
+File format for results. (Default: csv)
+
++ *plot*
+
+Comma-separated list of kinds of plots to be created.
+
++ *statistics*
+
+Comma-separated list of statistics to be calculated.
+
+
++ *printing*
+
+
+Formatting of the command line output. (Default: 'default')
+
++ *save_to*
+
+
+
+
+
+
+
+
 
 ## Commands
 
@@ -119,7 +182,7 @@ Usage: *probo2 add-benchmark [OPTIONS]*
   formats. Missing instances can be generated after the completion test
   (user has to confirm generation) or beforehand via the --generate/-g
   option. It is also possilbe to generate random argument files for the
-  DC/DS problems with the --random_arguments/-rnd option.
+  DC/DS problems with the --random_arguments/-rnd option. By default, the following attributes are saved for a benchmark: name, path, format, and the extension of query argument files. However, it is possible to specify additional attributes using your functions. See section "custom function" for further information.
 
 **Options**:
 + *-n, --name *
@@ -148,9 +211,13 @@ Usage: *probo2 add-benchmark [OPTIONS]*
 + *-rnd, --random_arguments*
 
     Generate additional argument files with a random argument.
++ *-fun, --function*
+
+    Custom functions to add additional attributes to benchmark.
 + *--help*
 
     Show this message and exit.
+ 
 
 **Example**
 ```
