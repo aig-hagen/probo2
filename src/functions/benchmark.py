@@ -1,3 +1,8 @@
+"""Costum functions for benchmarks.
+ Within this file you can implement functions to add additional attributes to the benchmarks.
+
+"""
+
 import src.functions.register as register
 from src.utils import benchmark_handler
 
@@ -31,6 +36,7 @@ def get_benchmark_size(benchmark_info: dict) -> dict:
 
     return size_counts
 
+# Register functions
 register.benchmark_functions_register('instance_count', get_instance_counts)
 register.benchmark_functions_register('file_sizes', get_benchmark_size)
 

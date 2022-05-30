@@ -136,7 +136,7 @@ def add_solver(name, path, format, tasks, version, guess):
         format = [format]
     solver_info = {'name': name,'version': version,
                    'path': path,'tasks': tasks,'format': format}
-    print(solver_info)
+
     is_working = solver_handler.check_interface(solver_info)
 
     if is_working:
@@ -183,7 +183,7 @@ def add_solver(name, path, format, tasks, version, guess):
               is_flag=True,
               help="Generate additional argument files with a random argument."
               )
-@click.option("--function",'-fun', type=click.Choice(register.benchmark_functions_dict.keys()),multiple=True )
+@click.option("--function",'-fun', type=click.Choice(register.benchmark_functions_dict.keys()),multiple=True,help=' Custom functions to add additional attributes to benchmark.' )
 def add_benchmark(name, path, format, extension_arg_files, no_check, generate, random_arguments, function):
     """ Adds a benchmark to the database.
      Before a benchmark is added to the database, it is checked if each instance is present in all specified file formats.

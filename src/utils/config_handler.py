@@ -35,7 +35,16 @@ class Config(object):
                     if not value:
                         pass
                     else:
-                        self.__dict__[key] = value
+                        if isinstance(value,tuple):
+                            value = list(value)
+                        if isinstance(self.__dict__[key],list):
+                            if  isinstance(value,list):
+
+                                self.__dict__[key].extend(value)
+                            else:
+                                self.__dict__[key].append(value)
+                        else:
+                            self.__dict__[key] = value
 
     def print(self):
         print(yaml.dump(self.__dict__))
