@@ -140,6 +140,8 @@ def run_experiment(config: config_handler.Config):
     result_path = init_result_path(config)
     config.raw_results_path = result_path
     cfg_path_result_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
+    if config.save_to is None:
+        config.save_to = os.path.join(os.getcwd(), config.name)
     config.dump(cfg_path_result_directory)
     write_experiment_index(config, cfg_path_result_directory)
 

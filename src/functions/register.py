@@ -15,3 +15,8 @@ def benchmark_functions_register(key, function):
 plot_dict = {}
 def plot_functions_register(key, function):
      register(key, function, plot_dict)
+
+print_functions_dict = {}
+def print_functions_register(key,function):
+    register(key, function, print_functions_dict)
+

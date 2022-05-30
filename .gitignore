@@ -139,6 +139,7 @@ __pycache__/
 # Distribution / packaging
 *.yaml
 !default_config.yaml
+!example_config.yaml
 *.csv
 *.db
 *.ipynb

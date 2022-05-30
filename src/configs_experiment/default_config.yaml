@@ -9,3 +9,5 @@ plot: null
 grouping: ['tag', 'task', 'benchmark_id', 'solver_id']
 save_to: null
 statistics: null
+printing: default
+copy_raws: True

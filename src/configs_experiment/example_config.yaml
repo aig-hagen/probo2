@@ -1,0 +1,9 @@
+name: example_experiment
+task: ['DS-PR']
+solver: all
+benchmark: all
+timeout: 600
+repetitions: 1
+result_format: csv
+plot: ['cactus']
+statistics: ['mean','solved','timeouts','coverage']

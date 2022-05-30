@@ -22,13 +22,11 @@ import click
 from matplotlib.pyplot import step
 from numpy import append, nanargmax, number
 import pandas as pd
-import numpy as np
-import psutil
+
 import tabulate
 from click.core import iter_params_for_processing
 from click.decorators import command
 from sqlalchemy import and_, engine, or_
-from sqlalchemy.sql.expression import false
 from tabulate import tabulate
 from src import functions
 
@@ -48,9 +46,10 @@ from src.utils.Notification import Notification
 from src.generators import generator_utils as gen_utils
 from src.generators import generator
 import src.functions.register as register
-from src.functions import benchmark, plot, statistics
+from src.functions import benchmark, plot, statistics, printing
 from src.utils import solver_handler, experiment_handler
 from src.utils import config_handler
+from functools import reduce
 
 
 #TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks und solvers überarbeiten, Logging system,
@@ -290,12 +289,13 @@ def add_benchmark(name, path, format, extension_arg_files, no_check, generate, r
 @click.option("--config",'-cfg',type=click.Path(exists=True,resolve_path=True))
 @click.option("--plot",'-plt',default=None, type=click.Choice(register.plot_dict.keys()),multiple=True)
 @click.option("--statistics",'-stats',default=None,type=click.Choice(register.stat_dict.keys()),multiple=True)
+@click.option("--printing",'-p',default=None,type=click.Choice(register.print_functions_dict.keys()),multiple=True)
 @click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
 @click.option("--name_map","-n",cls=CustomClickOptions.StringAsOption,
               required=False,default=None,help='Comma seperated list of solver names mapping. Format: <old>:<new>')
 @click.pass_context
 def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
-        notify, track, repetitions, rerun, subset, save_to, multi,statistics, config,plot,name_map):
+        notify, track, repetitions, rerun, subset, save_to, multi,statistics, config,plot,name_map,printing):
     """Run solver.
     \f
     Args:
@@ -328,10 +328,6 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
 
     cfg.check()
 
-
-    if cfg.save_to is None:
-        cfg.save_to = os.getcwd()
-    cfg.print()
     experiment_handler.run_experiment(cfg)
 
     result_df = experiment_handler.load_results_via_name(cfg.name)
@@ -342,17 +338,33 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
 
     saved_file_paths = []
     if cfg.plot is not None:
+        print("========== PLOTTING ==========")
         saved_plots = []
         default_plt_options = pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
-        for plt in plot:
+        for plt in cfg.plot:
             saved = register.plot_dict[plt](result_df,cfg,default_plt_options)
             saved_plots.append(saved)
         saved_files = pd.concat(saved_plots).to_frame().rename(columns={0:'saved_files'})
         saved_file_paths = saved_files.saved_files.to_list()
 
     if cfg.statistics is not None:
-        for stat in statistics:
-             print(register.stat_dict[stat](result_df))
+        stats_results = []
+        print("========== STATISTICS ==========")
+        for stat in cfg.statistics:
+            _res = register.stat_dict[stat](result_df)
+            stats_results.append(_res)
+
+        to_merge = []
+        other =  []
+        for res in stats_results:
+            if res[1]:
+                to_merge.append(res[0])
+            else:
+                other.append(res[0])
+        df_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), to_merge)
+        register.print_functions_dict[cfg.printing](df_merged,['tag','task','benchmark_name'])
+
+
 
 
 
@@ -471,10 +483,29 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
 
 @click.command()
 @click.option("--load_experiment","-lde",is_flag=True)
-def debug(load_experiment):
+@click.option("--stats","-s",is_flag=True)
+def debug(load_experiment,stats):
     if load_experiment:
         resultd_df = experiment_handler.load_results_via_name('ba_500_800_2')
         print(resultd_df.columns)
+    if stats:
+        s = ['solved','errors','timeouts','coverage','mean','sum']
+        result_df = experiment_handler.load_results_via_name('ba_500_800_72')
+        results = []
+        for stat in s:
+             results.append(register.stat_dict[stat](result_df))
+        to_merge = []
+        other =  []
+        for res in results:
+            if res[1]:
+                to_merge.append(res[0])
+            else:
+                other.append(res[0])
+        df_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), to_merge)
+        print(df_merged)
+        for _o in other:
+            print(other)
+
 
 
 @click.command()
