@@ -142,6 +142,8 @@ def run_experiment(config: config_handler.Config):
     cfg_path_result_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
     if config.save_to is None:
         config.save_to = os.path.join(os.getcwd(), config.name)
+    else:
+        config.save_to = os.path.join(config.save_to, config.name)
     config.dump(cfg_path_result_directory)
     write_experiment_index(config, cfg_path_result_directory)
 

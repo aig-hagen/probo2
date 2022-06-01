@@ -20,3 +20,8 @@ print_functions_dict = {}
 def print_functions_register(key,function):
     register(key, function, print_functions_dict)
 
+table_export_functions_dict = {}
+
+def table_export_functions_register(key,function):
+    register(key, function, table_export_functions_dict)
+

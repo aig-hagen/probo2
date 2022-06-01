@@ -6,7 +6,7 @@ from src.functions import statistics
 from src.utils import definitions
 import yaml
 class Config(object):
-    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,copy_raws=False,printing=None,plot=None,grouping=None,statistics=None,raw_results_path=None):
+    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,raw_results_path=None):
         self.task = task
         self.benchmark = benchmark
         self.solver = solver
@@ -22,6 +22,7 @@ class Config(object):
         self.statistics = statistics
         self.printing = printing
         self.copy_raws = copy_raws
+        self.table_export = table_export
 
     def write_config(self):
         save_to = os.path.join(definitions.CONFIGS_DIRECTORY,self.name)

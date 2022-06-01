@@ -11,3 +11,4 @@ save_to: null
 statistics: null
 printing: default
 copy_raws: True
+table_export: ['txt']

@@ -1,32 +1,28 @@
+import time
+start = time.time()
+
 import datetime
 import hashlib
 import itertools
 import json
 import logging
 import os
-import pathlib
-from re import S
-from socket import getnameinfo
+
 import sys
-import timeit
-from email.policy import default
 from glob import glob
 from importlib.resources import path
-from itertools import chain
-from random import choice
-import time
-from urllib import request
-from zipfile import Path
+#from urllib import request
+#from zipfile import Path
 
 import click
-from matplotlib.pyplot import step
+#from matplotlib.pyplot import step
 from numpy import append, nanargmax, number
 import pandas as pd
 
 import tabulate
-from click.core import iter_params_for_processing
-from click.decorators import command
-from sqlalchemy import and_, engine, or_
+#from click.core import iter_params_for_processing
+#from click.decorators import command
+#from sqlalchemy import and_, engine, or_
 from tabulate import tabulate
 from src import functions
 
@@ -46,10 +42,12 @@ from src.utils.Notification import Notification
 from src.generators import generator_utils as gen_utils
 from src.generators import generator
 import src.functions.register as register
-from src.functions import benchmark, plot, statistics, printing
+from src.functions import benchmark, plot, statistics, printing, table_export
 from src.utils import solver_handler, experiment_handler
 from src.utils import config_handler
 from functools import reduce
+end = time.time()
+print(end - start)
 
 
 #TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks und solvers überarbeiten, Logging system,
@@ -272,7 +270,7 @@ def add_benchmark(name, path, format, extension_arg_files, no_check, generate, r
     help="Comma-seperated list of tracks to solve."
 )
 @click.option(
-    "--tag",
+    "--name",
     required=False,
     help=
     "Tag for individual experiments.This tag is used to identify the experiment."
@@ -290,12 +288,13 @@ def add_benchmark(name, path, format, extension_arg_files, no_check, generate, r
 @click.option("--plot",'-plt',default=None, type=click.Choice(register.plot_dict.keys()),multiple=True)
 @click.option("--statistics",'-stats',default=None,type=click.Choice(register.stat_dict.keys()),multiple=True)
 @click.option("--printing",'-p',default=None,type=click.Choice(register.print_functions_dict.keys()),multiple=True)
+@click.option("--table_export",'-t',default=None,type=click.Choice(register.table_export_functions_dict.keys()),multiple=True)
 @click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
 @click.option("--name_map","-n",cls=CustomClickOptions.StringAsOption,
               required=False,default=None,help='Comma seperated list of solver names mapping. Format: <old>:<new>')
 @click.pass_context
-def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
-        notify, track, repetitions, rerun, subset, save_to, multi,statistics, config,plot,name_map,printing):
+def run(ctx, all,benchmark, task, solver, timeout, dry, name,
+        notify, track, repetitions, rerun, subset, save_to, multi,statistics, config,plot,name_map,printing, table_export):
     """Run solver.
     \f
     Args:
@@ -363,6 +362,11 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
                 other.append(res[0])
         df_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), to_merge)
         register.print_functions_dict[cfg.printing](df_merged,['tag','task','benchmark_name'])
+        if cfg.table_export is not None:
+
+            for format in cfg.table_export:
+                register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
+
 
 
 
@@ -419,9 +423,9 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
 
     Status.init_status_file(tasks, benchmarks, run_parameter['tag'], run_parameter['solver'])
 
-    tag = run_parameter['tag']
+    name = run_parameter['tag']
 
-    logging.info(f"Started to run Experiment {tag}")
+    logging.info(f"Started to run Experiment {name}")
     if multi:
         start = time.time()
         utils._multiprocess_run_experiment(run_parameter)
@@ -432,9 +436,9 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
         utils.run_experiment(run_parameter)
         end = time.time()
         print(f'\nTotal runtime:{end - start}')
-    logging.info(f"Finished to run Experiment {tag}")
+    logging.info(f"Finished to run Experiment {name}")
     df = stats.prepare_data(
-        DatabaseHandler.get_results(session, [], [], [], [tag],
+        DatabaseHandler.get_results(session, [], [], [], [name],
                                     None))
 
     if not dry:
@@ -473,7 +477,7 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, tag,
             summary = 'Something went wrong. Please check the logs for more information.'
 
     if run_parameter['notify']:
-        id_code = int(hashlib.sha256(tag.encode('utf-8')).hexdigest(), 16) % 10**8
+        id_code = int(hashlib.sha256(name.encode('utf-8')).hexdigest(), 16) % 10**8
         notification = Notification(run_parameter['notify'],message=f"Here a little summary of your experiment:\n{summary}",id=id_code)
 
         notification.send()
