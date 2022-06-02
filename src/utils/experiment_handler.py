@@ -98,6 +98,7 @@ def _read(format,file):
 
 
 def write_result(result, result_path, result_format):
+
     if not os.path.exists(result_path):
         with open(result_path,'w') as result_file:
             _write_initial(result_format,result_file, result)

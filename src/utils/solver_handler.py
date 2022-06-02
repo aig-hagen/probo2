@@ -16,11 +16,11 @@ import time
 from pathlib import Path
 
 def add_solver(solver_info: dict):
-    if not os.path.exists(definitions.SOLVER_FILE_PATH):
+    if not os.path.exists(definitions.SOLVER_FILE_PATH) or (os.stat(definitions.SOLVER_FILE_PATH).st_size == 0):
         with open(definitions.SOLVER_FILE_PATH,'w') as solver_file:
             id = 1
             solver_info['id'] = id
-            json.dump([solver_info], solver_file)
+            json.dump([solver_info], solver_file,indent=2)
         return id
     else:
         with open(definitions.SOLVER_FILE_PATH,'r+') as solver_file:
@@ -30,7 +30,7 @@ def add_solver(solver_info: dict):
             solver_data.append(solver_info)
 
             solver_file.seek(0)
-            json.dump(solver_data, solver_file)
+            json.dump(solver_data, solver_file,indent=2)
         return id
 
 def _init_cmd_params(solver_path):
@@ -121,9 +121,11 @@ def print_solvers(extra_columns=None, tablefmt=None):
         columns.extend(extra_columns)
     if tablefmt is None:
         tablefmt = 'pretty'
-
-    solvers_df = pd.read_json(definitions.SOLVER_FILE_PATH)
-    print(tabulate.tabulate(solvers_df[columns],headers='keys', tablefmt=tablefmt, showindex=False))
+    if os.stat(definitions.SOLVER_FILE_PATH).st_size != 0:
+        solvers_df = pd.read_json(definitions.SOLVER_FILE_PATH)
+        print(tabulate.tabulate(solvers_df[columns],headers='keys', tablefmt=tablefmt, showindex=False))
+    else:
+        print("No solvers found.")
 
 class Solver(object):
     def __init__(self, name, version, path, format, tasks, id):
@@ -235,6 +237,34 @@ def load_solver_by_identifier(identifier: list) -> list:
         if solver['name'] in identifier or solver['id'] in identifier:
             solver_list.append(solver)
     return solver_list
+
+def _update_solver_json(solvers: list):
+    json_str = json.dumps(solvers, indent=2)
+
+    with open(definitions.SOLVER_FILE_PATH, "w") as f:
+        f.write(json_str)
+
+def delete_solver(id):
+    solvers = load_solver('all')
+    deleted = False
+    if id.isdigit():
+        id = int(id)
+    for solver in solvers:
+        if solver['id'] == id or solver['name'] == id:
+            deleted = True
+            solvers.remove(solver)
+    if deleted:
+        _update_solver_json(solvers)
+        print(f"Solver {id} deleted")
+    else:
+        print("Solver not found.")
+
+
+
+
+def delete_all_solvers():
+    with open(definitions.SOLVER_FILE_PATH,"w") as f:
+        f.write("")
 
 
 def run_solver(solver_info,task,timeout,instance,format,additional_arguments_lookup=None,dynamic_files_lookup=None,additional_solver_arguments=None):

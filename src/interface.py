@@ -1,5 +1,4 @@
 import time
-start = time.time()
 
 import datetime
 import hashlib
@@ -16,7 +15,7 @@ from importlib.resources import path
 
 import click
 #from matplotlib.pyplot import step
-from numpy import append, nanargmax, number
+from numpy import append, nanargmax
 import pandas as pd
 
 import tabulate
@@ -46,8 +45,9 @@ from src.functions import benchmark, plot, statistics, printing, table_export
 from src.utils import solver_handler, experiment_handler
 from src.utils import config_handler
 from functools import reduce
-end = time.time()
-print(end - start)
+import csv
+csv.field_size_limit(sys.maxsize)
+
 
 
 #TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks und solvers überarbeiten, Logging system,
@@ -1344,7 +1344,7 @@ def significance(tag, task, benchmark, solver, filter, combine, parametric,
 
 
 @click.command()
-@click.option("--id", type=click.types.INT, required=False,help='ID of solver to delete.')
+@click.option("--id", required=False,help='ID or name of solver to delete.')
 @click.option("--all", is_flag=True,help='Delete all solvers in database.')
 def delete_solver(id, all):
     """ Deletes a solver from the database.
@@ -1357,33 +1357,44 @@ def delete_solver(id, all):
     Raises:
         None
    """
-    engine = DatabaseHandler.get_engine()
-    session = DatabaseHandler.create_session(engine)
+    if id is not None:
+        click.confirm(
+                 "Are you sure you want to delete this solver in the database?",
+                 abort=True,default=True)
+        solver_handler.delete_solver(id)
+    if all:
+        click.confirm(
+                 "Are you sure you want to delete all solvers in the database?",
+                 abort=True,default=True)
+        solver_handler.delete_all_solvers()
 
-    try:
-        if all:
-            click.confirm(
-                "Are you sure you want to delete all solvers in the database?",
-                abort=True,default=True)
-            session.query(Solver).delete()
-            session.commit()
-            print("All solvers deleted.")
-        else:
-            click.confirm(
-                "Are you sure you want to delete this solvers in the database?",
-                abort=True)
-            DatabaseHandler.delete_solver(session, id)
-            session.commit()
-            print("Solver deleted.")
+    # engine = DatabaseHandler.get_engine()
+    # session = DatabaseHandler.create_session(engine)
 
-    except ValueError as value_error:
-        session.rollback()
-        print(value_error)
-    finally:
-        session.close()
+    # try:
+    #     if all:
+    #         click.confirm(
+    #             "Are you sure you want to delete all solvers in the database?",
+    #             abort=True,default=True)
+    #         session.query(Solver).delete()
+    #         session.commit()
+    #         print("All solvers deleted.")
+    #     else:
+    #         click.confirm(
+    #             "Are you sure you want to delete this solvers in the database?",
+    #             abort=True)
+    #         DatabaseHandler.delete_solver(session, id)
+    #         session.commit()
+    #         print("Solver deleted.")
+
+    # except ValueError as value_error:
+    #     session.rollback()
+    #     print(value_error)
+    # finally:
+    #     session.close()
 
 @click.command()
-@click.option("--id", type=click.types.INT, required=False,help='ID of benchmark to delete.')
+@click.option("--id", required=False,help='ID of benchmark to delete.')
 @click.option("--all", is_flag=True, help='Delete all benchmarks in database')
 def delete_benchmark(id, all):
     """ Deletes a benchmark from the database.
@@ -1396,30 +1407,42 @@ def delete_benchmark(id, all):
     Raises:
         None
    """
-    engine = DatabaseHandler.get_engine()
-    session = DatabaseHandler.create_session(engine)
 
-    try:
-        if all:
-            click.confirm(
-                "Are you sure you want to delete all benchmarks in the database?",
-                abort=True,default=True)
-            session.query(Benchmark).delete()
-            session.commit()
-            print("All benchmarks deleted.")
-        else:
-            click.confirm(
-                "Are you sure you want to delete this benchmark in the database?",
-                abort=True,default=True)
-            DatabaseHandler.delete_benchmark(session, id)
-            session.commit()
-            print("Benchmark deleted.")
 
-    except ValueError as value_error:
-        session.rollback()
-        print(value_error)
-    finally:
-        session.close()
+    if id is not None:
+        click.confirm(
+                 "Are you sure you want to delete this benchmark in the database?",
+                 abort=True,default=True)
+        benchmark_handler.delete_benchmark(id)
+    if all:
+        click.confirm(
+                 "Are you sure you want to delete all benchmarks in the database?",
+                 abort=True,default=True)
+        benchmark_handler.delete_all_benchmarks()
+#     engine = DatabaseHandler.get_engine()
+#     session = DatabaseHandler.create_session(engine)
+
+#     try:
+#         if all:
+#             click.confirm(
+#                 "Are you sure you want to delete all benchmarks in the database?",
+#                 abort=True,default=True)
+#             session.query(Benchmark).delete()
+#             session.commit()
+#             print("All benchmarks deleted.")
+#         else:
+#             click.confirm(
+#                 "Are you sure you want to delete this benchmark in the database?",
+#                 abort=True,default=True)
+#             DatabaseHandler.delete_benchmark(session, id)
+#             session.commit()
+#             print("Benchmark deleted.")
+
+#     except ValueError as value_error:
+#         session.rollback()
+#         print(value_error)
+#     finally:
+#         session.close()
 
 @click.command()
 @click.option("--symbol","-s",multiple=True,required=True)

@@ -1,4 +1,5 @@
 import json
+
 import tabulate
 import src.utils.definitions as definitions
 import os
@@ -32,12 +33,12 @@ def get_num_instances(benchmark_path):
     pass
 
 def add_benchmark(benchmark_info: dict):
-    if not os.path.exists(definitions.BENCHMARK_FILE_PATH):
+    if not os.path.exists(definitions.BENCHMARK_FILE_PATH) or (os.stat(definitions.BENCHMARK_FILE_PATH).st_size == 0):
         with open(definitions.BENCHMARK_FILE_PATH,'w') as benchmark_file:
             id = 1
             benchmark_info['id'] = id
 
-            json.dump([benchmark_info], benchmark_file)
+            json.dump([benchmark_info], benchmark_file,indent=2)
         return id
     else:
         with open(definitions.BENCHMARK_FILE_PATH,'r+') as benchmark_file:
@@ -47,7 +48,7 @@ def add_benchmark(benchmark_info: dict):
             benchmark_data.append(benchmark_info)
 
             benchmark_file.seek(0)
-            json.dump(benchmark_data, benchmark_file)
+            json.dump(benchmark_data, benchmark_file,indent=2)
         return id
 
 def print_summary(benchmark_info):
@@ -60,9 +61,11 @@ def print_benchmarks(extra_columns=None, tablefmt=None):
         columns.extend(extra_columns)
     if tablefmt is None:
         tablefmt = 'pretty'
-
-    benchmarks_df = pd.read_json(definitions.BENCHMARK_FILE_PATH)
-    print(tabulate.tabulate(benchmarks_df[columns],headers='keys', tablefmt=tablefmt, showindex=False))
+    if os.stat(definitions.BENCHMARK_FILE_PATH).st_size != 0:
+        benchmarks_df = pd.read_json(definitions.BENCHMARK_FILE_PATH)
+        print(tabulate.tabulate(benchmarks_df[columns],headers='keys', tablefmt=tablefmt, showindex=False))
+    else:
+        print("No benchmarks found.")
 
 def get_instances(benchmark_path,extension,without_extension=False,full_path=False):
     instances = (chain.from_iterable(glob(os.path.join(x[0], f'*.{extension}')) for x in os.walk(benchmark_path)))
@@ -385,3 +388,32 @@ def load_benchmark_by_identifier(identifier: list) -> list:
         if benchmark['name'] in identifier or benchmark['id'] in identifier:
             benchmark_list.append(benchmark)
     return benchmark_list
+
+
+def _update_benchmark_json(benchmarks: list):
+    json_str = json.dumps(benchmarks, indent=2)
+
+    with open(definitions.BENCHMARK_FILE_PATH, "w") as f:
+        f.write(json_str)
+
+def delete_benchmark(id):
+    benchmarks = load_benchmark('all')
+    deleted = False
+    if id.isdigit():
+        id = int(id)
+    for b in benchmarks:
+        if b['id'] == id or b['name'] == id:
+            deleted = True
+            benchmarks.remove(b)
+    if deleted:
+        _update_benchmark_json(benchmarks)
+        print(f"Benchmark {id} deleted")
+    else:
+        print("Benchmark not found.")
+
+
+
+
+def delete_all_benchmarks():
+    with open(definitions.BENCHMARK_FILE_PATH,"w") as f:
+        f.write("")
