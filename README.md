@@ -84,6 +84,9 @@ If the user does not specify any other options, the experiment will be performed
 
    Copy raws result files to *save_to* destination. (Default: True)
 
++ *table_export*
+
+   Comma-separated list of export format for tables.
 
 For a list of choices for an option, run the following command:
  
@@ -96,7 +99,7 @@ probo2 run --help
 
 ### Example
 
-Here is an example of a configuration file:
+This is an example of a configuration file:
 
 ```
 name: my_experiment
@@ -130,16 +133,6 @@ probo2 run --config /path/to/my_config.yaml --statistics sum
 
 Another example can be found in the [example_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/example_config.yaml)
  
-
-
-
-
-
-
-
-
-
-
 
 ## Commands
 
