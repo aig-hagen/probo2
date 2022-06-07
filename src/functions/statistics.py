@@ -136,10 +136,13 @@ def par10(df: pd.DataFrame):
     pass
 
 
+
+
+
 # Bei mehreren Runs muss immer der Durschnitt der Runs genommen werden
 
-register.register_stat("best",get_number_best_runtime)
-register.register_stat("worst",get_number_worst_runtime)
+#register.register_stat("best",get_number_best_runtime)
+#register.register_stat("worst",get_number_worst_runtime)
 register.register_stat("sum",sum)
 register.register_stat("mean",mean)
 register.register_stat("solved",solved)

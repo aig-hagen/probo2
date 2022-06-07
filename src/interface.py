@@ -327,6 +327,7 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
 
     cfg.check()
 
+
     experiment_handler.run_experiment(cfg)
 
     result_df = experiment_handler.load_results_via_name(cfg.name)
@@ -338,6 +339,9 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
     saved_file_paths = []
     if cfg.plot is not None:
         print("========== PLOTTING ==========")
+        if cfg.plot =='all':
+            cfg.plot = register.plot_dict.keys()
+        print(cfg.plot)
         saved_plots = []
         default_plt_options = pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
         for plt in cfg.plot:
@@ -347,6 +351,9 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
         saved_file_paths = saved_files.saved_files.to_list()
 
     if cfg.statistics is not None:
+
+        if cfg.statistics =='all':
+            cfg.statistics = register.stat_dict.keys()
         stats_results = []
         print("========== STATISTICS ==========")
         for stat in cfg.statistics:

@@ -39,11 +39,14 @@ class Config(object):
                         if isinstance(value,tuple):
                             value = list(value)
                         if isinstance(self.__dict__[key],list):
-                            if  isinstance(value,list):
 
-                                self.__dict__[key].extend(value)
+                            if  isinstance(value,list):
+                                _intersection = set.intersection(set(self.__dict__[key]), set(value))
+                                _to_add = list(set.difference(set(value),_intersection ))
+                                self.__dict__[key].extend(_to_add)
                             else:
-                                self.__dict__[key].append(value)
+                                if value not in self.__dict__[key]:
+                                    self.__dict__[key].append(value)
                         else:
                             self.__dict__[key] = value
 
