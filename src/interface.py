@@ -1,3 +1,4 @@
+import shutil
 import time
 
 import datetime
@@ -41,7 +42,8 @@ from src.utils.Notification import Notification
 from src.generators import generator_utils as gen_utils
 from src.generators import generator
 import src.functions.register as register
-from src.functions import benchmark, plot, statistics, printing, table_export
+from src.functions import benchmark, statistics, printing, table_export, archive
+from src.functions import plot as plotter
 from src.utils import solver_handler, experiment_handler
 from src.utils import config_handler
 from functools import reduce
@@ -285,16 +287,17 @@ def add_benchmark(name, path, format, extension_arg_files, no_check, generate, r
 @click.option("--subset","-sub",type=click.types.INT, help="Run only the first n instances of a benchmark.")
 @click.option("--multi", is_flag=True,help="Run experiment on mutiple cores.")
 @click.option("--config",'-cfg',type=click.Path(exists=True,resolve_path=True))
-@click.option("--plot",'-plt',default=None, type=click.Choice(register.plot_dict.keys()),multiple=True)
-@click.option("--statistics",'-stats',default=None,type=click.Choice(register.stat_dict.keys()),multiple=True)
-@click.option("--printing",'-p',default=None,type=click.Choice(register.print_functions_dict.keys()),multiple=True)
+@click.option("--plot",'-plt',default=None, type=click.Choice(list(register.plot_dict.keys()) + ['all']),multiple=True)
+@click.option("--statistics",'-stats',default=None,type=click.Choice(list(register.stat_dict.keys()) + ['all']),multiple=True)
+@click.option("--printing",'-p',default=None,type=click.Choice(register.print_functions_dict.keys() ),multiple=True)
 @click.option("--table_export",'-t',default=None,type=click.Choice(register.table_export_functions_dict.keys()),multiple=True)
+@click.option("--archive",'-a',default=None,type=click.Choice(register.archive_functions_dict.keys()),multiple=True)
 @click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
 @click.option("--name_map","-n",cls=CustomClickOptions.StringAsOption,
               required=False,default=None,help='Comma seperated list of solver names mapping. Format: <old>:<new>')
 @click.pass_context
 def run(ctx, all,benchmark, task, solver, timeout, dry, name,
-        notify, track, repetitions, rerun, subset, save_to, multi,statistics, config,plot,name_map,printing, table_export):
+        notify, track, repetitions, rerun, subset, save_to, multi,statistics, config,plot,name_map,printing, table_export,archive):
     """Run solver.
     \f
     Args:
@@ -338,17 +341,8 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
 
     saved_file_paths = []
     if cfg.plot is not None:
-        print("========== PLOTTING ==========")
-        if cfg.plot =='all':
-            cfg.plot = register.plot_dict.keys()
-        print(cfg.plot)
-        saved_plots = []
-        default_plt_options = pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
-        for plt in cfg.plot:
-            saved = register.plot_dict[plt](result_df,cfg,default_plt_options)
-            saved_plots.append(saved)
-        saved_files = pd.concat(saved_plots).to_frame().rename(columns={0:'saved_files'})
-        saved_file_paths = saved_files.saved_files.to_list()
+        saved_plots = plotter.create_plots(result_df,cfg)
+
 
     if cfg.statistics is not None:
 
@@ -369,10 +363,23 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
                 other.append(res[0])
         df_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), to_merge)
         register.print_functions_dict[cfg.printing](df_merged,['tag','task','benchmark_name'])
+        print('========== DONE ==========')
         if cfg.table_export is not None:
 
             for format in cfg.table_export:
                 register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
+
+    if cfg.copy_raws:
+        click.echo('Copying raw files...',nl=False)
+        experiment_handler.copy_raws(cfg)
+        click.echo('done!')
+
+    if cfg.archive is not None:
+        click.echo('Creating archives...',nl=False)
+        for _format in cfg.archive:
+            register.archive_functions_dict[_format](cfg.save_to)
+        click.echo('done!')
+
 
 
 
@@ -495,7 +502,8 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
 @click.command()
 @click.option("--load_experiment","-lde",is_flag=True)
 @click.option("--stats","-s",is_flag=True)
-def debug(load_experiment,stats):
+@click.option("--zip")
+def debug(load_experiment,stats,zip):
     if load_experiment:
         resultd_df = experiment_handler.load_results_via_name('ba_500_800_2')
         print(resultd_df.columns)
@@ -516,62 +524,107 @@ def debug(load_experiment,stats):
         print(df_merged)
         for _o in other:
             print(other)
+    if zip:
+        shutil.make_archive(zip,'zip',zip)
+
 
 
 
 @click.command()
-@click.option("--par",
-              "-p",
-              type=click.types.INT,
-              help="Penalty multiplier for PAR score")
-@click.option("--solver",
-              "-s",
-              required=True,
-              cls=CustomClickOptions.StringAsOption,
-              default=[],
-              help="Comma-separated list of solver ids")
-@click.option("--filter",
-              "-f",
-              cls=CustomClickOptions.FilterAsDictionary,
-              multiple=True)
-@click.option("--task",
-              "-t",
-              required=False,
-              callback=CustomClickOptions.check_problems,
-              help="Computational problems")
-@click.option("--benchmark",
-              "-b",
-              cls=CustomClickOptions.StringAsOption,
-              default=[])
-@click.option("--print_format",
-              "-pfmt",default='fancy_grid',
-              type=click.Choice([
-                  "plain", "simple", "github", "grid", "fancy_grid", "pipe",
-                  "orgtbl", "jira", "presto", "pretty", "psql", "rst",
-                  "mediawiki", "moinmoin", "youtrack", "html", "unsafehtml"
-                  "latex", "latex_raw", "latex_booktabs", "textile"
-              ]))
-@click.option("--tag", "-t", cls=CustomClickOptions.StringAsOption, default=[])
-@click.option("--combine",
-              "-c",
-              cls=CustomClickOptions.StringAsOption,
-              default=[])
-@click.option("--vbs", is_flag=True, help="Create virtual best solver")
-@click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
-@click.option("--export","-e",type=click.Choice(['latex','csv','json']),default=None,multiple=True)
-#@click.option("--css",default="styled-table.css",help="CSS file for table style.")
-@click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors','all','best']),multiple=True)
-@click.option("--verbose",'-v',is_flag=True,help='Show additional information for some statistics.')
-@click.option("--last", "-l",is_flag=True,help="Calculate stats for the last finished experiment.")
-@click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
-@click.option("--send", required=False, help="Send plots via E-Mail.")
-@click.option("--custom","-cs",type=click.Choice(register.stat_dict.keys()),multiple=True)
-def calculate(par, solver, task, benchmark,
-              tag,combine, vbs, export, save_to, statistics,print_format,filter,last, send, compress, verbose, custom):
+# @click.option("--par",
+#               "-p",
+#               type=click.types.INT,
+#               help="Penalty multiplier for PAR score")
+# @click.option("--solver",
+#               "-s",
 
-    configs = config_handler.load_all_configs(definitions.CONFIGS_DIRECTORY)
-    for c in configs:
-        c.print()
+#               cls=CustomClickOptions.StringAsOption,
+#               default=[],
+#               help="Comma-separated list of solver ids")
+# @click.option("--filter",
+#               "-f",
+#               cls=CustomClickOptions.FilterAsDictionary,
+#               multiple=True)
+# @click.option("--task",
+#               "-t",
+#               required=False,
+#               callback=CustomClickOptions.check_problems,
+#               help="Computational problems")
+#@click.option("--benchmark",
+            #   "-b",
+            #   cls=CustomClickOptions.StringAsOption,
+            #   default=[])
+#@click.option("--print_format",
+            #   "-pfmt",default='fancy_grid',
+            #   type=click.Choice([
+            #       "plain", "simple", "github", "grid", "fancy_grid", "pipe",
+            #       "orgtbl", "jira", "presto", "pretty", "psql", "rst",
+            #       "mediawiki", "moinmoin", "youtrack", "html", "unsafehtml"
+            #       "latex", "latex_raw", "latex_booktabs", "textile"
+            #   ]))
+@click.option("--name", "-n",default=None,help='Experiment name')
+#@click.option("--combine",
+            #  "-c",
+            #   cls=CustomClickOptions.StringAsOption,
+            #   default=[])
+#@click.option("--vbs", is_flag=True, help="Create virtual best solver")
+#@click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
+#@click.option("--export","-e",type=click.Choice(['latex','csv','json']),default=None,multiple=True)
+#@click.option("--css",default="styled-table.css",help="CSS file for table style.")
+#@click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors','all','best']),multiple=True)
+#@click.option("--verbose",'-v',is_flag=True,help='Show additional information for some statistics.')
+#@click.option("--last", "-l",is_flag=True,help="Calculate stats for the last finished experiment.")
+#@click.option("--send", required=False, help="Send plots via E-Mail.")
+@click.option("--config",'-cfg', default=None,type=click.Path(exists=True,resolve_path=True),help='Path to experiment config.')
+@click.option("--raw",'-r',default=None, type=click.Path(exists=True,resolve_path=True), help='Path to raw result file.')
+@click.option("--statistics",'-stat',default=None,type=click.Choice(list(register.stat_dict.keys()) + ['all']),multiple=True)
+@click.option("--printing",default='default')
+#@click.option("--archive",'-a',default=None,type=click.Choice(register.archive_functions_dict.keys()),multiple=True)
+#@click.option("--table_export",'-t',default=None,type=click.Choice(register.table_export_functions_dict.keys()),multiple=True)
+def calculate(
+              name, statistics,raw,config,printing):
+
+    if name is not None:
+        result_df = experiment_handler.load_results_via_name(name)
+    elif raw is not None:
+        result_df = pd.read_csv(raw)
+    elif config is not None:
+        cfg = config_handler.load_config_yaml(config,as_obj=True)
+        result_df = experiment_handler.load_experiments_results(cfg)
+    else:
+        print('Unable to load results')
+        exit()
+
+
+
+
+    stats_results = []
+    print("========== STATISTICS ==========")
+    if statistics =='all' or 'all' in statistics:
+            statistics = register.stat_dict.keys()
+    for stat in statistics:
+        _res = register.stat_dict[stat](result_df)
+        stats_results.append(_res)
+    to_merge = []
+    other =  []
+    for res in stats_results:
+        if res[1]:
+            to_merge.append(res[0])
+        else:
+            other.append(res[0])
+    df_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), to_merge)
+    register.print_functions_dict[printing](df_merged,['tag','task','benchmark_name'])
+    # if table_export is not None:
+    #         for format in table_export:
+    #             register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
+
+
+    # if cfg.archive is not None:
+    #     for _format in cfg.archive:
+    #         register.archive_functions_dict[_format](cfg.save_to)
+    # configs = config_handler.load_all_configs(definitions.CONFIGS_DIRECTORY)
+    # for c in configs:
+    #     c.print()
 
     exit()
     if last:
@@ -661,54 +714,56 @@ def calculate(par, solver, task, benchmark,
 
 
 
-
-@click.command(cls=CustomClickOptions.command_required_tag_if_not('last'))
+#cls=CustomClickOptions.command_required_tag_if_not('last')
+@click.command()
 @click.pass_context
-@click.option("--tag", "-t",cls=CustomClickOptions.StringAsOption, default=[])
-@click.option("--task",
-              required=False,
-              callback=CustomClickOptions.check_problems,
-              help="Comma-separated list of task IDs or symbols to be selected.")
-@click.option("--benchmark", cls=CustomClickOptions.StringAsOption, default=[],help="Comma-separated list of task IDs or symbols to be selected.")
-@click.option("--solver",
-              "-s",
-              cls=CustomClickOptions.StringAsOption,
-              default=[],
-              help="Comma-separated list of solver IDs or names to be selected.")
-@click.option("--filter",
-              "-f",
-              cls=CustomClickOptions.FilterAsDictionary,
-              multiple=True,
-              help="Filter results in database. Format: [column:value]")
+@click.option("--name", "-n",cls=CustomClickOptions.StringAsOption, default=[])
+# @click.option("--task",
+#               required=False,
+#               callback=CustomClickOptions.check_problems,
+#               help="Comma-separated list of task IDs or symbols to be selected.")
+# @click.option("--benchmark", cls=CustomClickOptions.StringAsOption, default=[],help="Comma-separated list of task IDs or symbols to be selected.")
+# @click.option("--solver",
+#               "-s",
+#               cls=CustomClickOptions.StringAsOption,
+#               default=[],
+#               help="Comma-separated list of solver IDs or names to be selected.")
+# @click.option("--filter",
+#               "-f",
+#               cls=CustomClickOptions.FilterAsDictionary,
+#               multiple=True,
+#               help="Filter results in database. Format: [column:value]")
 @click.option(
     "--save_to",
     "-st",
     type=click.Path(exists=True, resolve_path=True),
     help="Directory to store plots in. Filenames will be generated automatically.")
-@click.option("--vbs", is_flag=True, help="Create virtual best solver.")
+#@click.option("--vbs", is_flag=True, help="Create virtual best solver.")
 #@click.option("--x_max", "-xm", type=click.types.INT)
 #@click.option("--y_max", "-ym", type=click.types.INT)
 #@click.option("--alpha",
             #   "-a",
             #   type=click.FloatRange(0, 1),
             #   help="Alpha value (only for scatter plots)")
-@click.option("--backend",
-              "-b",
-              type=click.Choice(['pdf', 'pgf', 'png', 'ps', 'svg']),
-              default='png',
-              help="Backend to use")
+# @click.option("--backend",
+#               "-b",
+#               type=click.Choice(['pdf', 'pgf', 'png', 'ps', 'svg']),
+#               default='png',
+#               help="Backend to use")
 # @click.option("--no_grid", "-ng", is_flag=True, help="Do not show a grid.")
 # @click.option("--grid_plot",is_flag=True)
-@click.option("--combine",
-              "-c",
-              type=click.Choice(['tag','task_id','benchmark_id']),help='Combine results on specified key.')
-@click.option("--kind",'-k',type=click.Choice(['cactus','count','dist','pie','box','scatter','all']),multiple=True)
-@click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
-@click.option("--send", required=False, help="Send plots via E-Mail.")
-@click.option("--last", "-l",is_flag=True,help="Plot results for the last finished experiment.")
-@click.option("--axis_scale",'-as',type=click.Choice(['linear','log']),default='log',help="Scale of x and y axis." )
-@click.option("--set_default", is_flag=True)
-def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs, backend,combine, kind, compress, send, last, axis_scale, set_default):
+# @click.option("--combine",
+#               "-c",
+#               type=click.Choice(['tag','task_id','benchmark_id']),help='Combine results on specified key.')
+@click.option("--kind",'-k',default=None, type=click.Choice(list(register.plot_dict.keys()) + ['all']),multiple=True)
+# @click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
+# @click.option("--send", required=False, help="Send plots via E-Mail.")
+# @click.option("--last", "-l",is_flag=True,help="Plot results for the last finished experiment.")
+#@click.option("--axis_scale",'-as',type=click.Choice(['linear','log']),default='log',help="Scale of x and y axis." )
+#@click.option("--set_default", is_flag=True)
+@click.option("--config",'-cfg', default=None,type=click.Path(exists=True,resolve_path=True))
+@click.option("--raw",'-r',default=None, type=click.Path(exists=True,resolve_path=True))
+def plot(ctx, name,  save_to,kind,raw,config):
     """Create plots of experiment results.
 
     The --tag option is used to specify which experiment the plots should be created for.
@@ -736,77 +791,108 @@ def plot(ctx, tag, task, benchmark, solver, save_to, filter, vbs, backend,combin
         send ([type]): [description]
         last ([type]): [description]
     """
-    if set_default and (save_to is not None):
-        def_options =  pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
-        def_options['settings']['default_dir'] = save_to
-        with open(def_options['def_path'],'w') as option_file:
-            json.dump(def_options,option_file,indent=4)
-        print(f'Default path for plots set to: {save_to}')
+    cfg = config_handler.load_default_config()
+
+    if name is not None:
+        result_df = experiment_handler.load_results_via_name(name)
+    elif raw is not None:
+        result_df = pd.read_csv(raw)
+    elif config is not None:
+        user_cfg_yaml = config_handler.load_config_yaml(config)
+        cfg.merge_user_input(user_cfg_yaml)
+        result_df = experiment_handler.load_experiments_results(cfg)
+    else:
+        print('Unable to load results')
         exit()
 
-    default_options = pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
-    pl_util.set_user_options(ctx, default_options)
+    cfg.merge_user_input(ctx.params)
+
     if not save_to:
-        if default_options['settings']['default_dir'] is not None:
-            save_to = default_options['settings']['default_dir']
+        cfg.save_to = os.getcwd()
+    cfg.print()
+
+    #cfg.check()
+
+    if kind is not None:
+
+        if kind =='all' or 'all' in kind:
+            cfg.plot = register.plot_dict.keys()
         else:
-            save_to = os.getcwd()
-    if last:
-        tag.append(utils.get_from_last_experiment("Tag"))
+            cfg.plot = list(kind)
+        saved_plots = plotter.create_plots(result_df,cfg)
+
+
+    # if set_default and (save_to is not None):
+    #     def_options =  pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
+    #     def_options['settings']['default_dir'] = save_to
+    #     with open(def_options['def_path'],'w') as option_file:
+    #         json.dump(def_options,option_file,indent=4)
+    #     print(f'Default path for plots set to: {save_to}')
+    #     exit()
+
+    # default_options = pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
+    # pl_util.set_user_options(ctx, default_options)
+    # if not save_to:
+    #     if default_options['settings']['default_dir'] is not None:
+    #         save_to = default_options['settings']['default_dir']
+    #     else:
+    #         save_to = os.getcwd()
+    # if last:
+    #     tag.append(utils.get_from_last_experiment("Tag"))
 
 
 
-    if 'all' in kind:
-        kind = ['cactus','count','dist','scatter','pie','box']
+    # if 'all' in kind:
+    #     kind = ['cactus','count','dist','scatter','pie','box']
 
-    grouping = ['tag', 'task_id', 'benchmark_id', 'solver_id']
-    if combine:
-        grouping = [x for x in grouping if x not in combine]
+    # grouping = ['tag', 'task_id', 'benchmark_id', 'solver_id']
+    # if combine:
+    #     grouping = [x for x in grouping if x not in combine]
 
-    engine = DatabaseHandler.get_engine()
-    session = DatabaseHandler.create_session(engine)
+    # engine = DatabaseHandler.get_engine()
+    # session = DatabaseHandler.create_session(engine)
 
-    og_df =  DatabaseHandler.get_results(session,
-                                        solver,
-                                        task,
-                                        benchmark,
-                                        tag,
-                                        filter,
-                                        only_solved=False)
+    # og_df =  DatabaseHandler.get_results(session,
+    #                                     solver,
+    #                                     task,
+    #                                     benchmark,
+    #                                     tag,
+    #                                     filter,
+    #                                     only_solved=False)
 
-    df = stats.prepare_data(og_df)
-    if vbs:
-        grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
-        stats.create_and_append_vbs(df, grouping_vbs)
-    saved_files = []
-
-
-    for plot_kind in list(kind):
-        saved_files.append(pl_util.create_plots(plot_kind, df, save_to, default_options, grouping))
-    saved_files_df = pd.concat(saved_files).to_frame().rename(columns={0:'saved_files'})
-
-    saved_files_paths = []
-    for file in saved_files_df.saved_files.to_list():
-        if isinstance(file,list):
-            saved_files_paths.extend([  f'{x}.{backend}' for x in file ])
-        else:
-            saved_files_paths.append( f'{file}.{backend}')
+    # df = stats.prepare_data(og_df)
+    # if vbs:
+    #     grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
+    #     stats.create_and_append_vbs(df, grouping_vbs)
+    # saved_files = []
 
 
-    if compress:
-        archive_name = "_".join(tag)
+    # for plot_kind in list(kind):
+    #     saved_files.append(pl_util.create_plots(plot_kind, df, save_to, default_options, grouping))
+    # saved_files_df = pd.concat(saved_files).to_frame().rename(columns={0:'saved_files'})
 
-        archive_save_path = pl_util.create_archive_from_plots(save_to,archive_name,saved_files_paths,compress)
+    # saved_files_paths = []
+    # for file in saved_files_df.saved_files.to_list():
+    #     if isinstance(file,list):
+    #         saved_files_paths.extend([  f'{x}.{backend}' for x in file ])
+    #     else:
+    #         saved_files_paths.append( f'{file}.{backend}')
 
-    if send:
-        id_code = int(hashlib.sha256(save_to.encode('utf-8')).hexdigest(), 16) % 10**8
-        email_notification = Notification(send,subject="Hi, there. I have your files for you.",message=f"Enclosed you will find your files.",id=id_code)
-        if compress:
-            email_notification.attach_file(f'{archive_save_path}.{compress}')
-        else:
-            email_notification.attach_mutiple_files(saved_files_paths)
-        email_notification.send()
-        print(f"\n{email_notification.foot}\nYour e-mail identification code: {id_code}")
+
+    # if compress:
+    #     archive_name = "_".join(tag)
+
+    #     archive_save_path = pl_util.create_archive_from_plots(save_to,archive_name,saved_files_paths,compress)
+
+    # if send:
+    #     id_code = int(hashlib.sha256(save_to.encode('utf-8')).hexdigest(), 16) % 10**8
+    #     email_notification = Notification(send,subject="Hi, there. I have your files for you.",message=f"Enclosed you will find your files.",id=id_code)
+    #     if compress:
+    #         email_notification.attach_file(f'{archive_save_path}.{compress}')
+    #     else:
+    #         email_notification.attach_mutiple_files(saved_files_paths)
+    #     email_notification.send()
+    #     print(f"\n{email_notification.foot}\nYour e-mail identification code: {id_code}")
 
 
 

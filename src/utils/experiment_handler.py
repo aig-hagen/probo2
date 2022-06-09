@@ -1,15 +1,15 @@
 
 import csv
-from genericpath import exists
 import json
 from csv import DictWriter, DictReader
-from src.utils import config_handler, utils
+from src.utils import config_handler
 import os
 import pandas as pd
 
 from src.utils import solver_handler,benchmark_handler
 from src.utils import definitions
 from tqdm import tqdm
+import shutil
 
 
 def need_additional_arguments(task):
@@ -61,7 +61,7 @@ def load_results_via_name(name):
     experiment_index = pd.read_csv(definitions.EXPERIMENT_INDEX)
 
     if name in experiment_index.name.values:
-        cfg_path = experiment_index[experiment_index.name == name]['config_path'].iloc[0]
+        cfg_path = experiment_index[experiment_index.name.values == name]['config_path'].iloc[0]
         cfg = config_handler.load_config_yaml(cfg_path,as_obj=True)
         return load_experiments_results(cfg)
     else:
@@ -173,3 +173,5 @@ def run_experiment(config: config_handler.Config):
                             write_result(result,result_path,config.result_format)
     print('========== DONE ==========')
 
+def copy_raws(config: config_handler.Config):
+    shutil.copy(config.raw_results_path, config.save_to)

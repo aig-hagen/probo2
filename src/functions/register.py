@@ -25,3 +25,7 @@ table_export_functions_dict = {}
 def table_export_functions_register(key,function):
     register(key, function, table_export_functions_dict)
 
+archive_functions_dict = {}
+def archive_functions_register(key, function):
+    register(key, function, archive_functions_dict)
+

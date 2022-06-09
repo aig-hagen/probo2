@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import json
 import shutil
-from src import data
+from src import probo2_data
 from src.utils import utils
 from src.plotting import CactusPlot, DistributionPlot, ScatterPlot
 from src.analysis.statistics import get_info_as_strings

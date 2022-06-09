@@ -1,8 +1,8 @@
-import cmd
-from copy import copy
+
+
 import json
 import tabulate
-from src import solver
+
 
 
 import src.utils.definitions as definitions
@@ -121,7 +121,7 @@ def print_solvers(extra_columns=None, tablefmt=None):
         columns.extend(extra_columns)
     if tablefmt is None:
         tablefmt = 'pretty'
-    if os.stat(definitions.SOLVER_FILE_PATH).st_size != 0:
+    if os.path.exists(definitions.SOLVER_FILE_PATH) and os.stat(definitions.SOLVER_FILE_PATH).st_size != 0:
         solvers_df = pd.read_json(definitions.SOLVER_FILE_PATH)
         print(tabulate.tabulate(solvers_df[columns],headers='keys', tablefmt=tablefmt, showindex=False))
     else:

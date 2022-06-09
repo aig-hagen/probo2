@@ -1,40 +1,45 @@
 import os
-import src.data
-import src.data.json
-import src.data.test
-import src.solver
-import src.benchmarks
+import src.probo2_data
+import src.probo2_data.json
+import src.probo2_data.solver_test_data
+
+
 import src.generators
-import src.configs_experiment
+import src.experiment_configs
 import src.results
 from importlib_resources import files
 # Defaults for paths
 ROOT_DIR = os.path.abspath(os.curdir)  # Root of project
 SRC_DIR = os.path.join(ROOT_DIR,"src")
-DATABASE_DIR = files(src.data).joinpath(".probo2")
-SOLVER_FILE_PATH = str(files(src.solver).joinpath('solvers.json'))
-BENCHMARK_FILE_PATH = str(files(src.benchmarks).joinpath('benchmarks.json'))
+DATABASE_DIR = files(src.probo2_data).joinpath(".probo2")
 TEST_DATABASE_PATH = os.path.join(str(DATABASE_DIR), "probo2_old.db")
-CONFIGS_DIRECTORY = str(files(src.configs_experiment))
+CONFIGS_DIRECTORY = str(files(src.experiment_configs))
 RESULT_DIRECTORY = str(files(src.results))
-EXPERIMENT_INDEX = str(files(src.data).joinpath("experiment_index.csv"))
+EXPERIMENT_INDEX = str(files(src.probo2_data).joinpath("experiment_index.csv"))
 
-TEST_INSTANCES_REF_PATH = str(files(src.data.test).joinpath("reference"))
-TEST_INSTANCE_ARG = str(files(src.data.test).joinpath("a.arg"))
-TEST_INSTANCE_APX = str(files(src.data.test).joinpath("a.apx"))
-TEST_INSTANCE_TGF = str(files(src.data.test).joinpath("a.tgf"))
 
-CSS_TEMPLATES_PATH = str(files(src.data).joinpath("css"))
+# Solver interface test files
+TEST_INSTANCES_REF_PATH = str(files(src.probo2_data.solver_test_data).joinpath("reference"))
+TEST_INSTANCE_ARG = str(files(src.probo2_data.solver_test_data).joinpath("a.arg"))
+TEST_INSTANCE_APX = str(files(src.probo2_data.solver_test_data).joinpath("a.apx"))
+TEST_INSTANCE_TGF = str(files(src.probo2_data.solver_test_data).joinpath("a.tgf"))
 
-STATUS_FILE_DIR = str(files(src.data.json).joinpath(".probo2_status.json"))
-PLOT_JSON_DEFAULTS =  str(files(src.data.json).joinpath("plotting_defaults.json"))
-FETCH_BENCHMARK_DEFAULTS_JSON = str(files(src.data.json).joinpath('probo2_fetch_benchmark_defaults.json'))
+CSS_TEMPLATES_PATH = str(files(src.probo2_data).joinpath("css"))
+
+
+# JSON files
+
+SOLVER_FILE_PATH = str(files(src.probo2_data.json).joinpath('solvers.json'))
+BENCHMARK_FILE_PATH = str(files(src.probo2_data.json).joinpath('benchmarks.json'))
+STATUS_FILE_DIR = str(files(src.probo2_data.json).joinpath(".probo2_status.json"))
+PLOT_JSON_DEFAULTS =  str(files(src.probo2_data.json).joinpath("plotting_defaults.json"))
+FETCH_BENCHMARK_DEFAULTS_JSON = str(files(src.probo2_data.json).joinpath('probo2_fetch_benchmark_defaults.json'))
 GENERATOR_DEFAULTS_JSON = str(files(src.generators).joinpath('generator_config.json'))
 
-LOG_FILE_PATH = str(files(src.data).joinpath('probo2_log.txt'))
+LOG_FILE_PATH = str(files(src.probo2_data).joinpath('probo2_log.txt'))
 DEFAULT_CONFIG_PATH = str(os.path.join(CONFIGS_DIRECTORY,'default_config.yaml'))
-LAST_EXPERIMENT_JSON_PATH = str(files(src.data).joinpath('probo2_last_experiment.json'))
-LAST_EXPERIMENT_SUMMARY_JSON_PATH = str(files(src.data).joinpath('probo2_last_experiment_summary.json'))
+LAST_EXPERIMENT_JSON_PATH = str(files(src.probo2_data).joinpath('probo2_last_experiment.json'))
+LAST_EXPERIMENT_SUMMARY_JSON_PATH = str(files(src.probo2_data).joinpath('probo2_last_experiment_summary.json'))
 
 ALEMBIC_INIT_FILE_PATH = os.path.join(str(DATABASE_DIR),'alembic.ini')
 

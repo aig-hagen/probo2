@@ -61,7 +61,7 @@ def print_benchmarks(extra_columns=None, tablefmt=None):
         columns.extend(extra_columns)
     if tablefmt is None:
         tablefmt = 'pretty'
-    if os.stat(definitions.BENCHMARK_FILE_PATH).st_size != 0:
+    if os.path.exists(definitions.BENCHMARK_FILE_PATH)  and   os.stat(definitions.BENCHMARK_FILE_PATH).st_size != 0:
         benchmarks_df = pd.read_json(definitions.BENCHMARK_FILE_PATH)
         print(tabulate.tabulate(benchmarks_df[columns],headers='keys', tablefmt=tablefmt, showindex=False))
     else:

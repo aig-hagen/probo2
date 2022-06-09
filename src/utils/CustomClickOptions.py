@@ -39,8 +39,8 @@ def command_required_tag_if_not(require_name):
 
         def invoke(self, ctx):
             last = ctx.params[require_name]
-            if not last and not ctx.params['tag']:
-                    raise click.BadOptionUsage(option_name='tag',message=f"With option --{require_name}={last} you must specify a value for option --tag.")
+            if not last and not ctx.params['name']:
+                    raise click.BadOptionUsage(option_name='name',message=f"With option --{require_name}={last} you must specify a value for option --tag.")
 
             super(CommandOptionRequiredClass, self).invoke(ctx)
 

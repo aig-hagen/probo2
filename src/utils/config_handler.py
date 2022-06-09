@@ -2,11 +2,12 @@ from ftplib import error_perm
 import json
 from json import JSONEncoder
 import os
-from src.functions import statistics
+from src.functions import archive, statistics
 from src.utils import definitions
+import src.functions.register as register
 import yaml
 class Config(object):
-    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,raw_results_path=None):
+    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,archive=None,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,raw_results_path=None):
         self.task = task
         self.benchmark = benchmark
         self.solver = solver
@@ -23,6 +24,7 @@ class Config(object):
         self.printing = printing
         self.copy_raws = copy_raws
         self.table_export = table_export
+        self.archive = archive
 
     def write_config(self):
         save_to = os.path.join(definitions.CONFIGS_DIRECTORY,self.name)
@@ -80,6 +82,52 @@ class Config(object):
         if self.timeout is None or self.timeout < 0:
             error = True
             msg_errors +=f"- Invalid timeout. Please specify benchmark via --timeout option or in {self.yaml_file_name}.\n"
+
+        if self.plot is not None:
+            _invalid = []
+            if isinstance(self.plot, list):
+                for p in self.plot:
+                    if p not in register.plot_dict.keys():
+                        _invalid.append(p)
+                        error=True
+            else:
+                if self.plot not in register.plot_dict.keys() and (self.plot != 'all'):
+                    _invalid.append(self.plot)
+                    error = True
+
+            if error:
+                 msg_errors +=f"- Invalid plot type: {','.join(_invalid)}. Please choose from following options: {','.join(register.plot_dict.keys())}\n"
+
+        if self.statistics is not None:
+            _invalid = []
+            if isinstance(self.statistics, list):
+                for stat in self.statistics:
+                    if stat not in register.stat_dict.keys():
+                        _invalid.append(stat)
+                        error=True
+            else:
+                if self.statistics not in register.stat_dict.keys() and (self.statistics != 'all'):
+                    _invalid.append(self.statistics)
+                    error = True
+
+            if error:
+                 msg_errors +=f"- Invalid statistics : {','.join(_invalid)}. Please choose from following options: {','.join(register.stat_dict.keys())}\n"
+        if self.archive is not None:
+            _invalid = []
+            if isinstance(self.archive, list):
+                for _format in self.archive:
+                    if _format not in register.archive_functions_dict.keys():
+                        _invalid.append(stat)
+                        error=True
+            else:
+                if self.archive not in register.archive_functions_dict.keys() and (self.archive != 'all'):
+                    _invalid.append(self.archive)
+                    error = True
+
+            if error:
+                 msg_errors +=f"- Invalid archive format : {','.join(_invalid)}. Please choose from following options: {','.join(register.archive_functions_dict.keys())}\n"
+
+
         if error:
             print('Bad configuration found:')
             print(msg_errors)

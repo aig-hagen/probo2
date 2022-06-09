@@ -21,12 +21,13 @@ class Scatter(Plot, object):
         Scatter plot class.
     """
 
-    def __init__(self, options):
+    def __init__(self, options, save_to):
         """
             Scatter constructor.
         """
 
         super(Scatter, self).__init__(options)
+        self.save_to = save_to
 
         # setting up axes limits
         if not self.x_min:
