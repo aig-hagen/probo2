@@ -25,13 +25,6 @@ def get_file_size(file, unit='MB'):
     if unit == 'MB':
         return  round(total_size  / float(1<<20))
 
-
-def get_benchmark_stats(benchmark_path):
-    pass
-
-def get_num_instances(benchmark_path):
-    pass
-
 def add_benchmark(benchmark_info: dict):
     if not os.path.exists(definitions.BENCHMARK_FILE_PATH) or (os.stat(definitions.BENCHMARK_FILE_PATH).st_size == 0):
         with open(definitions.BENCHMARK_FILE_PATH,'w') as benchmark_file:
@@ -43,7 +36,9 @@ def add_benchmark(benchmark_info: dict):
     else:
         with open(definitions.BENCHMARK_FILE_PATH,'r+') as benchmark_file:
             benchmark_data = json.load(benchmark_file)
-            id = len(benchmark_data) + 1
+            _df = pd.DataFrame(benchmark_data)
+            id = int(_df.id.max() + 1)
+
             benchmark_info['id'] = id
             benchmark_data.append(benchmark_info)
 
@@ -77,17 +72,47 @@ def get_argument_files(benchmark_info):
 def get_dynamic_instances(benchmark_info,format):
     return get_instances(benchmark_info['path'], f'{format}m')
 
-def generate_dynamic_file_lookup(benchmark_info, format):
+def check_dynamic(benchmark_info):
+    missing_files = {}
+    is_missing = False
+    for format in benchmark_info['format']:
+
+        _dynamic_instances = get_dynamic_instances(benchmark_info,format )
+        _instances = get_instances(benchmark_path=benchmark_info['path'], extension=format)
+        _instances = set([ os.path.basename(i).replace(f'.{format}','') for i in _instances])
+        if _dynamic_instances:
+
+            print(_instances)
+             # get file name and remove extension
+            _dynamic_instances = set( [os.path.basename(i).replace(f'.{format}m','') for i in _dynamic_instances])
+
+            print(_instances)
+            print(_dynamic_instances)
+            _diff = list(set.difference(_instances,_dynamic_instances))
+            if _diff:
+                missing_files[f'{format}m'] = _diff
+                is_missing = True
+
+        else:
+            is_missing = True
+            missing_files[f'{format}m'] = _instances
+    print(missing_files)
+    print(is_missing)
+
+def generate_dynamic_file_lookup(benchmark_info):
     lookup = {}
-    dynamic_instances = get_dynamic_instances(benchmark_info, format)
-    dynamic_instances_names = [Path(x).stem for x in dynamic_instances]
-    d_names_path = dict(zip(dynamic_instances_names,dynamic_instances))
-    instances_paths = get_instances(benchmark_info['path'], format)
-    instances_names = [Path(x).stem for x in instances_paths]
-    names_path = dict(zip(instances_names,instances_paths))
-    for instance_name, instances_path in names_path.items():
-        if instance_name in d_names_path:
-            lookup[instances_path] = d_names_path[instance_name]
+    for _format in benchmark_info['format']:
+        lookup[_format] = {}
+        dynamic_instances = get_dynamic_instances(benchmark_info, _format)
+        dynamic_instances_names = [Path(x).stem for x in dynamic_instances]
+        d_names_path = dict(zip(dynamic_instances_names,dynamic_instances))
+        instances_paths = get_instances(benchmark_info['path'], _format)
+        instances_names = [Path(x).stem for x in instances_paths]
+        names_path = dict(zip(instances_names,instances_paths))
+        for instance_name, instances_path in names_path.items():
+            if instance_name in d_names_path.keys():
+                lookup[_format][instances_path] = d_names_path[instance_name]
+
     return lookup
 
 def generate_additional_argument_lookup(benchmark_info) -> dict:
@@ -108,6 +133,7 @@ def generate_additional_argument_lookup(benchmark_info) -> dict:
         suffix_length = len(benchmark_info['ext_additional']) + 1 # +1 for dot
         instance_name = os.path.basename(file)[:-suffix_length]
         lookup[instance_name] = argument_param
+    print(lookup)
     return lookup
 
 def generate_instances(benchmark_info, generate_format, present_format=''):

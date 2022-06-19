@@ -12,8 +12,14 @@ from tqdm import tqdm
 import shutil
 
 
-def need_additional_arguments(task):
+def need_additional_arguments(task: str):
     if 'DC-' in task or 'DS-' in task:
+        return True
+    else:
+        return False
+
+def need_dynamic_arguments(task: str):
+    if task.endswith('-D'):
         return True
     else:
         return False
@@ -22,7 +28,13 @@ def need_dynamic_files_lookup(task):
     return False
 
 def get_accepted_format(solver_formats, benchmark_formats):
-    return list(set.intersection(set(solver_formats), set(benchmark_formats)))[0]
+    _shared = list(set.intersection(set(solver_formats), set(benchmark_formats)))
+
+    if _shared:
+        return _shared[0]
+    else:
+        return None
+
 
 def _format_benchmark_info(benchmark_info):
     formatted = {}
@@ -158,20 +170,27 @@ def run_experiment(config: config_handler.Config):
             print(f" +BENCHMARK: {benchmark_info['benchmark_name']}")
             if need_additional_arguments(task):
                 additional_arguments_lookup = benchmark_handler.generate_additional_argument_lookup(benchmark)
+            if need_dynamic_arguments(task):
+                dynamic_files_lookup = benchmark_handler.generate_dynamic_file_lookup(benchmark)
+
             print(f"  +Solver:")
             for solver in solver_list:
-                if task in solver['tasks']:
-                    format = get_accepted_format(solver['format'], benchmark['format'])
-                    instances = benchmark_handler.get_instances(benchmark['path'], format)
-                    for rep in range(1, config.repetitions + 1):
-                        desc = f"    {solver['name']}|REP#{rep}"
-                        for instance in tqdm(instances,desc=desc):
-                            result = solver_handler.run_solver(solver, task, config.timeout, instance, format, additional_arguments_lookup,dynamic_files_lookup)
-                            result.update(benchmark_info)
-                            result['repetition'] = rep
-                            result['tag'] = config.name
-                            write_result(result,result_path,config.result_format)
+                format = get_accepted_format(solver['format'], benchmark['format'])
+                if format is not None:
+                    if task in solver['tasks']:
+                        instances = benchmark_handler.get_instances(benchmark['path'], format)
+                        for rep in range(1, config.repetitions + 1):
+                            desc = f"    {solver['name']}|REP#{rep}"
+                            for instance in tqdm(instances,desc=desc):
+                                result = solver_handler.run_solver(solver, task, config.timeout, instance, format, additional_arguments_lookup,dynamic_files_lookup)
+                                result.update(benchmark_info)
+                                result['repetition'] = rep
+                                result['tag'] = config.name
+                                write_result(result,result_path,config.result_format)
+                else:
+                    print(f"    {solver['name']} SKIPPED! No files in supported solver format: {','.join(solver['format'])}")
     print('========== DONE ==========')
 
 def copy_raws(config: config_handler.Config):
+    os.makedirs(config.save_to, exist_ok=True)
     shutil.copy(config.raw_results_path, config.save_to)

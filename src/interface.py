@@ -166,7 +166,7 @@ def add_solver(name, path, format, tasks, version, guess):
               type=click.Choice(["apx","tgf"]),
               help="Supported formats of benchmark/fileset")
 @click.option(
-    "--extension_arg_files",
+    "--additional_extension",
     "-ext",
     type=click.types.STRING,
     default='arg',
@@ -183,8 +183,13 @@ def add_solver(name, path, format, tasks, version, guess):
               is_flag=True,
               help="Generate additional argument files with a random argument."
               )
+@click.option("--dynamic_files",
+              "-d",
+              is_flag=True,
+              help="Generate additional argument files with a random argument."
+              )
 @click.option("--function",'-fun', type=click.Choice(register.benchmark_functions_dict.keys()),multiple=True,help=' Custom functions to add additional attributes to benchmark.' )
-def add_benchmark(name, path, format, extension_arg_files, no_check, generate, random_arguments, function):
+def add_benchmark(name, path, format, additional_extension,dynamic_files,no_check, generate, random_arguments, function):
     """ Adds a benchmark to the database.
      Before a benchmark is added to the database, it is checked if each instance is present in all specified file formats.
      Missing instances can be generated after the completion test (user has to confirm generation) or beforehand via the --generate/-g option.
@@ -207,15 +212,19 @@ def add_benchmark(name, path, format, extension_arg_files, no_check, generate, r
       Raises:
            None
        """
-    benchmark_info = {'name': name, 'path': path,'format': list(format),'ext_additional': extension_arg_files}
+    benchmark_info = {'name': name, 'path': path,'format': list(format),'ext_additional': additional_extension, 'dynamic_files': dynamic_files}
 
     if generate:
         benchmark_handler.generate_instances(benchmark_info, generate)
         #new_benchmark.generate_instances(generate)
     if random_arguments:
-        benchmark_handler.generate_argument_files(benchmark_info,extension=extension_arg_files)
+        benchmark_handler.generate_argument_files(benchmark_info,extension=additional_extension)
     if not no_check:
         benchmark_handler.check(benchmark_info)
+
+    if dynamic_files:
+        benchmark_handler.check_dynamic(benchmark_info)
+
 
     for fun in function:
         benchmark_info.update(register.benchmark_functions_dict[fun](benchmark_info))
@@ -939,15 +948,17 @@ def benchmarks(verbose):
 
 @click.command()
 @click.option("--verbose", "-v", is_flag=True, default=False, required=False)
-@click.option("--id",help="Print summary of solver with specified id")
-@click.option("--path",is_flag=True)
-def solvers(verbose,id,path):
+def solvers(verbose):
     """Prints solvers in database to console.
 
     Args:
         verbose ([type]): [description]
     """
-    solver_handler.print_solvers()
+    if verbose:
+        solver_handler.print_solvers(extra_columns=['tasks'])
+    else:
+        solver_handler.print_solvers()
+
 
 
 

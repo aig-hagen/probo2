@@ -98,9 +98,20 @@ def check_interface(solver_info) -> bool:
                     arg = arg_file.read().rstrip('\n')
                     cmd_params.extend(["-a",arg])
 
+            if test_task.endswith('-D'):
+                dynamic_file = None
+                if 'apx' in solver_format:
+                    dynamic_file = str(definitions.TEST_INSTANCE_APXM)
+                elif 'tgf' in solver_format:
+                    dynamic_file = str(definitions.TEST_INSTANCE_TGFM)
+                cmd_params.extend([ "-m", dynamic_file])
+
+
+
             try:
                 result = utils.run_process(cmd_params,
                                         capture_output=True, timeout=5, check=True)
+
             except subprocess.TimeoutExpired as e:
                 print(f'Solver interface test timed out.')
                 return False
@@ -293,7 +304,10 @@ def run_solver(solver_info,task,timeout,instance,format,additional_arguments_loo
             additional_argument = additional_arguments_lookup[instance_name]
             params.extend(["-a",additional_argument])
         if dynamic_files_lookup:
-            pass
+            dynamic_file = dynamic_files_lookup[format][instance]
+            "-m", dynamic_file
+            params.extend([ "-m", dynamic_file])
+
 
         final_param = cmd_params + params
         try:
