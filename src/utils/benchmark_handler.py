@@ -133,7 +133,6 @@ def generate_additional_argument_lookup(benchmark_info) -> dict:
         suffix_length = len(benchmark_info['ext_additional']) + 1 # +1 for dot
         instance_name = os.path.basename(file)[:-suffix_length]
         lookup[instance_name] = argument_param
-    print(lookup)
     return lookup
 
 def generate_instances(benchmark_info, generate_format, present_format=''):

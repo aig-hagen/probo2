@@ -55,8 +55,8 @@ def _append_result_directoy_suffix(config: config_handler.Config):
 
 
 
-def init_result_path(config: config_handler.Config):
-    result_file_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
+def init_result_path(config: config_handler.Config, result_file_directory):
+
     if os.path.exists(result_file_directory):
         result_file_directory = _append_result_directoy_suffix(config)
 
@@ -87,10 +87,10 @@ def _write(format,file,content):
         file.seek(0)
         json.dump(content, file)
     elif format == 'csv':
-        last = content[-1]
-        header = last.keys()
+
+        header = content.keys()
         dictwriter_object = DictWriter(file, fieldnames=header)
-        dictwriter_object.writerow(last)
+        dictwriter_object.writerow(content)
 
 def _write_initial(format,file,content):
     if format == 'json':
@@ -116,10 +116,10 @@ def write_result(result, result_path, result_format):
             _write_initial(result_format,result_file, result)
 
     else:
-        with open(result_path,'r+') as result_file:
-            result_data = _read(result_format, result_file)
-            result_data.append(result)
-            _write(result_format,result_file, result_data)
+        with open(result_path,'a+') as result_file:
+            #result_data = _read(result_format, result_file)
+            #result_data.append(result)
+            _write(result_format,result_file, result)
 
 def write_experiment_index(config: config_handler.Config, result_directory_path):
 
@@ -150,15 +150,15 @@ def run_experiment(config: config_handler.Config):
     benchmark_list = benchmark_handler.load_benchmark(config.benchmark)
     additional_arguments_lookup= None
     dynamic_files_lookup = None
-    result_path = init_result_path(config)
+    experiment_result_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
+    result_path = init_result_path(config,experiment_result_directory)
     config.raw_results_path = result_path
-    cfg_path_result_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
     if config.save_to is None:
         config.save_to = os.path.join(os.getcwd(), config.name)
     else:
         config.save_to = os.path.join(config.save_to, config.name)
-    config.dump(cfg_path_result_directory)
-    write_experiment_index(config, cfg_path_result_directory)
+    config.dump(experiment_result_directory)
+    write_experiment_index(config, experiment_result_directory)
 
     print('========== Experiment Summary ==========')
     config.print()
@@ -173,16 +173,19 @@ def run_experiment(config: config_handler.Config):
             if need_dynamic_arguments(task):
                 dynamic_files_lookup = benchmark_handler.generate_dynamic_file_lookup(benchmark)
 
+                _check_dynamic_files_lookup(dynamic_files_lookup)
             print(f"  +Solver:")
             for solver in solver_list:
                 format = get_accepted_format(solver['format'], benchmark['format'])
                 if format is not None:
                     if task in solver['tasks']:
                         instances = benchmark_handler.get_instances(benchmark['path'], format)
+                        solver_output_dir = os.path.join(experiment_result_directory,solver['name'],task,benchmark_info['benchmark_name'])
+                        os.makedirs(solver_output_dir,exist_ok=True)
                         for rep in range(1, config.repetitions + 1):
                             desc = f"    {solver['name']}|REP#{rep}"
                             for instance in tqdm(instances,desc=desc):
-                                result = solver_handler.run_solver(solver, task, config.timeout, instance, format, additional_arguments_lookup,dynamic_files_lookup)
+                                result = solver_handler.run_solver(solver, task, config.timeout, instance, format, additional_arguments_lookup,dynamic_files_lookup,output_file_dir=solver_output_dir)
                                 result.update(benchmark_info)
                                 result['repetition'] = rep
                                 result['tag'] = config.name
@@ -190,6 +193,17 @@ def run_experiment(config: config_handler.Config):
                 else:
                     print(f"    {solver['name']} SKIPPED! No files in supported solver format: {','.join(solver['format'])}")
     print('========== DONE ==========')
+
+def _check_dynamic_files_lookup(dynamic_files_lookup):
+    missing = []
+
+    for format, instances in dynamic_files_lookup.items():
+        if not instances:
+            missing.append(format)
+
+    if missing:
+        print(f"No modification files found for instances in format: {','.join(missing)}")
+        exit()
 
 def copy_raws(config: config_handler.Config):
     os.makedirs(config.save_to, exist_ok=True)

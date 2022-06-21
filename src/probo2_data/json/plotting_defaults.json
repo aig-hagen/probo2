@@ -369,7 +369,8 @@
         "title": "",
         "axis_scale": "log",
         "gen_title": true,
-        "default_dir": null
+        "default_dir": null,
+        "include_timeouts": true
     },
     "pie_options": {
         "color_palette": "Blues_r"

@@ -1,6 +1,7 @@
 
 
 import json
+from sys import stdout
 import tabulate
 
 
@@ -25,7 +26,8 @@ def add_solver(solver_info: dict):
     else:
         with open(definitions.SOLVER_FILE_PATH,'r+') as solver_file:
             solver_data = json.load(solver_file)
-            id = len(solver_data) + 1
+            _df = pd.DataFrame(solver_data)
+            id = int(_df.id.max() + 1)
             solver_info['id'] = id
             solver_data.append(solver_info)
 
@@ -278,7 +280,7 @@ def delete_all_solvers():
         f.write("")
 
 
-def run_solver(solver_info,task,timeout,instance,format,additional_arguments_lookup=None,dynamic_files_lookup=None,additional_solver_arguments=None):
+def run_solver(solver_info,task,timeout,instance,format,additional_arguments_lookup=None,dynamic_files_lookup=None,output_file_dir=None,additional_solver_arguments=None):
 
         cmd_params = []
         additional_argument = ""
@@ -305,20 +307,29 @@ def run_solver(solver_info,task,timeout,instance,format,additional_arguments_loo
             params.extend(["-a",additional_argument])
         if dynamic_files_lookup:
             dynamic_file = dynamic_files_lookup[format][instance]
-            "-m", dynamic_file
             params.extend([ "-m", dynamic_file])
 
 
         final_param = cmd_params + params
         try:
-            start_time_current_run = time.perf_counter()
-            result = utils.run_process(final_param,
-                               capture_output=True, timeout=timeout, check=True,cwd=solver_dir)
-            end_time_current_run = time.perf_counter()
-            run_time = end_time_current_run - start_time_current_run
-            solver_output = re.sub("\s+", "",
-                               result.stdout.decode("utf-8"))
-            results.update({'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': additional_argument, 'runtime': run_time, 'result': solver_output, 'exit_with_error': False, 'error_code': None})
+            if output_file_dir is not None:
+                out_file_path = os.path.join(output_file_dir,f'{instance_name}.out')
+                with open(out_file_path,'w') as output:
+                    start_time_current_run = time.perf_counter()
+                    utils.run_process(final_param,
+                                     timeout=timeout, check=True,cwd=solver_dir,stdout=output)
+                    end_time_current_run = time.perf_counter()
+                    run_time = end_time_current_run - start_time_current_run
+                results.update({'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': additional_argument, 'runtime': run_time, 'result': out_file_path, 'exit_with_error': False, 'error_code': None})
+            else:
+                start_time_current_run = time.perf_counter()
+                result = utils.run_process(final_param,
+                                capture_output=True, timeout=timeout, check=True,cwd=solver_dir)
+                end_time_current_run = time.perf_counter()
+                run_time = end_time_current_run - start_time_current_run
+                solver_output = re.sub("\s+", "",
+                                result.stdout.decode("utf-8"))
+                results.update({'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': additional_argument, 'runtime': run_time, 'result': solver_output, 'exit_with_error': False, 'error_code': None})
             return results
         except subprocess.TimeoutExpired as e:
             results.update({'instance': instance_name,'format':format,'task': task,'timed_out':True,'additional_argument': additional_argument, 'runtime': None, 'result': None, 'exit_with_error': False, 'error_code': None})

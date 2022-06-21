@@ -125,9 +125,11 @@ def scatter_plot(df: pd.DataFrame,config: config_handler.Config, plot_options):
     scatter_grouping = grouping.copy()
     if 'solver_id' in scatter_grouping:
         scatter_grouping.remove('solver_id')
-
-    only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
-    rep_avg_df = df[only_solved_mask].groupby(['tag', 'task', 'benchmark_id', 'solver_id','instance'],as_index=False).apply(lambda _df: _get_avg_reps(_df))
+    if plot_options['settings']['include_timeouts']:
+        mask = (df.exit_with_error == False)
+    else:
+        mask = (df.timed_out == False) & (df.exit_with_error == False)
+    rep_avg_df = df[mask].groupby(['tag', 'task', 'benchmark_id', 'solver_id','instance'],as_index=False).apply(lambda _df: _get_avg_reps(_df))
 
     saved_files = rep_avg_df.groupby(scatter_grouping).apply(lambda _df: _create_pairwise_scatter_plot(_df,config,plot_options))
     print("done!")

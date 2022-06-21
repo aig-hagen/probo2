@@ -138,6 +138,7 @@ __pycache__/
 
 # Distribution / packaging
 *.yaml
+*.out
 !default_config.yaml
 !example_config.yaml
 *.csv
