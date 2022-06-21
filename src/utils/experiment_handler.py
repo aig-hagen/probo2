@@ -157,8 +157,9 @@ def run_experiment(config: config_handler.Config):
         config.save_to = os.path.join(os.getcwd(), config.name)
     else:
         config.save_to = os.path.join(config.save_to, config.name)
-    config.dump(experiment_result_directory)
-    write_experiment_index(config, experiment_result_directory)
+    cfg_experiment_result_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
+    config.dump(cfg_experiment_result_directory)
+    write_experiment_index(config, cfg_experiment_result_directory)
 
     print('========== Experiment Summary ==========')
     config.print()
@@ -180,7 +181,7 @@ def run_experiment(config: config_handler.Config):
                 if format is not None:
                     if task in solver['tasks']:
                         instances = benchmark_handler.get_instances(benchmark['path'], format)
-                        solver_output_dir = os.path.join(experiment_result_directory,solver['name'],task,benchmark_info['benchmark_name'])
+                        solver_output_dir = os.path.join(cfg_experiment_result_directory,solver['name'],task,benchmark_info['benchmark_name'])
                         os.makedirs(solver_output_dir,exist_ok=True)
                         for rep in range(1, config.repetitions + 1):
                             desc = f"    {solver['name']}|REP#{rep}"
