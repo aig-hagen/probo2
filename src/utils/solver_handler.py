@@ -280,7 +280,7 @@ def delete_all_solvers():
         f.write("")
 
 
-def run_solver(solver_info,task,timeout,instance,format,additional_arguments_lookup=None,dynamic_files_lookup=None,output_file_dir=None,additional_solver_arguments=None):
+def run_solver(solver_info,task,timeout,instance,format,additional_arguments_lookup=None,dynamic_files_lookup=None,output_file_dir=None,additional_solver_arguments=None, repetition=None):
 
         cmd_params = []
         additional_argument = ""
@@ -313,7 +313,7 @@ def run_solver(solver_info,task,timeout,instance,format,additional_arguments_loo
         final_param = cmd_params + params
         try:
             if output_file_dir is not None:
-                out_file_path = os.path.join(output_file_dir,f'{instance_name}.out')
+                out_file_path = os.path.join(output_file_dir,f'{instance_name}_{repetition}.out')
                 with open(out_file_path,'w') as output:
                     start_time_current_run = time.perf_counter()
                     utils.run_process(final_param,
@@ -327,9 +327,9 @@ def run_solver(solver_info,task,timeout,instance,format,additional_arguments_loo
                                 capture_output=True, timeout=timeout, check=True,cwd=solver_dir)
                 end_time_current_run = time.perf_counter()
                 run_time = end_time_current_run - start_time_current_run
-                solver_output = re.sub("\s+", "",
-                                result.stdout.decode("utf-8"))
-                results.update({'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': additional_argument, 'runtime': run_time, 'result': solver_output, 'exit_with_error': False, 'error_code': None})
+                # solver_output = re.sub("\s+", "",
+                #                 result.stdout.decode("utf-8"))
+                results.update({'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': additional_argument, 'runtime': run_time, 'result': None, 'exit_with_error': False, 'error_code': None})
             return results
         except subprocess.TimeoutExpired as e:
             results.update({'instance': instance_name,'format':format,'task': task,'timed_out':True,'additional_argument': additional_argument, 'runtime': None, 'result': None, 'exit_with_error': False, 'error_code': None})

@@ -181,12 +181,16 @@ def run_experiment(config: config_handler.Config):
                 if format is not None:
                     if task in solver['tasks']:
                         instances = benchmark_handler.get_instances(benchmark['path'], format)
-                        solver_output_dir = os.path.join(cfg_experiment_result_directory,solver['name'],task,benchmark_info['benchmark_name'])
-                        os.makedirs(solver_output_dir,exist_ok=True)
+                        if config.save_output:
+                            solver_output_dir = os.path.join(cfg_experiment_result_directory,solver['name'],task,benchmark_info['benchmark_name'])
+                            os.makedirs(solver_output_dir,exist_ok=True)
+                        else:
+                            solver_output_dir = None
+
                         for rep in range(1, config.repetitions + 1):
                             desc = f"    {solver['name']}|REP#{rep}"
                             for instance in tqdm(instances,desc=desc):
-                                result = solver_handler.run_solver(solver, task, config.timeout, instance, format, additional_arguments_lookup,dynamic_files_lookup,output_file_dir=solver_output_dir)
+                                result = solver_handler.run_solver(solver, task, config.timeout, instance, format, additional_arguments_lookup,dynamic_files_lookup,output_file_dir=solver_output_dir,repetition=rep)
                                 result.update(benchmark_info)
                                 result['repetition'] = rep
                                 result['tag'] = config.name

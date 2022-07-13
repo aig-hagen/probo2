@@ -7,3 +7,5 @@ repetitions: 1
 result_format: csv
 plot: ['cactus']
 statistics: ['mean','solved','timeouts','coverage']
+archive: ['zip']
+save_output: False
