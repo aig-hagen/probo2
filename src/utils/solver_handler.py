@@ -80,7 +80,6 @@ def check_interface(solver_info) -> bool:
         init_cmd = _init_cmd_params(solver_info['path'])
 
         solver_format = solver_info['format'][0]
-
         if 'apx' in solver_format:
             instance = str(definitions.TEST_INSTANCE_APX)
         elif 'tgf' in solver_format:

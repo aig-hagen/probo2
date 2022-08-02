@@ -1,4 +1,5 @@
 import shutil
+import subprocess
 import time
 
 import datetime
@@ -105,7 +106,9 @@ def cli():
     "--guess","-g",
     is_flag=True,
     help="Pull supported file format and computational problems from solver.")
-def add_solver(name, path, format, tasks, version, guess):
+@click.option("--yes",is_flag=True,help="Skip prompt.")
+@click.option("--no_check", is_flag=True)
+def add_solver(name, path, format, tasks, version, guess,yes, no_check):
     """ Adds a solver to the database.
     Adding has to be confirmed by user.
     \f
@@ -136,14 +139,17 @@ def add_solver(name, path, format, tasks, version, guess):
         format = [format]
     solver_info = {'name': name,'version': version,
                    'path': path,'tasks': tasks,'format': format}
-
-    is_working = solver_handler.check_interface(solver_info)
+    if not no_check:
+        is_working = solver_handler.check_interface(solver_info)
+    else:
+        is_working = True
 
     if is_working:
         solver_handler.print_summary(solver_info)
-        click.confirm(
-            "Are you sure you want to add this solver to the database?"
-            ,abort=True,default=True)
+        if not yes:
+            click.confirm(
+                "Are you sure you want to add this solver to the database?"
+                ,abort=True,default=True)
         id = solver_handler.add_solver(solver_info)
         print(f"Solver {solver_info['name']} added with ID: {id}")
         logging.info(f"Solver {solver_info['name']} added with ID: {id}")
@@ -169,6 +175,7 @@ def add_solver(name, path, format, tasks, version, guess):
     "--additional_extension",
     "-ext",
     type=click.types.STRING,
+    multiple=True,
     default='arg',
     help="Extension of additional argument parameter for DC/DS problems.")
 @click.option("--no_check",
@@ -212,6 +219,12 @@ def add_benchmark(name, path, format, additional_extension,dynamic_files,no_chec
       Raises:
            None
        """
+    print(additional_extension)
+    if len(additional_extension) > 1:
+        additional_extension = list(additional_extension)
+    else:
+        additional_extension = additional_extension[0]
+    print(additional_extension)
     benchmark_info = {'name': name, 'path': path,'format': list(format),'ext_additional': additional_extension, 'dynamic_files': dynamic_files}
 
     if generate:
@@ -1688,14 +1701,17 @@ def logs():
         print(log_file.read())
 
 @click.command()
-@click.option('--name','-n', type=click.Choice(['ICCMA15','ICCMA19','ICCMA21']),multiple=True,required=True, help='Name of benchmark to fetch')
+@click.option('--benchmark','-b', type=click.Choice(['ICCMA15','ICCMA19','ICCMA21']),multiple=True, help='Name of benchmark to fetch')
+@click.option('--solver','-s', type=click.Choice(['ICCMA19','ICCMA21']),multiple=True, help='Name of solver to fetch' )
+@click.option('--install',is_flag=True,help='Install fetched solvers and add them to probo2.')
+
 @click.option(
     "--save_to",
     "-st",
     type=click.Path(exists=True, resolve_path=True),
     help="Directory to store benchmark in. Default is the current working directory.")
 @click.pass_context
-def fetch(ctx,name, save_to):
+def fetch(ctx,benchmark, save_to,solver,install):
     """Download ICCMA competition benchmakrs and add them to the database.
 
     Args:
@@ -1710,7 +1726,7 @@ def fetch(ctx,name, save_to):
 
     if not save_to:
         save_to = os.getcwd()
-    for benchmark_name in name:
+    for benchmark_name in benchmark:
         current_benchmark_options = fetch_options[benchmark_name]
         path_benchmark = fetching._fetch_benchmark(benchmark_name,save_to,current_benchmark_options)
         if path_benchmark:
@@ -1722,6 +1738,17 @@ def fetch(ctx,name, save_to):
                    extension_arg_files=current_benchmark_options['extension_arg_files'],
                    generate=current_benchmark_options['generate']
                    )
+    if solver:
+        if not os.path.exists(os.path.join(save_to,"ICCMA-Solvers")):
+            subprocess.call('git clone https://github.com/jklein94/ICCMA-Solvers.git', shell = True, cwd=save_to)
+        if install:
+            for s in solver:
+                solver_dir = os.path.join(save_to,'ICCMA-Solvers',f'{s}_solvers')
+                if os.path.exists(solver_dir):
+                    subprocess.call(f'bash install.sh',shell=True,cwd=solver_dir)
+
+
+
 @click.command()
 @click.pass_context
 @click.option("--num","-n",required=True,type=click.INT, help='Number of instances to generate')

@@ -66,8 +66,11 @@ def get_instances(benchmark_path,extension,without_extension=False,full_path=Fal
     instances = (chain.from_iterable(glob(os.path.join(x[0], f'*.{extension}')) for x in os.walk(benchmark_path)))
     return sorted(list(instances))
 
-def get_argument_files(benchmark_info):
-    return get_instances(benchmark_info['path'], benchmark_info['ext_additional'])
+def get_argument_files(benchmark_info, arg_files_format=None):
+    if arg_files_format is None:
+        return get_instances(benchmark_info['path'], benchmark_info['ext_additional'])
+    else:
+        return get_instances(benchmark_info['path'], arg_files_format)
 
 def get_dynamic_instances(benchmark_info,format):
     return get_instances(benchmark_info['path'], f'{format}m')
@@ -115,7 +118,7 @@ def generate_dynamic_file_lookup(benchmark_info):
 
     return lookup
 
-def generate_additional_argument_lookup(benchmark_info) -> dict:
+def generate_additional_argument_lookup(benchmark_info, solver_supported_format=None) -> dict:
     """[summary]
     Args:
         format ([type]): [description]
@@ -123,14 +126,35 @@ def generate_additional_argument_lookup(benchmark_info) -> dict:
         [type]: [description]
     """
     lookup = {}
-    argument_files = get_argument_files(benchmark_info)
+    arg_files_format = None
+
+    if isinstance(benchmark_info['ext_additional'],list) and len(benchmark_info['ext_additional']) > 1 and solver_supported_format is not None:
+
+        for ext in benchmark_info['ext_additional']:
+            if solver_supported_format in ext:
+                arg_files_format = ext
+                break
+        if arg_files_format:
+            argument_files = get_argument_files(benchmark_info,arg_files_format=arg_files_format)
+        else:
+            print(f"No matching argument files for format {format} found!")
+            exit()
+
+
+    else:
+        argument_files = get_argument_files(benchmark_info)
+
     for file in argument_files:
         try:
             with open(file, 'r') as af:
                 argument_param = af.read().replace('\n', '')
         except IOError as err:
             print(err)
-        suffix_length = len(benchmark_info['ext_additional']) + 1 # +1 for dot
+        if arg_files_format is None:
+            suffix_length = len(benchmark_info['ext_additional']) + 1 # +1 for dot
+        else:
+            suffix_length = len(arg_files_format) + 1 # +1 for dot
+
         instance_name = os.path.basename(file)[:-suffix_length]
         lookup[instance_name] = argument_param
     return lookup
@@ -369,6 +393,7 @@ def _print_missing(missing_files):
         else:
             continue
 def check(benchmark_info):
+
     if not is_complete(benchmark_info):
         missing_files = get_missing_files_per_format(benchmark_info)
         _print_missing(missing_files)

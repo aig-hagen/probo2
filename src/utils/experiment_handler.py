@@ -169,8 +169,9 @@ def run_experiment(config: config_handler.Config):
         for benchmark in benchmark_list:
             benchmark_info = _format_benchmark_info(benchmark)
             print(f" +BENCHMARK: {benchmark_info['benchmark_name']}")
-            if need_additional_arguments(task):
+            if need_additional_arguments(task) and len(benchmark_info['benchmark_ext_additional']) == 1:
                 additional_arguments_lookup = benchmark_handler.generate_additional_argument_lookup(benchmark)
+
             if need_dynamic_arguments(task):
                 dynamic_files_lookup = benchmark_handler.generate_dynamic_file_lookup(benchmark)
 
@@ -179,6 +180,8 @@ def run_experiment(config: config_handler.Config):
             for solver in solver_list:
                 format = get_accepted_format(solver['format'], benchmark['format'])
                 if format is not None:
+                    if need_additional_arguments(task) and len(benchmark_info['benchmark_ext_additional']) > 1:
+                        additional_arguments_lookup = benchmark_handler.generate_additional_argument_lookup(benchmark, format)
                     if task in solver['tasks']:
                         instances = benchmark_handler.get_instances(benchmark['path'], format)
                         if config.save_output:
