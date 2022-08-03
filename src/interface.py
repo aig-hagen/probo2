@@ -1,4 +1,5 @@
 import shutil
+import string
 import subprocess
 import time
 
@@ -220,11 +221,17 @@ def add_benchmark(name, path, format, additional_extension,dynamic_files,no_chec
            None
        """
     print(additional_extension)
-    if len(additional_extension) > 1:
-        additional_extension = list(additional_extension)
-    else:
-        additional_extension = additional_extension[0]
-    print(additional_extension)
+    if isinstance(additional_extension, tuple):
+        if len(additional_extension) > 1:
+            additional_extension = list(additional_extension)
+        else:
+            additional_extension = additional_extension[0]
+    elif not isinstance(additional_extension, str):
+        print(f"Type {type(additional_extension)} of additional extension is not valid.")
+        exit()
+
+
+
     benchmark_info = {'name': name, 'path': path,'format': list(format),'ext_additional': additional_extension, 'dynamic_files': dynamic_files}
 
     if generate:
@@ -1735,7 +1742,7 @@ def fetch(ctx,benchmark, save_to,solver,install):
                    path=path_benchmark,
                    format=tuple(current_benchmark_options['format']),
                    random_arguments=current_benchmark_options['random_arguments'],
-                   extension_arg_files=current_benchmark_options['extension_arg_files'],
+                   additional_extension=current_benchmark_options['extension_arg_files'],
                    generate=current_benchmark_options['generate']
                    )
     if solver:
