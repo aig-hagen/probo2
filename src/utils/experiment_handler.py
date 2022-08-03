@@ -1,5 +1,6 @@
 
 import csv
+from hashlib import new
 import json
 from csv import DictWriter, DictReader
 from src.utils import config_handler
@@ -143,11 +144,29 @@ def load_experiments_results(config: config_handler.Config)->pd.DataFrame:
     else:
         print(f'Results for experiment {config.name} not found!')
 
+def exclude_task(config: config_handler.Config):
+    to_exclude = []
+    for current_task in config.task:
+        for task in config.exclude_task:
+            if task in current_task:
+               to_exclude.append(current_task)
 
+
+    config.task = [ task for task in config.task if task not in to_exclude]
+
+
+def set_supported_tasks(solver_list, config: config_handler.Config):
+    supported_tasks = [ set(solver['tasks']) for solver in solver_list]
+    supported_set = set.union(*supported_tasks)
+    config.task = list(supported_set)
 
 def run_experiment(config: config_handler.Config):
     solver_list = solver_handler.load_solver(config.solver)
     benchmark_list = benchmark_handler.load_benchmark(config.benchmark)
+    if config.task == 'supported':
+        set_supported_tasks(solver_list,config)
+    if config.exclude_task is not None:
+        exclude_task(config)
     additional_arguments_lookup= None
     dynamic_files_lookup = None
     experiment_result_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)

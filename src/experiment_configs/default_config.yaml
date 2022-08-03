@@ -1,5 +1,6 @@
 name: default_experiment
 task: null
+exclude_task: null
 solver: null
 benchmark: null
 timeout: 600

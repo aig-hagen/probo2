@@ -7,8 +7,9 @@ from src.utils import definitions
 import src.functions.register as register
 import yaml
 class Config(object):
-    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,save_output=None,archive_output=None,archive=None,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,raw_results_path=None):
+    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,save_output=None,archive_output=None,archive=None,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,raw_results_path=None,exclude_task=None):
         self.task = task
+        self.exclude_task = exclude_task
         self.benchmark = benchmark
         self.solver = solver
         self.timeout = timeout
