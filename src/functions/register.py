@@ -8,6 +8,10 @@ stat_dict = {}
 def register_stat(key, function):
     register(key, function, stat_dict)
 
+score_functions_dict = {}
+def register_score_function(key, function):
+    register(key, function, score_functions_dict)
+
 benchmark_functions_dict = {}
 def benchmark_functions_register(key, function):
     register(key, function, benchmark_functions_dict)
@@ -28,4 +32,14 @@ def table_export_functions_register(key,function):
 archive_functions_dict = {}
 def archive_functions_register(key, function):
     register(key, function, archive_functions_dict)
+
+
+run_functions_dict = {}
+def run_functions_register(key, function):
+    register(key, function, run_functions_dict)
+
+validation_functions_dict = {}
+def validation_functions_register(key, function):
+    register(key, function, validation_functions_dict)
+
 

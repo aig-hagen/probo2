@@ -315,26 +315,33 @@ def run_solver(solver_info,task,timeout,instance,format,additional_arguments_loo
                 out_file_path = os.path.join(output_file_dir,f'{instance_name}_{repetition}.out')
                 with open(out_file_path,'w') as output:
                     start_time_current_run = time.perf_counter()
-                    utils.run_process(final_param,
-                                     timeout=timeout, check=True,cwd=solver_dir,stdout=output)
+                    if os.path.exists(solver_dir):
+                        utils.run_process(final_param,
+                                        timeout=timeout, check=True,cwd=solver_dir,stdout=output)
+                        end_time_current_run = time.perf_counter()
+                        run_time = end_time_current_run - start_time_current_run
+                        results.update({'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': additional_argument, 'runtime': run_time, 'result': out_file_path, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':timeout})
+                    else:
+                        raise subprocess.CalledProcessError(returncode=-1,cmd=final_param,output="Solver path not found.")
+
+            else:
+                if os.path.exists(solver_dir):
+                    start_time_current_run = time.perf_counter()
+                    result = utils.run_process(final_param,
+                                    capture_output=True, timeout=timeout, check=True,cwd=solver_dir)
                     end_time_current_run = time.perf_counter()
                     run_time = end_time_current_run - start_time_current_run
-                results.update({'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': additional_argument, 'runtime': run_time, 'result': out_file_path, 'exit_with_error': False, 'error_code': None})
-            else:
-                start_time_current_run = time.perf_counter()
-                result = utils.run_process(final_param,
-                                capture_output=True, timeout=timeout, check=True,cwd=solver_dir)
-                end_time_current_run = time.perf_counter()
-                run_time = end_time_current_run - start_time_current_run
-                # solver_output = re.sub("\s+", "",
-                #                 result.stdout.decode("utf-8"))
-                results.update({'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': additional_argument, 'runtime': run_time, 'result': None, 'exit_with_error': False, 'error_code': None})
+                    # solver_output = re.sub("\s+", "",
+                    #                 result.stdout.decode("utf-8"))
+                    results.update({'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': additional_argument, 'runtime': run_time, 'result': None, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':timeout})
+                else:
+                    raise subprocess.CalledProcessError(returncode=-1,cmd=final_param,output="Solver path not found.")
             return results
         except subprocess.TimeoutExpired as e:
-            results.update({'instance': instance_name,'format':format,'task': task,'timed_out':True,'additional_argument': additional_argument, 'runtime': None, 'result': None, 'exit_with_error': False, 'error_code': None})
+            results.update({'instance': instance_name,'format':format,'task': task,'timed_out':True,'additional_argument': additional_argument, 'runtime': timeout, 'result': None, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':timeout})
             return results
         except subprocess.CalledProcessError as err:
             #logging.exception(f'Something went wrong running solver {self.solver_name}')
             print("\nError occured:",err)
-            results.update({'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': additional_argument, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode})
+            results.update({'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': additional_argument, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode,'error': err,'cut_off':timeout})
             return results

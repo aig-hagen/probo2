@@ -1,5 +1,4 @@
 import shutil
-import string
 import subprocess
 import time
 
@@ -29,25 +28,20 @@ from tabulate import tabulate
 from src import functions
 
 import src.analysis.statistics as stats
-import src.analysis.validation as validation
 import src.database_models.DatabaseHandler as DatabaseHandler
 import src.plotting.plotting_utils as pl_util
 import src.utils.CustomClickOptions as CustomClickOptions
 import src.utils.definitions as definitions
 import src.utils.Status as Status
-from src.database_models.Base import Base, Supported_Tasks
-from src.database_models.Benchmark import Benchmark
-from src.database_models.Result import Result
 from src.database_models.Solver import Solver
 from src.utils import benchmark_handler, config_handler, definitions, fetching, utils
 from src.utils.Notification import Notification
 from src.generators import generator_utils as gen_utils
 from src.generators import generator
 import src.functions.register as register
-from src.functions import benchmark, statistics, printing, table_export, archive
+from src.functions import benchmark, statistics, printing, table_export, archive, score, validation
 from src.functions import plot as plotter
-from src.utils import solver_handler, experiment_handler
-from src.utils import config_handler
+from src.utils import solver_handler, experiment_handler, config_handler
 from functools import reduce
 import csv
 csv.field_size_limit(sys.maxsize)
@@ -69,16 +63,10 @@ def init():
 @click.group()
 def cli():
     pass
-    #init()
-    # if not os.path.exists(definitions.DATABASE_DIR):
-    #     os.makedirs(definitions.DATABASE_DIR)
-    #     logging.info("Database directory created.")
 
-    # if not os.path.exists(definitions.TEST_DATABASE_PATH):
-    #     engine = DatabaseHandler.get_engine()
-    #     DatabaseHandler.init_database(engine)
-    # DatabaseHandler.check_database_version()
-
+@click.command()
+def version():
+    pass
 
 
 @click.command(cls=CustomClickOptions.command_required_option_from_option('guess'))
@@ -324,9 +312,10 @@ def add_benchmark(name, path, format, additional_extension,dynamic_files,no_chec
 @click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
 @click.option("--name_map","-n",cls=CustomClickOptions.StringAsOption,
               required=False,default=None,help='Comma seperated list of solver names mapping. Format: <old>:<new>')
+@click.option("--score",'-s',default=None,type=click.Choice(list(register.score_functions_dict.keys()) + ['all']),multiple=True)
 @click.pass_context
 def run(ctx, all,benchmark, task, solver, timeout, dry, name,
-        notify, track, repetitions, rerun, subset, save_to, multi,statistics, config,plot,name_map,printing, table_export,archive):
+        notify, track, repetitions, rerun, subset, save_to, multi,statistics, config,plot,name_map,printing, table_export,archive,score):
     """Run solver.
     \f
     Args:
@@ -360,6 +349,7 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
     cfg.check()
 
 
+    exit()
     experiment_handler.run_experiment(cfg)
 
     result_df = experiment_handler.load_results_via_name(cfg.name)
@@ -372,7 +362,8 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
     if cfg.plot is not None:
         saved_plots = plotter.create_plots(result_df,cfg)
 
-
+    to_merge = []
+    others =  []
     if cfg.statistics is not None:
 
         if cfg.statistics =='all':
@@ -383,20 +374,30 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
             _res = register.stat_dict[stat](result_df)
             stats_results.append(_res)
 
-        to_merge = []
-        other =  []
         for res in stats_results:
             if res[1]:
                 to_merge.append(res[0])
             else:
-                other.append(res[0])
+                others.append(res[0])
+    if cfg.score is not None:
+        score_results = []
+        if cfg.score =='all' or 'all' in cfg.score:
+                    cfg.score = register.score_functions_dict.keys()
+        for s in cfg.score:
+            _res = register.score_functions_dict[s](result_df)
+            score_results.append(_res)
+        for res in score_results:
+            if res[1]:
+                to_merge.append(res[0])
+            else:
+                others.append(res[0])
+    if len(to_merge) >0:
         df_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), to_merge)
         register.print_functions_dict[cfg.printing](df_merged,['tag','task','benchmark_name'])
         print('========== DONE ==========')
         if cfg.table_export is not None:
-
-            for format in cfg.table_export:
-                register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
+            	for format in cfg.table_export:
+                    register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
 
     if cfg.copy_raws:
         click.echo('Copying raw files...',nl=False)
@@ -607,14 +608,17 @@ def debug(load_experiment,stats,zip):
 @click.option("--config",'-cfg', default=None,type=click.Path(exists=True,resolve_path=True),help='Path to experiment config.')
 @click.option("--raw",'-r',default=None, type=click.Path(exists=True,resolve_path=True), help='Path to raw result file.')
 @click.option("--statistics",'-stat',default=None,type=click.Choice(list(register.stat_dict.keys()) + ['all']),multiple=True)
+@click.option("--score",'-s',default=None,type=click.Choice(list(register.score_functions_dict.keys()) + ['all']),multiple=True)
 @click.option("--printing",default='default')
 #@click.option("--archive",'-a',default=None,type=click.Choice(register.archive_functions_dict.keys()),multiple=True)
-#@click.option("--table_export",'-t',default=None,type=click.Choice(register.table_export_functions_dict.keys()),multiple=True)
+@click.option("--table_export",'-t',default=None,type=click.Choice(list(register.table_export_functions_dict.keys()) + ['all']),multiple=True)
+@click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
 def calculate(
-              name, statistics,raw,config,printing):
+              name, statistics,score,raw,config,printing,table_export, save_to):
 
     if name is not None:
-        result_df = experiment_handler.load_results_via_name(name)
+        result_df= experiment_handler.load_results_via_name(name)
+        cfg = config_handler.load_config_via_name(name)
     elif raw is not None:
         result_df = pd.read_csv(raw)
     elif config is not None:
@@ -625,27 +629,50 @@ def calculate(
         exit()
 
 
-
-
-    stats_results = []
-    print("========== STATISTICS ==========")
-    if statistics =='all' or 'all' in statistics:
-            statistics = register.stat_dict.keys()
-    for stat in statistics:
-        _res = register.stat_dict[stat](result_df)
-        stats_results.append(_res)
     to_merge = []
-    other =  []
-    for res in stats_results:
-        if res[1]:
-            to_merge.append(res[0])
-        else:
-            other.append(res[0])
-    df_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), to_merge)
-    register.print_functions_dict[printing](df_merged,['tag','task','benchmark_name'])
-    # if table_export is not None:
-    #         for format in table_export:
-    #             register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
+    others =  []
+    print("========== RESULTS ==========")
+    if statistics is not None:
+        stats_results = []
+        if statistics =='all' or 'all' in statistics:
+                statistics = register.stat_dict.keys()
+        for stat in statistics:
+            _res = register.stat_dict[stat](result_df)
+            stats_results.append(_res)
+        for res in stats_results:
+            if res[1]:
+                to_merge.append(res[0])
+            else:
+                others.append(res[0])
+    if score is not None:
+        score_results = []
+        if score =='all' or 'all' in score:
+                score = register.score_functions_dict.keys()
+        for s in score:
+            _res = register.score_functions_dict[s](result_df)
+            score_results.append(_res)
+        for res in score_results:
+            if res[1]:
+                to_merge.append(res[0])
+            else:
+                others.append(res[0])
+
+    if len(to_merge) > 0:
+        df_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), to_merge)
+        register.print_functions_dict[printing](df_merged,['tag','task','benchmark_name'])
+
+    for other in others:
+        register.print_functions_dict[printing](other,['tag','task','benchmark_name'])
+
+
+    if not save_to:
+        cfg.save_to = os.getcwd()
+    else:
+        cfg.save_to  = save_to
+    print(df_merged)
+    if table_export is not None:
+             for format in table_export:
+                 register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
 
 
     # if cfg.archive is not None:
@@ -1163,16 +1190,15 @@ def status():
 
 
 @click.command()
-@click.option("--tag",help="Experiment tag to be validated")
+@click.option("--name","-n",help="Experiment tag to be validated")
 @click.option("--task",
               "-t",
               required=False,
               callback=CustomClickOptions.check_problems,
               help="Comma-separated list of task IDs or symbols to be validated.")
-@click.option("--benchmark","-b", required=True,help="Benchmark name or id to be validated.")
+@click.option("--benchmark","-b",help="Benchmark name or id to be validated.")
 @click.option("--solver",
               "-s",
-              required=True,
               cls=CustomClickOptions.StringAsOption,
               default=[],
               help="Comma-separated list of solver IDs or names to be validated.")
@@ -1210,7 +1236,9 @@ def status():
 @click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
 @click.option("--send", required=False, help="Send plots and data via E-Mail.")
 @click.option("--verbose","-v", is_flag=True,help="Verbose output for validation with reference. For each solver the instance names of not validated and incorrect instances is printed to the console.")
-def validate(tag, task, benchmark, solver, filter, reference, pairwise,
+@click.option("--config",'-cfg', default=None,type=click.Path(exists=True,resolve_path=True),help='Path to experiment config.')
+@click.option("--mode",'-m',default=None,type=click.Choice(list(register.validation_functions_dict.keys()) + ['all']),multiple=True)
+def validate(name,config,mode,task, benchmark, solver, filter, reference, pairwise,
              save_to, export,plot, update_db,extension,compress,send, verbose,raw):
     """Validate experiments results.
 
@@ -1242,101 +1270,120 @@ def validate(tag, task, benchmark, solver, filter, reference, pairwise,
         update_db ([type]): [description]
         extension ([type]): [description]
     """
-    if not save_to:
-        save_to = os.getcwd()
-    engine = DatabaseHandler.get_engine()
-    session = DatabaseHandler.create_session(engine)
-    og_df = DatabaseHandler.get_results(session,
-                                        solver,
-                                        task,
-                                        [benchmark],
-                                        [tag],
-                                        filter,
-                                        only_solved=True)
-    result_df = validation.prepare_data(og_df)
 
-    saved_files = []
-
-
-
-    if pairwise:
-        pairwise_result = result_df.groupby(['tag','benchmark_id','task']).apply(lambda df_: validation._validate_pairwise(df_)).reset_index()
-        validation.print_validate_pairwise(pairwise_result)
-
-        if export:
-            for export_format in list(export):
-                saved_files.append(pairwise_result.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.export_pairwise(export_format,df_,save_to,file_name_suffix='pairwise')))
-
-        if plot:
-            for kind in list(plot):
-                saved_files.append(pairwise_result.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.plot_pairwise(kind,df_,save_to)))
-
+    if name is not None:
+        result_df= experiment_handler.load_results_via_name(name)
+        cfg = config_handler.load_config_via_name(name)
+    elif config is not None:
+        cfg = config_handler.load_config_yaml(config,as_obj=True)
+        result_df = experiment_handler.load_experiments_results(cfg)
     else:
-        unique_tasks = list(result_df.task.unique())
+        print('Unable to load results.')
+        exit()
 
-        # Replace SE with EE for reference as SE problems are not unique
-        for i,t in enumerate(unique_tasks):
-            if 'SE' in t:
-                unique_tasks[i] = unique_tasks[i].replace('SE','EE')
-
-        ref_dict = validation.get_reference(extension, unique_tasks, reference)
-        validation_results = validation.validate(result_df, ref_dict, extension)
-        analyse = validation_results.groupby(['tag','benchmark_id','task_id','solver_id'],as_index=False).apply(lambda df: validation.analyse(df) )
-        validation.print_validate_with_reference_results(analyse)
-        if verbose:
-            validation.print_not_validated(validation_results)
+    if mode:
+        validation.validate(result_df, mode, cfg)
+    else:
+        print("Please specify a validation mode via the --mode/-m Option.")
+        exit()
 
 
 
+    # if not save_to:
+    #     save_to = os.getcwd()
+    # engine = DatabaseHandler.get_engine()
+    # session = DatabaseHandler.create_session(engine)
+    # og_df = DatabaseHandler.get_results(session,
+    #                                     solver,
+    #                                     task,
+    #                                     [benchmark],
+    #                                     [tag],
+    #                                     filter,
+    #                                     only_solved=True)
+    # result_df = validation.prepare_data(og_df)
 
-        if export:
-            if raw:
-                saved_files.append(validation_results.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.export('csv',df_,save_to,file_name_suffix='raw')))
-
-
-            for export_format in list(export):
-                saved_files.append(analyse.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.export(export_format,df_,save_to)))
-        if plot:
-            for kind in list(plot):
-                saved_files.append(validation_results.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.plot(kind,df_,save_to)))
+    # saved_files = []
 
 
 
+    # if pairwise:
+    #     pairwise_result = result_df.groupby(['tag','benchmark_id','task']).apply(lambda df_: validation._validate_pairwise(df_)).reset_index()
+    #     validation.print_validate_pairwise(pairwise_result)
 
-        if update_db and not pairwise:
-            og_df.set_index("id", inplace=True)
-            og_df.no_reference.update(validation_results.set_index("id").no_reference)
-            og_df.correct_solved.update(validation_results.set_index("id").correct)
-            og_df.incorrect_solved.update(validation_results.set_index("id").incorrect)
+    #     if export:
+    #         for export_format in list(export):
+    #             saved_files.append(pairwise_result.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.export_pairwise(export_format,df_,save_to,file_name_suffix='pairwise')))
 
-            result_objs = session.query(Result).filter(
-                Result.tag.in_(tag)).all()
-            id_result_mapping = dict()
-            for res in result_objs:
-                id_result_mapping[res.id] = res
-            og_df.apply(lambda row: validation.update_result_object(id_result_mapping[row.name], row.correct_solved,row.incorrect_solved,row.no_reference),
-                        axis=1)
-            session.commit()
+    #     if plot:
+    #         for kind in list(plot):
+    #             saved_files.append(pairwise_result.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.plot_pairwise(kind,df_,save_to)))
 
-    saved_files = list(itertools.chain(*[x.values for x in saved_files]))
+    # else:
+    #     unique_tasks = list(result_df.task.unique())
 
-    if compress:
-        if pairwise:
-            archive_name = f'{tag}_pairwise'
-        else:
-            archive_name = f'{tag}_reference'
+    #     # Replace SE with EE for reference as SE problems are not unique
+    #     for i,t in enumerate(unique_tasks):
+    #         if 'SE' in t:
+    #             unique_tasks[i] = unique_tasks[i].replace('SE','EE')
 
-        archive_save_path = utils.create_archive_from_files(save_to,archive_name,saved_files,compress,'validations')
+    #     ref_dict = validation.get_reference(extension, unique_tasks, reference)
+    #     validation_results = validation.validate(result_df, ref_dict, extension)
+    #     analyse = validation_results.groupby(['tag','benchmark_id','task_id','solver_id'],as_index=False).apply(lambda df: validation.analyse(df) )
+    #     validation.print_validate_with_reference_results(analyse)
+    #     if verbose:
+    #         validation.print_not_validated(validation_results)
 
-    if send:
-        id_code = int(hashlib.sha256(save_to.encode('utf-8')).hexdigest(), 16) % 10**8
-        email_notification = Notification(send,subject="Hi, there. I have your files for you.",message=f"Enclosed you will find your files.",id=id_code)
-        if compress:
-            email_notification.attach_file(f'{archive_save_path}.{compress}')
-        else:
-            email_notification.attach_mutiple_files(saved_files)
-        email_notification.send()
-        print(f"\n{email_notification.foot}\nYour e-mail identification code: {id_code}")
+
+
+
+    #     if export:
+    #         if raw:
+    #             saved_files.append(validation_results.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.export('csv',df_,save_to,file_name_suffix='raw')))
+
+
+    #         for export_format in list(export):
+    #             saved_files.append(analyse.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.export(export_format,df_,save_to)))
+    #     if plot:
+    #         for kind in list(plot):
+    #             saved_files.append(validation_results.groupby(['tag','benchmark_name','task']).apply(lambda df_: validation.plot(kind,df_,save_to)))
+
+
+
+
+    #     if update_db and not pairwise:
+    #         og_df.set_index("id", inplace=True)
+    #         og_df.no_reference.update(validation_results.set_index("id").no_reference)
+    #         og_df.correct_solved.update(validation_results.set_index("id").correct)
+    #         og_df.incorrect_solved.update(validation_results.set_index("id").incorrect)
+
+    #         result_objs = session.query(Result).filter(
+    #             Result.tag.in_(tag)).all()
+    #         id_result_mapping = dict()
+    #         for res in result_objs:
+    #             id_result_mapping[res.id] = res
+    #         og_df.apply(lambda row: validation.update_result_object(id_result_mapping[row.name], row.correct_solved,row.incorrect_solved,row.no_reference),
+    #                     axis=1)
+    #         session.commit()
+
+    # saved_files = list(itertools.chain(*[x.values for x in saved_files]))
+
+    # if compress:
+    #     if pairwise:
+    #         archive_name = f'{tag}_pairwise'
+    #     else:
+    #         archive_name = f'{tag}_reference'
+
+    #     archive_save_path = utils.create_archive_from_files(save_to,archive_name,saved_files,compress,'validations')
+
+    # if send:
+    #     id_code = int(hashlib.sha256(save_to.encode('utf-8')).hexdigest(), 16) % 10**8
+    #     email_notification = Notification(send,subject="Hi, there. I have your files for you.",message=f"Enclosed you will find your files.",id=id_code)
+    #     if compress:
+    #         email_notification.attach_file(f'{archive_save_path}.{compress}')
+    #     else:
+    #         email_notification.attach_mutiple_files(saved_files)
+    #     email_notification.send()
+    #     print(f"\n{email_notification.foot}\nYour e-mail identification code: {id_code}")
 
 import src.analysis.significance_testing as sig
 
@@ -1642,26 +1689,19 @@ def last(verbose):
                 print(f'\n{summary}')
     else:
         print("No experiments finished yet.")
+
 @click.command()
-@click.option("--tag","-t",required=True, help="Experiment tag.")
-def experiment_info(tag):
+@click.option("--list","-l", is_flag=True)
+def experiments(list,):
     """Prints some basic information about the experiment speficied with "--tag" option.
 
     Args:
         tag ([type]): [description]
     """
-    engine = DatabaseHandler.get_engine()
-    session = DatabaseHandler.create_session(engine)
-    try:
-        df = stats.prepare_data(DatabaseHandler.get_results(session,[],[],[],[tag],[]))
-    except ValueError as e:
-        print(e)
-    finally:
-        session.close()
-    if not df.empty:
-        print(stats.get_experiment_info(df))
-    else:
-        print(f"No experiment with tag {tag} found.")
+    if list:
+        experiment_index = pd.read_csv(definitions.EXPERIMENT_INDEX)
+        print(experiment_index)
+
 
 def recursive_help(cmd,text_dict,parent=None):
     #print(f'cmd dict: {cmd.__dict__}\n\n')
@@ -2071,7 +2111,7 @@ cli.add_command(stable_generator)
 cli.add_command(fetch)
 cli.add_command(logs)
 cli.add_command(dumphelp_markdown)
-cli.add_command(experiment_info)
+cli.add_command(experiments)
 cli.add_command(last)
 cli.add_command(delete_benchmark)
 cli.add_command(update_db)

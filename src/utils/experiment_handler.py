@@ -69,6 +69,9 @@ def init_result_path(config: config_handler.Config, result_file_directory):
 
     return result_file_path
 
+
+
+
 def load_results_via_name(name):
 
     experiment_index = pd.read_csv(definitions.EXPERIMENT_INDEX)
@@ -187,6 +190,7 @@ def run_experiment(config: config_handler.Config):
         print(f'+TASK: {task}')
         for benchmark in benchmark_list:
             benchmark_info = _format_benchmark_info(benchmark)
+            print(benchmark_info)
             print(f" +BENCHMARK: {benchmark_info['benchmark_name']}")
             if need_additional_arguments(task) and len(benchmark_info['benchmark_ext_additional']) == 1:
                 additional_arguments_lookup = benchmark_handler.generate_additional_argument_lookup(benchmark)

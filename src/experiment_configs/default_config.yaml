@@ -10,9 +10,14 @@ plot: null
 grouping: ['tag', 'task', 'benchmark_id', 'solver_id']
 save_to: null
 statistics: null
+score: null
 printing: default
-copy_raws: True
+copy_raws: False
 table_export: ['txt']
 archive: null
 save_output: True
 archive_output: null
+validation:
+  mode: null
+  plot: null
+  table_export: null

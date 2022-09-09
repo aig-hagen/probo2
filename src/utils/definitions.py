@@ -43,6 +43,10 @@ DEFAULT_CONFIG_PATH = str(os.path.join(CONFIGS_DIRECTORY,'default_config.yaml'))
 LAST_EXPERIMENT_JSON_PATH = str(files(src.probo2_data).joinpath('probo2_last_experiment.json'))
 LAST_EXPERIMENT_SUMMARY_JSON_PATH = str(files(src.probo2_data).joinpath('probo2_last_experiment_summary.json'))
 
+# YAML files
+PRETTY_LATEX_TABLE_CONFIG =  str(files(src.probo2_data).joinpath('pretty_latex_table_config.yaml'))
+
+
 ALEMBIC_INIT_FILE_PATH = os.path.join(str(DATABASE_DIR),'alembic.ini')
 
 

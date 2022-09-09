@@ -1,13 +1,14 @@
-from ftplib import error_perm
+
 import json
 from json import JSONEncoder
 import os
 from src.functions import archive, statistics
-from src.utils import definitions
+from src.utils import benchmark_handler, definitions
 import src.functions.register as register
 import yaml
+import pandas as pd
 class Config(object):
-    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,save_output=None,archive_output=None,archive=None,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,raw_results_path=None,exclude_task=None):
+    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,save_output=None,archive_output=None,archive=None,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,score=None,validation=None,raw_results_path=None,exclude_task=None):
         self.task = task
         self.exclude_task = exclude_task
         self.benchmark = benchmark
@@ -22,12 +23,14 @@ class Config(object):
         self.raw_results_path = raw_results_path
         self.save_to = save_to
         self.statistics = statistics
+        self.score = score
         self.printing = printing
         self.copy_raws = copy_raws
         self.table_export = table_export
         self.archive = archive
         self.save_output = save_output
         self.archive_output = archive_output
+        self.validation = validation
 
     def write_config(self):
         save_to = os.path.join(definitions.CONFIGS_DIRECTORY,self.name)
@@ -76,6 +79,16 @@ class Config(object):
         if self.benchmark is None:
             error = True
             msg_errors +=f"- No benchmark found. Please specify benchmark via --benchmark option or in {self.yaml_file_name}.\n"
+        else:
+            benchmarks = benchmark_handler.load_benchmark(self.benchmark)
+            for b in benchmarks:
+                if not os.path.exists(b["path"]):
+                    error = True
+                    msg_errors += f"- Path for benchmark {b['name']} not found."
+                else:
+                    if len(os.listdir(b['path'])) == 0:
+                        error = True
+                        msg_errors +=f"- No instances found for benchmark {b['name']} at path {b['path']}."
         if self.solver is None:
             error = True
             msg_errors +=f"- No solver found. Please specify benchmark via --solver option or in {self.yaml_file_name}.\n"
@@ -130,7 +143,6 @@ class Config(object):
             if error:
                  msg_errors +=f"- Invalid archive format : {','.join(_invalid)}. Please choose from following options: {','.join(register.archive_functions_dict.keys())}\n"
 
-
         if error:
             print('Bad configuration found:')
             print(msg_errors)
@@ -173,6 +185,16 @@ def load_all_configs(directory: str) -> list:
             f_path = os.path.join(directory,f)
             configs.append(load_config_yaml(f_path))
     return configs
+
+def load_config_via_name(name):
+    experiment_index = pd.read_csv(definitions.EXPERIMENT_INDEX)
+    if name in experiment_index.name.values:
+        cfg_path = experiment_index[experiment_index.name.values == name]['config_path'].iloc[0]
+        cfg = load_config_yaml(cfg_path,as_obj=True)
+        return cfg
+    else:
+        print(f"No Config with name {name} found.")
+        exit()
 
 
 
