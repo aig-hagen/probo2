@@ -21,9 +21,6 @@ from numpy import append, nanargmax
 import pandas as pd
 
 import tabulate
-#from click.core import iter_params_for_processing
-#from click.decorators import command
-#from sqlalchemy import and_, engine, or_
 from tabulate import tabulate
 from src import functions
 
