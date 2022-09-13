@@ -47,8 +47,15 @@ def add_benchmark(benchmark_info: dict):
         return id
 
 def print_summary(benchmark_info):
+    print()
     print("**********BENCHMARK SUMMARY**********")
-    print(json.dumps(benchmark_info, indent=4))
+    for key,value in benchmark_info.items():
+        
+        if key == 'format':
+            print(f"Format: {json.dumps(benchmark_info['format'],indent=4)}" )
+        else:
+            print(f'{str(key).capitalize()}: {value}')
+    print()
 
 def print_benchmarks(extra_columns=None, tablefmt=None):
     columns = ['id','name','format']
@@ -65,6 +72,9 @@ def print_benchmarks(extra_columns=None, tablefmt=None):
 def get_instances(benchmark_path,extension,without_extension=False,full_path=False):
     instances = (chain.from_iterable(glob(os.path.join(x[0], f'*.{extension}')) for x in os.walk(benchmark_path)))
     return sorted(list(instances))
+
+def get_instances_count(benchmark_path,extension):
+    return len(get_instances(benchmark_path=benchmark_path, extension=extension))
 
 def get_argument_files(benchmark_info, arg_files_format=None):
     if arg_files_format is None:

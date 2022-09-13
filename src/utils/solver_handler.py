@@ -123,9 +123,18 @@ def check_interface(solver_info) -> bool:
         return True
 
 
-def print_summary(solver_info):
+def print_summary(solver_info: dict):
+    print()
     print("**********SOLVER SUMMARY**********")
-    print(json.dumps(solver_info, indent=4))
+    for key,value in solver_info.items():
+        if key == 'tasks':
+            print(f"Tasks: {json.dumps(solver_info['tasks'],indent=4)}" )
+        elif key == 'format':
+            print(f"Format: {json.dumps(solver_info['format'],indent=4)}" )
+        else:
+            print(f'{str(key).capitalize()}: {value}')
+    #print(json.dumps(solver_info, indent=4))
+    print()
 
 def print_solvers(extra_columns=None, tablefmt=None):
     columns = ['id','name','version','format']
@@ -138,62 +147,6 @@ def print_solvers(extra_columns=None, tablefmt=None):
         print(tabulate.tabulate(solvers_df[columns],headers='keys', tablefmt=tablefmt, showindex=False))
     else:
         print("No solvers found.")
-
-class Solver(object):
-    def __init__(self, name, version, path, format, tasks, id):
-        self.name = name
-        self.version =version
-        self.path  = path
-        self.format = format
-        self.tasks = tasks
-        self.id = id
-
-    def to_json(self):
-        return json.dumps(self,cls=SolverEncoder, indent=4)
-
-    def run(self,task,timeout,instances, additional_arguments_lookup=None,dynamic_files_lookup=None,additional_solver_arguments=None):
-        results = {}
-        cmd_params = []
-        additional_argument = ""
-        solver_dir = os.path.dirname(self.solver_path)
-        if self.path.endswith('.sh'):
-            cmd_params.append('bash')
-        elif self.path.endswith('.py'):
-            cmd_params.append('python')
-
-        for instance in instances:
-            instance_name = Path(instance).stem
-            params = [self.solver_path,
-                  "-p", task.symbol,
-                  "-f", instance,
-                  "-fo", self.solver_format]
-            if additional_arguments_lookup:
-                additional_argument = additional_arguments_lookup[instance_name]
-                params.extend(["-a",additional_argument])
-            final_param = cmd_params + params
-            try:
-                start_time_current_run = time.perf_counter()
-                result = utils.run_process(final_param,
-                                   capture_output=True, timeout=timeout, check=True,cwd=solver_dir)
-                end_time_current_run = time.perf_counter()
-                run_time = end_time_current_run - start_time_current_run
-                solver_output = re.sub("\s+", "",
-                                   result.stdout.decode("utf-8"))
-                results[instance_name] = {'timed_out':False,'additional_argument': additional_argument, 'runtime': run_time, 'result': solver_output, 'exit_with_error': False, 'error_code': None}
-            except subprocess.TimeoutExpired as e:
-                results[instance_name] = {'timed_out':True,'additional_argument': additional_argument, 'runtime': None, 'result': None, 'exit_with_error': False, 'error_code': None}
-            except subprocess.CalledProcessError as err:
-                #logging.exception(f'Something went wrong running solver {self.solver_name}')
-                print("\nError occured:",err)
-                results[instance_name] = {'timed_out':False,'additional_argument': additional_argument, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode}
-
-
-
-
-
-class SolverEncoder(JSONEncoder):
-    def default(self, o):
-        return o.__dict__
 
 def load_solver(identifiers):
     if isinstance(identifiers,str):

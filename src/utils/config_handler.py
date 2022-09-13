@@ -8,7 +8,7 @@ import src.functions.register as register
 import yaml
 import pandas as pd
 class Config(object):
-    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,save_output=None,archive_output=None,archive=None,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,score=None,validation=None,raw_results_path=None,exclude_task=None):
+    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,save_output=None,archive_output=None,archive=None,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,score=None,validation=None,significance=None,raw_results_path=None,exclude_task=None):
         self.task = task
         self.exclude_task = exclude_task
         self.benchmark = benchmark
@@ -31,6 +31,7 @@ class Config(object):
         self.save_output = save_output
         self.archive_output = archive_output
         self.validation = validation
+        self.significance = significance
 
     def write_config(self):
         save_to = os.path.join(definitions.CONFIGS_DIRECTORY,self.name)
@@ -41,7 +42,7 @@ class Config(object):
         for key,value in cfg_to_merge.items():
             if key in self.__dict__.keys():
                 if value is not None or value:
-                    if not value:
+                    if not value and not isinstance(value,bool):
                         pass
                     else:
                         if isinstance(value,tuple):
@@ -56,6 +57,7 @@ class Config(object):
                                 if value not in self.__dict__[key]:
                                     self.__dict__[key].append(value)
                         else:
+                           
                             self.__dict__[key] = value
 
     def print(self):

@@ -1,18 +1,23 @@
-from enum import unique
-from itertools import count
+
 import src.functions.register as register
 import pandas as pd
 import numpy as np
 import src.utils.config_handler as config_handler
+import matplotlib.pyplot as plt
 
-def validate(df: pd.DataFrame, mode,config: config_handler.Config):
-    if mode =='all' or 'all' in mode:
-            mode = register.validation_functions_dict.keys()
-    for m in mode:
+def validate(df: pd.DataFrame,config: config_handler.Config):
+    validation_cfg = config.validation
+    if validation_cfg['mode'] =='all' or 'all' in validation_cfg['mode']:
+            validation_cfg['mode'] = register.validation_functions_dict.keys()
+    results = {}
+    for m in validation_cfg['mode']:
         if m in register.validation_functions_dict.keys():
             _res = register.validation_functions_dict[m](df, config)
+            results[m] = _res
+    
+    return results
 
-    pass
+    
 
 def _map_index_names(df:pd.DataFrame, map):
     pass
@@ -27,6 +32,7 @@ def pairwise(df: pd.DataFrame, config: config_handler.Config ):
         # id_names = df[['solver_id','solver_name','solver_version']]
         # id_names['solver_full_name'] = id_names['solver_name'] +'_'+id_names['solver_version']
         # print(id_names)
+        return validation_results
 
     else:
         print("No computational results available for this experiment.")
@@ -97,7 +103,5 @@ def _read_result(task,path):
         return _read_decision_task_file(path)
     else:
         pass
-
-
 
 register.validation_functions_register("pairwise",pairwise)

@@ -1,4 +1,3 @@
-from time import time
 import src.functions.register as register
 from src.utils import config_handler
 import pandas as pd

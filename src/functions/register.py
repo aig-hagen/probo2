@@ -42,4 +42,15 @@ validation_functions_dict = {}
 def validation_functions_register(key, function):
     register(key, function, validation_functions_dict)
 
+plot_validation_functions_dict = {}
+def plot_validation_functions_register(key, function):
+    register(key, function, plot_validation_functions_dict)
 
+print_validation_functions_dict = {}
+def print_validation_functions_register(key, function):
+    register(key, function, print_validation_functions_dict)
+
+
+significance_functions_dict = {}
+def significance_functions_register(key, function):
+    register(key, function, significance_functions_dict)

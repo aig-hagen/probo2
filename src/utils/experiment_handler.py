@@ -1,6 +1,5 @@
 
 import csv
-from hashlib import new
 import json
 from csv import DictWriter, DictReader
 from src.utils import config_handler
@@ -11,6 +10,8 @@ from src.utils import solver_handler,benchmark_handler
 from src.utils import definitions
 from tqdm import tqdm
 import shutil
+import tabulate
+from src.utils import Status
 
 
 def need_additional_arguments(task: str):
@@ -164,6 +165,9 @@ def set_supported_tasks(solver_list, config: config_handler.Config):
     config.task = list(supported_set)
 
 def run_experiment(config: config_handler.Config):
+
+    Status.init_status_file(config)
+
     solver_list = solver_handler.load_solver(config.solver)
     benchmark_list = benchmark_handler.load_benchmark(config.benchmark)
     if config.task == 'supported':
@@ -182,7 +186,7 @@ def run_experiment(config: config_handler.Config):
     cfg_experiment_result_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
     config.dump(cfg_experiment_result_directory)
     write_experiment_index(config, cfg_experiment_result_directory)
-
+    Status.init_status_file(config)
     print('========== Experiment Summary ==========')
     config.print()
     print('========== RUNNING EXPERIMENT ==========')
@@ -190,7 +194,6 @@ def run_experiment(config: config_handler.Config):
         print(f'+TASK: {task}')
         for benchmark in benchmark_list:
             benchmark_info = _format_benchmark_info(benchmark)
-            print(benchmark_info)
             print(f" +BENCHMARK: {benchmark_info['benchmark_name']}")
             if need_additional_arguments(task) and len(benchmark_info['benchmark_ext_additional']) == 1:
                 additional_arguments_lookup = benchmark_handler.generate_additional_argument_lookup(benchmark)
@@ -221,8 +224,11 @@ def run_experiment(config: config_handler.Config):
                                 result['repetition'] = rep
                                 result['tag'] = config.name
                                 write_result(result,result_path,config.result_format)
+                                if rep == 1:
+                                    Status.increment_instances_counter(task,solver['id'])
                 else:
                     print(f"    {solver['name']} SKIPPED! No files in supported solver format: {','.join(solver['format'])}")
+        Status.increment_task_counter()
     print('========== DONE ==========')
 
 def _check_dynamic_files_lookup(dynamic_files_lookup):
@@ -239,3 +245,19 @@ def _check_dynamic_files_lookup(dynamic_files_lookup):
 def copy_raws(config: config_handler.Config):
     os.makedirs(config.save_to, exist_ok=True)
     shutil.copy(config.raw_results_path, config.save_to)
+
+def get_last_experiment():
+    if os.path.exists(definitions.EXPERIMENT_INDEX):
+        experiment_index = pd.read_csv(definitions.EXPERIMENT_INDEX)
+        return  experiment_index.iloc[-1]
+
+    else:
+       return None
+
+def print_experiment_index(tablefmt=None):
+    if os.path.exists(definitions.EXPERIMENT_INDEX):
+        experiment_index = pd.read_csv(definitions.EXPERIMENT_INDEX)
+        print(tabulate.tabulate(experiment_index,headers='keys', tablefmt=tablefmt, showindex=False))
+            
+    else:
+        print("No experiments found.")

@@ -6,7 +6,7 @@ import click
 
 
 from src.utils import definitions
-from src.database_models import DatabaseHandler
+
 
 
 class TrackToProblemClass(click.Option):

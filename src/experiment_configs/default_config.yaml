@@ -21,3 +21,8 @@ validation:
   mode: null
   plot: null
   table_export: null
+significance:
+  test: null
+  post_hoc: null
+  plot: null
+  table_export: null
