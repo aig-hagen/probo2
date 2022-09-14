@@ -21,7 +21,6 @@ def _print_pairwise(df: pd.DataFrame):
     
 
 def print_pairwise_results(validation_results: pd.DataFrame):
-    print(validation_results)
     validation_results.groupby(['tag','task','benchmark_name']).apply(lambda _df: _print_pairwise(_df))
     
 

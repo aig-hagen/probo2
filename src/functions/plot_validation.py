@@ -67,7 +67,7 @@ def plot_accordance_heatmap(df: pd.DataFrame, cfg: config_handler.Config):
     """
 
     print(f'Creating heatmap...',end='')
-    plot_directory = os.path.join(cfg.save_to,'plots')
+    plot_directory = os.path.join(cfg.save_to,'validation_plots')
     os.makedirs(plot_directory,exist_ok=True)
     saved_files = df.groupby(['tag','task','benchmark_name']).apply(lambda _df: _plot_accordance_heatmap(_df,cfg,plot_directory))
     print("done!")

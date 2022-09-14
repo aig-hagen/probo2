@@ -229,7 +229,7 @@ def run_experiment(config: config_handler.Config):
                 else:
                     print(f"    {solver['name']} SKIPPED! No files in supported solver format: {','.join(solver['format'])}")
         Status.increment_task_counter()
-    print('========== DONE ==========')
+    print('')
 
 def _check_dynamic_files_lookup(dynamic_files_lookup):
     missing = []

@@ -22,7 +22,10 @@ validation:
   plot: null
   table_export: null
 significance:
-  test: null
-  post_hoc: null
+  parametric_test: null
+  parametric_post_hoc: null
+  non_parametric_test: null
+  non_parametric_post_hoc: null
+  p_adjust: null
   plot: null
   table_export: null

@@ -52,8 +52,8 @@ def _calculate_sum(df):
                     'benchmark_name':df.benchmark_name.iloc[0],
                     'sum':df.runtime.sum()}))
 def sum(df: pd.DataFrame):
-    only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
-    rep_avg_df = df[only_solved_mask].groupby(['tag', 'task', 'benchmark_id', 'solver_id','instance'],as_index=False).apply(lambda _df: _get_avg_reps(_df))
+    #only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
+    rep_avg_df = df.groupby(['tag', 'task', 'benchmark_id', 'solver_id','instance'],as_index=False).apply(lambda _df: _get_avg_reps(_df))
     grouping = ['tag', 'task', 'benchmark_id','solver_id']
     groups = rep_avg_df.groupby(grouping,as_index=False).apply(lambda _df: _calculate_sum(_df))
     return groups, True # indicates that this dataframe should be merged with other "mergable" dataframes
@@ -64,8 +64,8 @@ def _calculate_mean(df):
                     'benchmark_name':df.benchmark_name.iloc[0],
                     'mean':df.runtime.mean()}))
 def mean(df: pd.DataFrame):
-    only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
-    rep_avg_df = df[only_solved_mask].groupby(['tag', 'task', 'benchmark_id', 'solver_id','instance'],as_index=False).apply(lambda _df: _get_avg_reps(_df)) # Results of all runs have to be averaged
+    #only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
+    rep_avg_df = df.groupby(['tag', 'task', 'benchmark_id', 'solver_id','instance'],as_index=False).apply(lambda _df: _get_avg_reps(_df)) # Results of all runs have to be averaged
     grouping = ['tag', 'task', 'benchmark_id','solver_id']
     groups = rep_avg_df.groupby(grouping,as_index=False).apply(lambda _df: _calculate_mean(_df))
     return groups, True # indicates that this dataframe should be merged with other "mergable" dataframes

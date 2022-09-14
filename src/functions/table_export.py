@@ -22,7 +22,7 @@ def _save_as_text(df: pd.DataFrame, save_to):
 def text(df: pd.DataFrame,config: config_handler.Config, grouping=None):
     if grouping is None:
         grouping = ['tag','task','benchmark_name']
-    save_to = os.path.join(config.save_to, 'tables')
+    save_to = os.path.join(config.save_to, 'stats_tables')
     os.makedirs(save_to, exist_ok=True)
 
     saved_files = df.groupby(grouping).apply(lambda _df: _save_as_text(_df,save_to))
@@ -44,7 +44,7 @@ def _save_as_csv(df: pd.DataFrame, save_to):
 def csv(df: pd.DataFrame,config: config_handler.Config, grouping=None):
     if grouping is None:
         grouping = ['tag','task','benchmark_name']
-    save_to = os.path.join(config.save_to, 'tables')
+    save_to = os.path.join(config.save_to, 'stats_tables')
     os.makedirs(save_to, exist_ok=True)
 
     saved_files = df.groupby(grouping).apply(lambda _df: _save_as_csv(_df,save_to))
@@ -55,7 +55,7 @@ def csv(df: pd.DataFrame,config: config_handler.Config, grouping=None):
 def pretty_latex(df: pd.DataFrame,config: config_handler.Config, grouping=None):
     if grouping is None:
         grouping = ['tag','task','benchmark_name']
-    save_to = os.path.join(config.save_to, 'tables')
+    save_to = os.path.join(config.save_to, 'stats_tables')
     os.makedirs(save_to, exist_ok=True)
     with open(definitions.PRETTY_LATEX_TABLE_CONFIG,'r') as config_file:
         table_config = yaml.load(config_file, Loader=yaml.FullLoader)
@@ -87,7 +87,6 @@ def column_header_bold(df: pd.DataFrame) -> list:
 
 def _save_as_pretty_latex(df:pd.DataFrame, save_to,table_config):
     df_columns = df.columns
-    print(df)
     tag = df.tag.iloc[0]
     benchmark = df.benchmark_name.iloc[0]
     task = df.task.iloc[0]

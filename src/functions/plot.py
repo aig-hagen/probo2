@@ -21,7 +21,7 @@ def create_plots(result_df: pd.DataFrame, cfg: config_handler.Config):
         saved = register.plot_dict[plt](result_df,cfg,default_plt_options)
         saved_plots.append(saved)
     saved_files = pd.concat(saved_plots).to_frame().rename(columns={0:'saved_files'})
-    print('========== DONE ==========')
+    print('')
     return  saved_files.saved_files.to_list()
 
 
@@ -164,7 +164,7 @@ def _create_cactus_plot(df,config: config_handler.Config, plot_options):
     task = df.task.iloc[0]
     tag = df.tag.iloc[0]
     benchmark = df.benchmark_name.iloc[0]
-    plot_options['settings']['title'] = task
+    plot_options['settings']['title'] = f"{task} {benchmark}"
     save_file_name = os.path.join( plot_options['settings']['save_to'],f'{tag}_{task}_{benchmark}_cactus.png')
 
     return CactusPlot.Cactus(plot_options,save_file_name).create(df)

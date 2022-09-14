@@ -25,9 +25,12 @@ def print_functions_register(key,function):
     register(key, function, print_functions_dict)
 
 table_export_functions_dict = {}
-
 def table_export_functions_register(key,function):
     register(key, function, table_export_functions_dict)
+
+post_hoc_table_export_functions_dict = {}
+def post_hoc_table_export_functions_register(key,function):
+    register(key, function, post_hoc_table_export_functions_dict)
 
 archive_functions_dict = {}
 def archive_functions_register(key, function):
@@ -51,6 +54,28 @@ def print_validation_functions_register(key, function):
     register(key, function, print_validation_functions_dict)
 
 
-significance_functions_dict = {}
-def significance_functions_register(key, function):
-    register(key, function, significance_functions_dict)
+parametric_significance_functions_dict = {}
+def parametric_significance_functions_register(key, function):
+    register(key, function, parametric_significance_functions_dict)
+
+non_parametric_significance_functions_dict = {}
+def non_parametric_significance_functions_register(key, function):
+    register(key, function, non_parametric_significance_functions_dict)
+
+parametric_post_hoc_functions_dict = {}
+def parametric_post_hoc_functions_register(key, function):
+    register(key, function, parametric_post_hoc_functions_dict)
+
+non_parametric_post_hoc_functions_dict = {}
+def non_parametric_post_hoc_functions_register(key, function):
+    register(key, function, non_parametric_post_hoc_functions_dict)
+
+plot_post_hoc_functions_dict = {}
+def plot_post_hoc_functions_register(key, function):
+    register(key, function, plot_post_hoc_functions_dict)
+
+
+print_significance_functions_dict = {}
+def print_significance_functions_register(key, function):
+    register(key, function, print_significance_functions_dict)
+

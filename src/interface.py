@@ -25,7 +25,7 @@ from src.utils.Notification import Notification
 from src.generators import generator_utils as gen_utils
 from src.generators import generator
 import src.functions.register as register
-from src.functions import benchmark, plot_validation, statistics, printing, table_export, archive, score, validation, print_validation
+from src.functions import benchmark, non_parametric_post_hoc, plot_post_hoc, plot_validation, print_significance, statistics, printing, table_export, archive, score, validation, print_validation, parametric_significance, non_parametric_significance, parametric_post_hoc, post_hoc_table_export
 from src.functions import plot as plotter
 from src.utils import solver_handler, experiment_handler, config_handler
 from functools import reduce
@@ -346,8 +346,6 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
 
 
     cfg.check()
-
-    cfg.print()
     
     experiment_handler.run_experiment(cfg)
 
@@ -393,10 +391,48 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
     if len(to_merge) >0:
         df_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), to_merge)
         register.print_functions_dict[cfg.printing](df_merged,['tag','task','benchmark_name'])
-        print('========== DONE ==========')
         if cfg.table_export is not None:
             	for format in cfg.table_export:
                     register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
+    
+    if cfg.validation['mode']:
+        validation_results = validation.validate(result_df, cfg)
+        print_validation.print_results(validation_results)
+        if cfg.validation['plot']:
+            plot_validation.create_plots(validation_results['pairwise'],cfg)
+    
+    test_results = {}
+    post_hoc_results = {}
+
+    if cfg.significance['parametric_test']:
+        test_results.update(parametric_significance.test(result_df,cfg))
+    if cfg.significance['non_parametric_test']:
+        test_results.update(non_parametric_significance.test(result_df,cfg))
+    if cfg.significance['parametric_post_hoc']:
+        post_hoc_results.update(parametric_post_hoc.test(result_df,cfg))
+    if cfg.significance['non_parametric_post_hoc']:
+        post_hoc_results.update(non_parametric_post_hoc.test(result_df,cfg))
+    
+    if test_results:
+        print("========== Significance Analysis Summary ==========")
+        for test in test_results.keys():
+            print_significance.print_results(test_results[test],test)
+    
+    if post_hoc_results:
+        print("========== Post-hoc Analysis Summary ==========")
+        for test in post_hoc_results.keys():
+            print_significance.print_results_post_hoc(post_hoc_results[test],test)
+        
+        if cfg.significance['plot']:
+            for post_hoc_test in post_hoc_results.keys():
+                plot_post_hoc.create_plots(post_hoc_results[post_hoc_test],cfg,post_hoc_test)
+        if cfg.significance['table_export']:
+            if cfg.significance['table_export'] == 'all' or 'all' in cfg.significance['table_export']:
+                cfg.significance['table_export'] = register.post_hoc_table_export_functions_dict.keys()
+            for post_hoc_test in post_hoc_results.keys():
+                for f in cfg.significance['table_export']:
+                    register.post_hoc_table_export_functions_dict[f](post_hoc_results[post_hoc_test],cfg,post_hoc_test)
+
 
     if cfg.copy_raws:
         click.echo('Copying raw files...',nl=False)
@@ -983,70 +1019,6 @@ def solvers(verbose):
         solver_handler.print_solvers()
 
 
-
-
-@click.command()
-@click.option("--solver",
-              "-s",
-              required=False,
-              cls=CustomClickOptions.StringAsOption,
-              default=[],
-              help="Comma-separated list of solver ids")
-@click.option("--filter",
-              "-f",
-              cls=CustomClickOptions.FilterAsDictionary,
-              multiple=True,
-              help="Filter results in database. Format: [column:value]")
-@click.option("--task",
-              "-t",
-              cls=CustomClickOptions.StringAsOption,
-              default=[])
-@click.option("--benchmark",
-              "-b",
-              cls=CustomClickOptions.StringAsOption,
-              default=[])
-@click.option("--tag",
-              "-t",
-              required=False,
-              cls=CustomClickOptions.StringAsOption,
-              default=[])
-@click.option("--verbose", "-v", is_flag=True, default=False, required=False)
-@click.option("--only_tags",is_flag=True)
-def results(verbose, solver, task, benchmark, tag, filter,only_tags):
-    pass
-    # engine = DatabaseHandler.get_engine()
-    # session = DatabaseHandler.create_session(engine)
-    # result_df = DatabaseHandler.get_results(session,
-    #                                         solver,
-    #                                         task,
-    #                                         benchmark,
-    #                                         tag,
-    #                                         filter,
-    #                                         only_solved=False)
-    # if only_tags:
-    #     print(",".join(list(result_df.tag.unique())))
-
-    # print(result_df[['correct_solved','incorrect_solved','no_reference']])
-
-    # results = session.query(Result).all()
-    # tabulate_data = []
-    # if verbose:
-    #     for result in results:
-    #         tabulate_data.append(
-    #             [result.instance, result.task.symbol, result.runtime, result.solver.solver_full_name, result.tag,
-    #              result.exit_with_error, result.error_code, result.benchmark.benchmark_name])
-    #     print(tabulate.tabulate(tabulate_data,
-    #                             headers=["INSTANCE", "TASK", "RUNTIME", "SOLVER", "TAG", "EXIT_WITH_ERROR",
-    #                                      "ERROR_CODE", "BENCHMARK"], tablefmt=format))
-    # else:
-    #     for result in results:
-    #         tabulate_data.append(
-    #             [result.instance, result.task.symbol, result.runtime, result.solver.solver_full_name, result.tag])
-    #     print(
-    #         tabulate.tabulate(tabulate_data, headers=["INSTANCE", "TASK", "RUNTIME", "SOLVER", "TAG"], tablefmt=format))
-    session.close()
-
-
 @click.command()
 @click.option("--save_to",
     "-st",
@@ -1271,7 +1243,7 @@ def validate(name,config,mode,task, benchmark, solver, filter, reference, pairwi
         exit()
 
 @click.command()
-@click.option("--tag", cls=CustomClickOptions.StringAsOption, default=[],help="Experiment tag to be tested.")
+@click.option("--name", cls=CustomClickOptions.StringAsOption, default=[],help="Experiment tag to be tested.")
 @click.option("--task",
               "-t",
               required=False,
@@ -1280,7 +1252,7 @@ def validate(name,config,mode,task, benchmark, solver, filter, reference, pairwi
 @click.option("--benchmark", cls=CustomClickOptions.StringAsOption, default=[],help="Benchmark name or id to be tested.")
 @click.option("--solver",
               "-s",
-              required=True,
+              required=False,
               cls=CustomClickOptions.StringAsOption,
               default=[],
               help="Comma-separated list of solver ids")
@@ -1293,32 +1265,25 @@ def validate(name,config,mode,task, benchmark, solver, filter, reference, pairwi
               "-c",
               cls=CustomClickOptions.StringAsOption,
               default=[])
-@click.option("--parametric","-p", type=click.Choice(['ANOVA', 't-test']),help="Parametric significance test. ANOVA for mutiple solvers and t-test for two solvers.")
+@click.option("--parametric","-p", type=click.Choice(list(register.parametric_significance_functions_dict.keys()) + ['all']),multiple=True,help="Parametric significance test. ANOVA for mutiple solvers and t-test for two solvers.")
 @click.option("--non_parametric",
               "-np",
-              type=click.Choice(['kruskal', 'mann-whitney-u']),help="Non-parametric significance test. kruksal for mutiple solvers and mann-whitney-u for two solvers.")
+              type=click.Choice(list(register.non_parametric_significance_functions_dict.keys()) + ['all']),multiple=True,help="Non-parametric significance test. kruksal for mutiple solvers and mann-whitney-u for two solvers.")
 @click.option("--post_hoc_parametric",
               "-php",
-              type=click.Choice(
-                  ['scheffe', 'tamhane', 'ttest', 'tukey', 'tukey_hsd']),multiple=True,default=())
+              type=click.Choice(list(register.parametric_post_hoc_functions_dict.keys()) + ['all']),multiple=True)
 @click.option("--post_hoc_non_parametric",
               "-phn",
-              type=click.Choice([
-                  'conover', 'dscf', 'mannwhitney', 'nemenyi', 'dunn',
-                  'npm_test', 'vanwaerden', 'wilcoxon'
-              ]),multiple=True,default=())
+               type=click.Choice(list(register.non_parametric_post_hoc_functions_dict.keys()) + ['all']),multiple=True)
 @click.option("--p_adjust", type=click.Choice(
                   ['holm']),default='holm')
 @click.option("--alpha", "-a", default=0.05, help="Significance level.")
-@click.option('--export',
+@click.option('--table_export',
               '-e',
-              type=click.Choice(
-                  ['json', 'latex','csv']),multiple=True)
+              type=click.Choice(list(register.post_hoc_table_export_functions_dict.keys()) + ['all']),multiple=True)
 @click.option('--plot',
               '-p',
-              type=click.Choice(
-                  ['heatmap']),
-              multiple=True,help="Create a heatmap for pairwise comparision results and a count plot for validation with references.")
+              type=click.Choice(list(register.plot_post_hoc_functions_dict.keys()) + ['all']),multiple=True,help="Create a heatmap for pairwise comparision results and a count plot for validation with references.")
 @click.option(
     "--save_to",
     "-st",
@@ -1327,9 +1292,9 @@ def validate(name,config,mode,task, benchmark, solver, filter, reference, pairwi
     help=
     "Directory to store plots in. Filenames will be generated automatically.")
 @click.option("--last", "-l",is_flag=True,help="Test the last finished experiment.")
-def significance(tag, task, benchmark, solver, filter, combine, parametric,
+def significance(name, task, benchmark, solver, filter, combine, parametric,
                  non_parametric, post_hoc_parametric, post_hoc_non_parametric,
-                 alpha, export, save_to, p_adjust,last):
+                 alpha, table_export, save_to, p_adjust,last,plot):
     """Parmatric and non-parametric significance and post-hoc tests.
 
     Args:
@@ -1350,6 +1315,63 @@ def significance(tag, task, benchmark, solver, filter, combine, parametric,
         equal_sample_size ([type]): [description]
         last ([type]): [description]
     """
+    if name is not None:
+        result_df= experiment_handler.load_results_via_name(name)
+        cfg = config_handler.load_config_via_name(name)
+    else:
+        print('Unable to load results.')
+        exit()
+    
+    if not save_to:
+        cfg.save_to = os.getcwd()
+    else:
+        cfg.save_to = save_to
+    
+    if table_export == 'all' or 'all' in table_export:
+        table_export = register.post_hoc_table_export_functions_dict.keys()
+    
+
+    sig_cfg =   {   "parametric_test": list(parametric),
+                    "non_parametric_test": list(non_parametric),
+                    "parametric_post_hoc": list(post_hoc_parametric),
+                    "non_parametric_post_hoc": list(post_hoc_non_parametric),
+                    "p_adjust": "holm",
+                    "plot": list(plot),
+                    "table_export": list(table_export)
+                }
+    cfg.significance = sig_cfg
+    test_results = {}
+    post_hoc_results = {}
+    if cfg.significance['parametric_test']:
+        test_results.update(parametric_significance.test(result_df,cfg))
+    if cfg.significance['non_parametric_test']:
+        test_results.update(non_parametric_significance.test(result_df,cfg))
+    if cfg.significance['parametric_post_hoc']:
+        post_hoc_results.update(parametric_post_hoc.test(result_df,cfg))
+    if cfg.significance['non_parametric_post_hoc']:
+        post_hoc_results.update(non_parametric_post_hoc.test(result_df,cfg))
+    
+    if test_results:
+        print("========== Significance Analysis Summary ==========")
+        for test in test_results.keys():
+            print_significance.print_results(test_results[test],test)
+    
+    if post_hoc_results:
+        print("========== Post-hoc Analysis Summary ==========")
+        for test in post_hoc_results.keys():
+            print_significance.print_results_post_hoc(post_hoc_results[test],test)
+        if cfg.significance['plot']:
+            for post_hoc_test in post_hoc_results.keys():
+                plot_post_hoc.create_plots(post_hoc_results[post_hoc_test],cfg,post_hoc_test)
+        if cfg.significance['table_export']:
+            for post_hoc_test in post_hoc_results.keys():
+                for f in cfg.significance['table_export']:
+                    register.post_hoc_table_export_functions_dict[f](post_hoc_results[post_hoc_test],cfg,post_hoc_test)
+        
+
+    
+    
+
 
     # if not save_to:
     #     save_to = os.getcwd()
@@ -1879,7 +1901,6 @@ cli.add_command(add_solver)
 cli.add_command(add_benchmark)
 cli.add_command(benchmarks)
 cli.add_command(solvers)
-cli.add_command(results)
 cli.add_command(run)
 cli.add_command(calculate)
 cli.add_command(plot)
