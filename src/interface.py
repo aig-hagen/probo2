@@ -1,18 +1,14 @@
 
-import time
 
-import shutil
+
+
 import subprocess
-import datetime
-import hashlib
-import itertools
 import json
 import logging
 import os
 
 import sys
 import click
-from numpy import append, nanargmax
 import pandas as pd
 
 from tabulate import tabulate
@@ -21,15 +17,15 @@ import src.utils.CustomClickOptions as CustomClickOptions
 import src.utils.definitions as definitions
 import src.utils.Status as Status
 from src.utils import benchmark_handler, config_handler, definitions, fetching, utils
-from src.utils.Notification import Notification
 from src.generators import generator_utils as gen_utils
 from src.generators import generator
 import src.functions.register as register
-from src.functions import benchmark, non_parametric_post_hoc, plot_post_hoc, plot_validation, print_significance, statistics, printing, table_export, archive, score, validation, print_validation, parametric_significance, non_parametric_significance, parametric_post_hoc, post_hoc_table_export
+from src.functions import benchmark, non_parametric_post_hoc, plot_post_hoc, plot_validation, print_significance, statistics, printing, table_export, archive, score, validation, print_validation, parametric_significance, non_parametric_significance, parametric_post_hoc, post_hoc_table_export,validation_table_export
 from src.functions import plot as plotter
 from src.utils import solver_handler, experiment_handler, config_handler
 from functools import reduce
 import csv
+import yaml
 csv.field_size_limit(sys.maxsize)
 
 
@@ -392,14 +388,22 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
         df_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), to_merge)
         register.print_functions_dict[cfg.printing](df_merged,['tag','task','benchmark_name'])
         if cfg.table_export is not None:
-            	for format in cfg.table_export:
-                    register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
+            if cfg.table_export == 'all' or 'all' in cfg.table_export:
+                cfg.table_export = register.table_export_functions_dict.keys()
+            for format in cfg.table_export:
+                register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
     
     if cfg.validation['mode']:
         validation_results = validation.validate(result_df, cfg)
         print_validation.print_results(validation_results)
         if cfg.validation['plot']:
             plot_validation.create_plots(validation_results['pairwise'],cfg)
+        if 'pairwise' in cfg.validation['mode']:
+            if cfg.validation['table_export']:
+                if cfg.validation['table_export'] == 'all' or 'all' in cfg.validation['table_export']:
+                    cfg.validation['table_export'] = register.validation_table_export_functions_dict.keys()
+                for f in cfg.validation['table_export']:
+                    register.validation_table_export_functions_dict[f](validation_results['pairwise'],cfg)
     
     test_results = {}
     post_hoc_results = {}
@@ -446,155 +450,6 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
         click.echo('done!')
 
 
-
-
-
-
-
-    exit()
-
-
-
-    engine = DatabaseHandler.get_engine()
-    session = DatabaseHandler.create_session(engine)
-    run_parameter = ctx.params.copy()
-    if rerun:
-        last_json = utils.get_last_experiment_json()
-        utils.set_run_parameters(run_parameter, last_json)
-
-
-
-    if run_parameter['tag'] is None and not(dry):
-        print("Please specify a experiment tag via the --tag option.")
-        sys.exit()
-    if DatabaseHandler.tag_in_database(session, run_parameter['tag']) and not(dry):
-        print("Tag is already used. Please use another tag.")
-        sys.exit()
-
-
-
-    benchmarks = DatabaseHandler.get_benchmarks(session, run_parameter['benchmark'])
-    if run_parameter['track']:
-        tasks = DatabaseHandler.get_tasks(session, run_parameter['track'])
-    else:
-
-        tasks = DatabaseHandler.get_tasks(session, run_parameter['task'])
-
-
-
-    run_parameter['benchmark'] = benchmarks
-    run_parameter['task'] = tasks
-    run_parameter['session'] = session
-
-    if run_parameter['solver']:
-        run_parameter['select'] = True
-        solvers =  DatabaseHandler.get_solvers(session, run_parameter['solver'])
-        #Status.init_status_file(tasks, benchmarks, tag, solvers)
-        run_parameter['solver'] = solvers
-
-    else:
-        run_parameter['select'] = False
-        solvers_all_tasks = [ (t.solvers) for t in tasks]
-        solver_to_run = [ solver for sub_list_solver in solvers_all_tasks for solver in sub_list_solver]
-        run_parameter['solver'] = solver_to_run
-
-    run_parameter['solver'] = utils.check_solver_paths(run_parameter['solver'])
-
-    Status.init_status_file(tasks, benchmarks, run_parameter['tag'], run_parameter['solver'])
-
-    name = run_parameter['tag']
-
-    logging.info(f"Started to run Experiment {name}")
-    if multi:
-        start = time.time()
-        utils._multiprocess_run_experiment(run_parameter)
-        end = time.time()
-        print(f'\nTotal runtime:{end - start}')
-    else:
-        start = time.time()
-        utils.run_experiment(run_parameter)
-        end = time.time()
-        print(f'\nTotal runtime:{end - start}')
-    logging.info(f"Finished to run Experiment {name}")
-    df = stats.prepare_data(
-        DatabaseHandler.get_results(session, [], [], [], [name],
-                                    None))
-
-    if not dry:
-        if not df.empty:
-            summary = stats.get_experiment_summary_as_string(df)
-            print("")
-            print(summary)
-            with open(definitions.LAST_EXPERIMENT_SUMMARY_JSON_PATH,'w') as f:
-                f.write(summary)
-            now = datetime.datetime.now()
-            mode = 'select' if run_parameter['select'] else 'all'
-
-
-
-            last_experiment_dict = {'Tag':  run_parameter['tag'],
-                                    'Benchmarks' : list(df.benchmark_name.unique()),
-                                    'Benchmark IDs': [ int(b_id) for b_id in list(df.benchmark_id.unique())],
-                                    'Tasks' : list(df.task.unique()),
-                                    'Track' :  run_parameter['track'],
-                                    'Solvers': list(df.solver_full_name.unique()),
-                                    'Solver IDs': [ int(s_id) for s_id in list(df.solver_id.unique())],
-                                    'Finished': now.strftime("%m/%d/%Y, %H:%M:%S"),
-                                    'Timeout':  run_parameter['timeout'],
-                                    'n_times': run_parameter['n_times'],
-                                    'Mode': mode,
-                                    'Notify': run_parameter['notify'],
-                                    'Dry': run_parameter['dry']
-
-                                   }
-
-
-
-            with open(definitions.LAST_EXPERIMENT_JSON_PATH,'w') as f:
-                json.dump(last_experiment_dict,f)
-        else:
-            summary = 'Something went wrong. Please check the logs for more information.'
-
-    if run_parameter['notify']:
-        id_code = int(hashlib.sha256(name.encode('utf-8')).hexdigest(), 16) % 10**8
-        notification = Notification(run_parameter['notify'],message=f"Here a little summary of your experiment:\n{summary}",id=id_code)
-
-        notification.send()
-        send_to = run_parameter['notify']
-        logging.info(f'Sended Notfication e-mail to {send_to}\nID: {id_code}')
-        print(f"\n{notification.foot}\nYour e-mail identification code: {id_code}")
-
-@click.command()
-@click.option("--load_experiment","-lde",is_flag=True)
-@click.option("--stats","-s",is_flag=True)
-@click.option("--zip")
-def debug(load_experiment,stats,zip):
-    if load_experiment:
-        resultd_df = experiment_handler.load_results_via_name('ba_500_800_2')
-        print(resultd_df.columns)
-    if stats:
-        s = ['solved','errors','timeouts','coverage','mean','sum']
-        result_df = experiment_handler.load_results_via_name('ba_500_800_72')
-        results = []
-        for stat in s:
-             results.append(register.stat_dict[stat](result_df))
-        to_merge = []
-        other =  []
-        for res in results:
-            if res[1]:
-                to_merge.append(res[0])
-            else:
-                other.append(res[0])
-        df_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), to_merge)
-        print(df_merged)
-        for _o in other:
-            print(other)
-    if zip:
-        shutil.make_archive(zip,'zip',zip)
-
-
-
-
 @click.command()
 # @click.option("--par",
 #               "-p",
@@ -638,7 +493,7 @@ def debug(load_experiment,stats,zip):
 #@click.option("--css",default="styled-table.css",help="CSS file for table style.")
 #@click.option("--statistics",'-s',type=click.Choice(['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors','all','best']),multiple=True)
 #@click.option("--verbose",'-v',is_flag=True,help='Show additional information for some statistics.')
-#@click.option("--last", "-l",is_flag=True,help="Calculate stats for the last finished experiment.")
+@click.option("--last", "-l",is_flag=True,help="Calculate stats for the last finished experiment.")
 #@click.option("--send", required=False, help="Send plots via E-Mail.")
 @click.option("--config",'-cfg', default=None,type=click.Path(exists=True,resolve_path=True),help='Path to experiment config.')
 @click.option("--raw",'-r',default=None, type=click.Path(exists=True,resolve_path=True), help='Path to raw result file.')
@@ -649,9 +504,17 @@ def debug(load_experiment,stats,zip):
 @click.option("--table_export",'-t',default=None,type=click.Choice(list(register.table_export_functions_dict.keys()) + ['all']),multiple=True)
 @click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
 def calculate(
-              name, statistics,score,raw,config,printing,table_export, save_to):
-
-    if name is not None:
+              name, statistics,score,raw,config,printing,table_export, save_to,last):
+    
+    if last:
+        last_experiment = experiment_handler.get_last_experiment()
+        if last_experiment is not None:
+            cfg = config_handler.load_config_via_name(last_experiment['name'])
+            result_df= experiment_handler.load_results_via_name(cfg.name)
+        else:
+            print("No experiment found.")
+    
+    elif name is not None:
         result_df= experiment_handler.load_results_via_name(name)
         cfg = config_handler.load_config_via_name(name)
     elif raw is not None:
@@ -705,8 +568,10 @@ def calculate(
     else:
         cfg.save_to  = save_to
     if table_export is not None:
-             for format in table_export:
-                 register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
+        if 'all' in table_export or table_export == 'all':
+            table_export = register.table_export_functions_dict.keys()
+        for format in table_export:
+            register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
 
 
     # if cfg.archive is not None:
@@ -715,114 +580,9 @@ def calculate(
     # configs = config_handler.load_all_configs(definitions.CONFIGS_DIRECTORY)
     # for c in configs:
     #     c.print()
-
-    exit()
-    if last:
-        tag.append(utils.get_from_last_experiment("Tag"))
-
-
-    engine = DatabaseHandler.get_engine()
-    session = DatabaseHandler.create_session(engine)
-
-    grouping = ['tag', 'task_id', 'benchmark_id', 'solver_id']
-    export_columns = ['tag','solver','task','benchmark']
-
-    if combine:
-        grouping = [x for x in grouping if x not in combine]
-
-    if 'all' in statistics:
-        functions_to_call = ['mean','sum','min','max','median','var','std','coverage','timeouts','solved','errors','best']
-    else:
-        functions_to_call = list(statistics)
-
-    df = stats.prepare_data(
-        DatabaseHandler.get_results(session, solver, task, benchmark, tag,
-                                    filter))
-
-
-
-
-    if vbs:
-        grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
-        vbs_id = -1
-        vbs_df = df.groupby(grouping_vbs,as_index=False).apply(lambda df: stats.create_vbs(df,vbs_id))
-        df = df.append(vbs_df)
-
-    if par:
-        functions_to_call.append(f'PAR{par}')
-    else:
-        par=0
-    custom_stats_df = []
-    for custom_stat_func in custom:
-        custom_stats_df.append(register.stat_dict[custom_stat_func](df))
-    for _df in custom_stats_df:
-        print(tabulate(_df[_df.columns.values],headers='keys',tablefmt=print_format,showindex=False))
-
-    if functions_to_call:
-        stats_df = stats.calculate_stats(df,grouping,functions_to_call,par_penalty=par)
-    # stats_df = (df
-    #             .groupby(grouping,as_index=False)
-    #             .apply(lambda df: stats.dispatch_function(df,functions_to_call,par_penalty=par))
-    #             )
-
-
-    if functions_to_call:
-        print_headers = ['solver','task','benchmark']
-        print_headers.extend(functions_to_call)
-        utils.print_df(stats_df,['tag','benchmark','task'],headers=print_headers,format=print_format)
-
-    if verbose:
-        verbose_grouping = grouping.copy()
-        if 'solver_id' in verbose_grouping:
-            verbose_grouping.remove('solver_id')
-        verbose_stats_to_call = set.intersection(set(functions_to_call),{'timeouts','errors','solved'})
-        for to_call in verbose_stats_to_call:
-            df.groupby(verbose_grouping).apply(lambda _df: stats._verbose_output(to_call,_df))
-
-    saved_files = []
-    if export:
-        for export_format in list(export):
-            saved_files.append(stats_df.groupby(['tag','benchmark','task']).apply(lambda df_: stats.export(export_format,df_,save_to, functions_to_call,par)))
-
-    saved_files = list(itertools.chain(*[x.values for x in saved_files]))
-    if compress:
-        archive_name = "_".join(tag)
-
-        archive_save_path = utils.create_archive_from_files(save_to,archive_name,saved_files,compress,'calculations')
-
-    if send:
-        id_code = int(hashlib.sha256(save_to.encode('utf-8')).hexdigest(), 16) % 10**8
-        email_notification = Notification(send,subject="Hi, there. I have your files for you.",message=f"Enclosed you will find your files.",id=id_code)
-        if compress:
-            email_notification.attach_file(f'{archive_save_path}.{compress}')
-        else:
-            email_notification.attach_mutiple_files(saved_files)
-        email_notification.send()
-        print(f"\n{email_notification.foot}\nYour e-mail identification code: {id_code}")
-
-
-
-
-
-#cls=CustomClickOptions.command_required_tag_if_not('last')
 @click.command()
 @click.pass_context
 @click.option("--name", "-n",cls=CustomClickOptions.StringAsOption, default=[])
-# @click.option("--task",
-#               required=False,
-#               callback=CustomClickOptions.check_problems,
-#               help="Comma-separated list of task IDs or symbols to be selected.")
-# @click.option("--benchmark", cls=CustomClickOptions.StringAsOption, default=[],help="Comma-separated list of task IDs or symbols to be selected.")
-# @click.option("--solver",
-#               "-s",
-#               cls=CustomClickOptions.StringAsOption,
-#               default=[],
-#               help="Comma-separated list of solver IDs or names to be selected.")
-# @click.option("--filter",
-#               "-f",
-#               cls=CustomClickOptions.FilterAsDictionary,
-#               multiple=True,
-#               help="Filter results in database. Format: [column:value]")
 @click.option(
     "--save_to",
     "-st",
@@ -853,7 +613,9 @@ def calculate(
 #@click.option("--set_default", is_flag=True)
 @click.option("--config",'-cfg', default=None,type=click.Path(exists=True,resolve_path=True))
 @click.option("--raw",'-r',default=None, type=click.Path(exists=True,resolve_path=True))
-def plot(ctx, name,  save_to,kind,raw,config):
+@click.option("--last", "-l",is_flag=True,help="Calculate stats for the last finished experiment.")
+
+def plot(ctx, name,  save_to,kind,raw,config,last):
     """Create plots of experiment results.
 
     The --tag option is used to specify which experiment the plots should be created for.
@@ -882,8 +644,14 @@ def plot(ctx, name,  save_to,kind,raw,config):
         last ([type]): [description]
     """
     cfg = config_handler.load_default_config()
-
-    if name is not None:
+    if last:
+        last_experiment = experiment_handler.get_last_experiment()
+        if last_experiment is not None:
+            cfg = config_handler.load_config_via_name(last_experiment['name'])
+            result_df= experiment_handler.load_results_via_name(cfg.name)
+        else:
+            print("No experiment found.")
+    elif name is not None:
         result_df = experiment_handler.load_results_via_name(name)
     elif raw is not None:
         result_df = pd.read_csv(raw)
@@ -899,9 +667,9 @@ def plot(ctx, name,  save_to,kind,raw,config):
 
     if not save_to:
         cfg.save_to = os.getcwd()
-    cfg.print()
+    
 
-    #cfg.check()
+    cfg.check()
 
     if kind is not None:
 
@@ -910,86 +678,14 @@ def plot(ctx, name,  save_to,kind,raw,config):
         else:
             cfg.plot = list(kind)
         saved_plots = plotter.create_plots(result_df,cfg)
-
-
-    # if set_default and (save_to is not None):
-    #     def_options =  pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
-    #     def_options['settings']['default_dir'] = save_to
-    #     with open(def_options['def_path'],'w') as option_file:
-    #         json.dump(def_options,option_file,indent=4)
-    #     print(f'Default path for plots set to: {save_to}')
-    #     exit()
-
-    # default_options = pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
-    # pl_util.set_user_options(ctx, default_options)
-    # if not save_to:
-    #     if default_options['settings']['default_dir'] is not None:
-    #         save_to = default_options['settings']['default_dir']
-    #     else:
-    #         save_to = os.getcwd()
-    # if last:
-    #     tag.append(utils.get_from_last_experiment("Tag"))
-
-
-
-    # if 'all' in kind:
-    #     kind = ['cactus','count','dist','scatter','pie','box']
-
-    # grouping = ['tag', 'task_id', 'benchmark_id', 'solver_id']
-    # if combine:
-    #     grouping = [x for x in grouping if x not in combine]
-
-    # engine = DatabaseHandler.get_engine()
-    # session = DatabaseHandler.create_session(engine)
-
-    # og_df =  DatabaseHandler.get_results(session,
-    #                                     solver,
-    #                                     task,
-    #                                     benchmark,
-    #                                     tag,
-    #                                     filter,
-    #                                     only_solved=False)
-
-    # df = stats.prepare_data(og_df)
-    # if vbs:
-    #     grouping_vbs = ['tag', 'task_id', 'benchmark_id', 'instance']
-    #     stats.create_and_append_vbs(df, grouping_vbs)
-    # saved_files = []
-
-
-    # for plot_kind in list(kind):
-    #     saved_files.append(pl_util.create_plots(plot_kind, df, save_to, default_options, grouping))
-    # saved_files_df = pd.concat(saved_files).to_frame().rename(columns={0:'saved_files'})
-
-    # saved_files_paths = []
-    # for file in saved_files_df.saved_files.to_list():
-    #     if isinstance(file,list):
-    #         saved_files_paths.extend([  f'{x}.{backend}' for x in file ])
-    #     else:
-    #         saved_files_paths.append( f'{file}.{backend}')
-
-
-    # if compress:
-    #     archive_name = "_".join(tag)
-
-    #     archive_save_path = pl_util.create_archive_from_plots(save_to,archive_name,saved_files_paths,compress)
-
-    # if send:
-    #     id_code = int(hashlib.sha256(save_to.encode('utf-8')).hexdigest(), 16) % 10**8
-    #     email_notification = Notification(send,subject="Hi, there. I have your files for you.",message=f"Enclosed you will find your files.",id=id_code)
-    #     if compress:
-    #         email_notification.attach_file(f'{archive_save_path}.{compress}')
-    #     else:
-    #         email_notification.attach_mutiple_files(saved_files_paths)
-    #     email_notification.send()
-    #     print(f"\n{email_notification.foot}\nYour e-mail identification code: {id_code}")
-
-
+    else:
+        print("Please specify a plot type with the --kind option.")
 
 
 @click.command()
 @click.option("--verbose","-v",is_flag=True,help="Prints additional information on benchmark")
-def benchmarks(verbose):
+@click.option("--id",type=click.INT,help="Print information of benchmark")
+def benchmarks(verbose,id):
     """ Prints benchmarks in database to console.
 
     Args:
@@ -1002,12 +698,19 @@ def benchmarks(verbose):
     if verbose:
         benchmark_handler.print_benchmarks(extra_columns=['ext_additional','dynamic_files'])
     else:
-        benchmark_handler.print_benchmarks()
+        if id:
+            benchmark = benchmark_handler.load_benchmark_by_identifier([id])
+            print(f"========== Summary {benchmark[0]['name']} ==========")
+            print(yaml.dump(benchmark, allow_unicode=True, default_flow_style=False))
+
+        else:
+            benchmark_handler.print_benchmarks()
    
 
 @click.command()
 @click.option("--verbose", "-v", is_flag=True, default=False, required=False)
-def solvers(verbose):
+@click.option("--id",type=click.INT,help="Print information of solver")
+def solvers(verbose,id):
     """Prints solvers in database to console.
 
     Args:
@@ -1016,116 +719,14 @@ def solvers(verbose):
     if verbose:
         solver_handler.print_solvers(extra_columns=['tasks'])
     else:
-        solver_handler.print_solvers()
+        if id:
+            solver = solver_handler.load_solver_by_identifier([id])
+            print(f"========== Summary {solver[0]['name']} ==========")
+            print(yaml.dump(solver, allow_unicode=True, default_flow_style=False))
 
-
-@click.command()
-@click.option("--save_to",
-    "-st",
-    type=click.Path(resolve_path=True,exists=True),
-    required=False,
-    help=
-    "Directory to store plots and data in. Filenames will be generated automatically.")
-@click.option("--solver",
-              "-s",
-              required=False,
-              cls=CustomClickOptions.StringAsOption,
-              default=[],
-              help="Comma-separated list of solver ids")
-@click.option("--filter",
-              "-f",
-              cls=CustomClickOptions.FilterAsDictionary,
-              multiple=True,
-              help="Filter results in database. Format: [column:value]")
-@click.option("--problem",
-              "-p",
-              required=False,
-              callback=CustomClickOptions.check_problems,
-              help="Computational problems")
-@click.option("--task",
-              "-t",
-              cls=CustomClickOptions.StringAsOption,
-              default=[])
-@click.option("--benchmark",
-              "-b",
-              cls=CustomClickOptions.StringAsOption,
-              default=[])
-@click.option("--tag",
-              "-t",
-              required=False,
-              cls=CustomClickOptions.StringAsOption,
-              default=[])
-@click.option("--format",
-              type=click.Choice(['csv', 'json', 'xlsx']),
-              default='csv')
-@click.option("--group_by",
-              "-g",
-              type=click.Choice(
-                  ['tag', 'solver_name', 'benchmark_name', 'symbol']))
-@click.option("--file_name", required=False, default='data')
-@click.option("--include_column",
-              required=False,
-              cls=CustomClickOptions.StringAsOption,
-              default=[])
-@click.option("--exclude_column",
-              required=False,
-              cls=CustomClickOptions.StringAsOption,
-              default=[])
-@click.option("--only_solved", is_flag=True, default=False)
-@click.option("--all_columns",is_flag=True)
-@click.option("--last",'-l',is_flag=True,help='Export results of last experiment')
-def export(save_to, solver, filter, problem, benchmark, tag, task, format,
-           group_by, file_name, include_column, exclude_column, only_solved,all_columns,last):
-
-    # if last:
-    #     tag.append(utils.get_from_last_experiment("Tag"))
-    # if not save_to:
-    #     save_to = os.getcwd()
-    # engine = DatabaseHandler.get_engine()
-    # session = DatabaseHandler.create_session(engine)
-    # colums_to_export = [
-    #     'id', 'tag', 'solver_id', 'benchmark_id', 'task_id', 'instance',
-    #     'cut_off', 'timed_out', 'exit_with_error', 'runtime',
-    #     'additional_argument', 'anon_1', 'benchmark_name', 'symbol'
-    # ]
-    # # ['solver_name','solver_version','benchmark_name','instance','timed_out','runtime','symbol','additional_argument','tag','exit_with_error']
-
-    # result_df = DatabaseHandler.get_results(session,
-    #                                         solver,
-    #                                         task,
-    #                                         benchmark,
-    #                                         tag,
-    #                                         filter,
-    #                                         only_solved=only_solved)
-
-
-    # if include_column:
-    #     colums_to_export.extend(include_column)
-    # if exclude_column:
-    #     colums_to_export = [
-    #         ele for ele in colums_to_export if ele not in exclude_column
-    #     ]
-    # if all_columns:
-    #      export_df = result_df
-    # else:
-
-    #     export_df = result_df[colums_to_export]
-    # # export_df = result_df
-
-    # if group_by:
-    #     grouped = export_df.groupby(group_by)
-    #     for name, group in grouped:
-    #         group.to_csv(os.path.join(save_to, '{}.zip'.format(name)),
-    #                      index=False)
-
-    # file = os.path.join(save_to, file_name)
-    # if format == 'xlsx':
-    #     export_df.to_excel("{}.{}".format(file, 'xlsx'), index=False)
-    # if format == 'csv':
-    #     export_df.to_csv("{}.{}".format(file, 'csv'), index=False)
-    # if format == 'json':
-    #     export_df.to_json("{}.{}".format(file, 'json'))
-    pass
+        else:
+            
+            solver_handler.print_solvers()
 
 @click.command()
 def status():
@@ -1140,33 +741,10 @@ def status():
 
 @click.command()
 @click.option("--name","-n",help="Experiment tag to be validated")
-@click.option("--task",
-              "-t",
-              required=False,
-              callback=CustomClickOptions.check_problems,
-              help="Comma-separated list of task IDs or symbols to be validated.")
-@click.option("--benchmark","-b",help="Benchmark name or id to be validated.")
-@click.option("--solver",
-              "-s",
-              cls=CustomClickOptions.StringAsOption,
-              default=[],
-              help="Comma-separated list of solver IDs or names to be validated.")
-@click.option("--filter",
-              "-f",
-              cls=CustomClickOptions.FilterAsDictionary,
-              multiple=True,
-              help="Filter results in database. Format: [column:value]")
 @click.option("--reference",
               "-r",
               type=click.Path(resolve_path=True,exists=True),
               help="Path to reference files.")
-@click.option("--update_db", is_flag=True,help="Update instances status (correct, incorrect, no reference) in database.")
-@click.option("--pairwise", "-pw", is_flag=True,help="Pairwise comparision of results. Not supported for the SE task.")
-@click.option('--export',
-              '-e',
-              type=click.Choice(
-                  ['json', 'latex','csv']),
-              multiple=True,help="Export results in specified format." )
 @click.option("--raw", is_flag=True, help='Export raw validation results in csv format.')
 @click.option(
     "--save_to",
@@ -1177,14 +755,15 @@ def status():
     "Directory to store plots and data in. Filenames will be generated automatically.")
 
 @click.option('--extension','-ext',multiple=True, help="Reference file extension")
-@click.option("--compress",type=click.Choice(['tar','zip']), required=False,help="Compress saved files.")
-@click.option("--send", required=False, help="Send plots and data via E-Mail.")
-@click.option("--verbose","-v", is_flag=True,help="Verbose output for validation with reference. For each solver the instance names of not validated and incorrect instances is printed to the console.")
 @click.option("--config",'-cfg', default=None,type=click.Path(exists=True,resolve_path=True),help='Path to experiment config.')
 @click.option("--mode",'-m',default=None,type=click.Choice(list(register.validation_functions_dict.keys()) + ['all']),multiple=True)
 @click.option("--plot",'-m',default=None,type=click.Choice(list(register.plot_validation_functions_dict.keys())),multiple=True)
-def validate(name,config,mode,task, benchmark, solver, filter, reference, pairwise,
-             save_to, export,plot, update_db,extension,compress,send, verbose,raw):
+@click.option("--last", "-l",is_flag=True,help="Validate last finished experiment.")
+@click.option('--table_export',
+              '-e',
+              type=click.Choice(list(register.validation_table_export_functions_dict.keys()) + ['all']),multiple=True)
+def validate(name,config,mode,reference,extension,
+             save_to, table_export,plot,raw,last):
     """Validate experiments results.
 
     With the validation, we have the choice between a pairwise comparison of the results or a validation based on reference results.
@@ -1215,8 +794,14 @@ def validate(name,config,mode,task, benchmark, solver, filter, reference, pairwi
         update_db ([type]): [description]
         extension ([type]): [description]
     """
-
-    if name is not None:
+    if last:
+        last_experiment = experiment_handler.get_last_experiment()
+        if last_experiment is not None:
+            cfg = config_handler.load_config_via_name(last_experiment['name'])
+            result_df= experiment_handler.load_results_via_name(cfg.name)
+        else:
+            print("No experiment found.")
+    elif name is not None:
         result_df= experiment_handler.load_results_via_name(name)
         cfg = config_handler.load_config_via_name(name)
     elif config is not None:
@@ -1225,18 +810,32 @@ def validate(name,config,mode,task, benchmark, solver, filter, reference, pairwi
     else:
         print('Unable to load results.')
         exit()
+    
+    if not save_to:
+        cfg.save_to = os.getcwd()
+    else:
+        cfg.save_to = save_to
 
     
     validation_cfg = {"mode": mode,
-  "plot": plot,
-  "table_export": None}
+  "plot": list(plot),
+  "table_export": list(table_export)}
     cfg.validation = validation_cfg
     if mode:
         validation_results = validation.validate(result_df, cfg)
         print_validation.print_results(validation_results)
 
-        if cfg.validation['plot']:
+        if cfg.validation['plot'] and "pairwise" in validation_results.keys():
             plot_validation.create_plots(validation_results['pairwise'],cfg)
+        
+        if 'pairwise' in mode:
+            
+            if cfg.validation['table_export']:
+                if cfg.validation['table_export'] == 'all' or 'all' in cfg.validation['table_export']:
+                    cfg.validation['table_export'] = register.validation_table_export_functions_dict.keys()
+                for f in cfg.validation['table_export']:
+                    register.validation_table_export_functions_dict[f](validation_results['pairwise'],cfg)
+
         
     else:
         print("Please specify a validation mode via the --mode/-m Option.")
@@ -1282,7 +881,7 @@ def validate(name,config,mode,task, benchmark, solver, filter, reference, pairwi
               '-e',
               type=click.Choice(list(register.post_hoc_table_export_functions_dict.keys()) + ['all']),multiple=True)
 @click.option('--plot',
-              '-p',
+              
               type=click.Choice(list(register.plot_post_hoc_functions_dict.keys()) + ['all']),multiple=True,help="Create a heatmap for pairwise comparision results and a count plot for validation with references.")
 @click.option(
     "--save_to",
@@ -1315,7 +914,14 @@ def significance(name, task, benchmark, solver, filter, combine, parametric,
         equal_sample_size ([type]): [description]
         last ([type]): [description]
     """
-    if name is not None:
+    if last:
+        last_experiment = experiment_handler.get_last_experiment()
+        if last_experiment is not None:
+            cfg = config_handler.load_config_via_name(last_experiment['name'])
+            result_df= experiment_handler.load_results_via_name(cfg.name)
+        else:
+            print("No experiment found.")
+    elif name is not None:
         result_df= experiment_handler.load_results_via_name(name)
         cfg = config_handler.load_config_via_name(name)
     else:
@@ -1368,55 +974,6 @@ def significance(name, task, benchmark, solver, filter, combine, parametric,
                 for f in cfg.significance['table_export']:
                     register.post_hoc_table_export_functions_dict[f](post_hoc_results[post_hoc_test],cfg,post_hoc_test)
         
-
-    
-    
-
-
-    # if not save_to:
-    #     save_to = os.getcwd()
-    # if last:
-    #     tag.append(utils.get_from_last_experiment("Tag"))
-
-    # engine = DatabaseHandler.get_engine()
-    # session = DatabaseHandler.create_session(engine)
-    # og_df = DatabaseHandler.get_results(session,
-    #                                     solver,
-    #                                     task,
-    #                                     benchmark,
-    #                                     tag,
-    #                                     filter,
-    #                                     only_solved=True)
-    # clean = sig.prepare_data(og_df)
-
-    # grouping = ['tag', 'task_id', 'benchmark_id']
-
-    # #result_dict = {'parametric': None, 'non_parametric': None}
-
-    # if combine:
-    #     grouping = [x for x in grouping if x not in combine]
-
-    # significance_tests = [non_parametric,parametric]
-    # significance_tests = [ x for x in significance_tests if x is not None]
-
-    # if significance_tests:
-    #     sig_results_list = [ clean.groupby(grouping,as_index=False).apply(lambda df_: sig.test(kind_test,df_,equal_sample_size=True)) for kind_test in significance_tests]
-    #     sig_results_df = pd.concat(sig_results_list)
-    #     sig.print_result('significance',sig_results_df)
-
-
-    # post_hocs = list(post_hoc_parametric)
-    # post_hocs.extend(list(post_hoc_non_parametric))
-    # if post_hocs:
-    #     ph_results_list = [ (clean.groupby(grouping,as_index=False).apply(lambda df_: sig.test_post_hoc(df_,ph,True,p_adjust))) for ph in post_hocs]
-    #     ph_res_df = pd.concat(ph_results_list)
-    #     ph_res_df.apply(lambda row: sig.print_post_hoc_results(row),axis=1)
-
-    # if export:
-    #     pass
-    pass
-
-
 
 @click.command()
 @click.option("--id", required=False,help='ID or name of solver to delete.')
@@ -1597,187 +1154,187 @@ def fetch(ctx,benchmark, save_to,solver,install):
 
 
 
-@click.command()
-@click.pass_context
-@click.option("--num","-n",required=True,type=click.INT, help='Number of instances to generate')
-@click.option("--name",help='Benchmark name')
-@click.option(
-    "--save_to",
-    "-st",
-    type=click.Path(exists=True, resolve_path=True),
-    help="Directory to store benchmark in. Default is the current working directory.")
-@click.option("--num_args","-a", help='Number of arguments.')
-@click.option("--generate_solutions", "-gs", is_flag=True,help="Generate solutions for instance.")
-@click.option("--generate_arg_files", "-ga", help='Generate additional argument files for DS/DC problems.')
-@click.option("--solver", "-s", help='Solver (id/name) for solution generation')
-@click.option("--timeout", "-t",type=click.types.FLOAT, help='Timeout for instances in seconds. Instances that exceed this value are discarded')
-@click.option("--timemin","-tm",type=click.types.FLOAT, help='Minimum solving time of instance.')
-@click.option("--format","-f", type=click.Choice(['apx','tgf']),help='Format of instances to generate')
-@click.option("--task","-t",help='Tasks to generate solutions for.')
-@click.option("--random_size","-rs",nargs=2,type=click.INT, help='Random number of arguments per instances. Usage: -rs [min] [max]')
-@click.option("--add",is_flag=True,help="Add benchmark to database.")
-@click.option("--solver")
-@click.option('--task')
-def stable_generator(ctx,num, name, save_to, num_args, generate_solutions, generate_arg_files,solver, timeout, timemin, format, task, random_size, add):
-    """ Python port of the original StableGenerator of probo by Matthias Thimm.
-        This is the generator for abstract argumentation graphs used
-        in ICCMA'15 for the second group of problems (testcases 4-6). It generates
-        graphs that (likely) possess many stable, preferred, and complete extensions.
-        It works roughly as follows:
-        1.) A set of arguments is identified to form an acyclic subgraph, containing
-         the likely grounded extension
-        2.) a subset of arguments is randomly selected and attacks are randomly added
-          from some arguments within this set to all arguments outside the set (except
-          to the arguments identified in 1.)
-        3.) Step 2 is repeated until a number of desired stable extensions is reached *
-        For more details see the code.
+# @click.command()
+# @click.pass_context
+# @click.option("--num","-n",required=True,type=click.INT, help='Number of instances to generate')
+# @click.option("--name",help='Benchmark name')
+# @click.option(
+#     "--save_to",
+#     "-st",
+#     type=click.Path(exists=True, resolve_path=True),
+#     help="Directory to store benchmark in. Default is the current working directory.")
+# @click.option("--num_args","-a", help='Number of arguments.')
+# @click.option("--generate_solutions", "-gs", is_flag=True,help="Generate solutions for instance.")
+# @click.option("--generate_arg_files", "-ga", help='Generate additional argument files for DS/DC problems.')
+# @click.option("--solver", "-s", help='Solver (id/name) for solution generation')
+# @click.option("--timeout", "-t",type=click.types.FLOAT, help='Timeout for instances in seconds. Instances that exceed this value are discarded')
+# @click.option("--timemin","-tm",type=click.types.FLOAT, help='Minimum solving time of instance.')
+# @click.option("--format","-f", type=click.Choice(['apx','tgf']),help='Format of instances to generate')
+# @click.option("--task","-t",help='Tasks to generate solutions for.')
+# @click.option("--random_size","-rs",nargs=2,type=click.INT, help='Random number of arguments per instances. Usage: -rs [min] [max]')
+# @click.option("--add",is_flag=True,help="Add benchmark to database.")
+# @click.option("--solver")
+# @click.option('--task')
+# def stable_generator(ctx,num, name, save_to, num_args, generate_solutions, generate_arg_files,solver, timeout, timemin, format, task, random_size, add):
+#     """ Python port of the original StableGenerator of probo by Matthias Thimm.
+#         This is the generator for abstract argumentation graphs used
+#         in ICCMA'15 for the second group of problems (testcases 4-6). It generates
+#         graphs that (likely) possess many stable, preferred, and complete extensions.
+#         It works roughly as follows:
+#         1.) A set of arguments is identified to form an acyclic subgraph, containing
+#          the likely grounded extension
+#         2.) a subset of arguments is randomly selected and attacks are randomly added
+#           from some arguments within this set to all arguments outside the set (except
+#           to the arguments identified in 1.)
+#         3.) Step 2 is repeated until a number of desired stable extensions is reached *
+#         For more details see the code.
 
-        This generator can be used by adapting the variables in the configuration block in the
-        beginning of the class. Once started, this generator generates graphs continuously
-        (it will not terminate on its own, the application has to be terminated forcefully).
+#         This generator can be used by adapting the variables in the configuration block in the
+#         beginning of the class. Once started, this generator generates graphs continuously
+#         (it will not terminate on its own, the application has to be terminated forcefully).
 
-         Matthias Thimm
-    """
-    if not save_to:
-        save_to = os.getcwd()
-        ctx.params['save_to'] = save_to
-    if len(random_size) < 1:
-        ctx.params['random_size'] = None
-    default_config =  gen_utils.read_default_config(str(definitions.GENERATOR_DEFAULTS_JSON))
-    gen_utils.update_configs(ctx, default_config,generator_type='stable')
-    if default_config['general']['timemin'] and default_config['general']['timeout']:
-        if (solver and task):
+#          Matthias Thimm
+#     """
+#     if not save_to:
+#         save_to = os.getcwd()
+#         ctx.params['save_to'] = save_to
+#     if len(random_size) < 1:
+#         ctx.params['random_size'] = None
+#     default_config =  gen_utils.read_default_config(str(definitions.GENERATOR_DEFAULTS_JSON))
+#     gen_utils.update_configs(ctx, default_config,generator_type='stable')
+#     if default_config['general']['timemin'] and default_config['general']['timeout']:
+#         if (solver and task):
 
-            engine = DatabaseHandler.get_engine()
-            session = DatabaseHandler.create_session(engine)
-            ref_solver =  DatabaseHandler.get_solver(session, solver)
-            ref_task = DatabaseHandler.get_task(session, task)
-            if ref_task not in ref_solver.supported_tasks:
-                print("Solver does not support the specified task")
-            default_config['general']['save'] = False
-            accepted_graphs = []
-            step_size = 100
-            i = 0
-            while len(accepted_graphs) < default_config["general"]["num"]:
-                i += 1
-                num = default_config["general"]["num"] - len(accepted_graphs)
-                graphs = generator.generate('stable', default_config)
-                accepted_graphs.extend(gen_utils._ensure_runtime(graphs, default_config, ref_solver, ref_task))
-                print(f'{accepted_graphs=}')
-                num_extension = default_config['stable']['num_extension']
-                size_extension = default_config['stable']['size_extension']
-                size_grounded = default_config['stable']['size_grounded']
-                default_config['stable']['num_extension'] = [num_extension[0] + step_size, num_extension[1] + (2*step_size)]
-                default_config['stable']['size_extension'] = [size_extension[0] + step_size, size_extension[1] + (2*step_size)]
-                default_config['stable']['size_grounded'] = [size_grounded[0] + step_size, size_grounded[1] + (2*step_size)]
-                print(default_config['stable']['num_extension'])
-                print(default_config['stable']['size_extension'])
-                print(default_config['stable']['size_grounded'])
-                print(f'{step_size=}')
-                if i % 5 == 0:
-                    step_size += int(round(step_size * 0.5))
-            gen_utils.save_instances(accepted_graphs, default_config['general'],'stable')
+#             engine = DatabaseHandler.get_engine()
+#             session = DatabaseHandler.create_session(engine)
+#             ref_solver =  DatabaseHandler.get_solver(session, solver)
+#             ref_task = DatabaseHandler.get_task(session, task)
+#             if ref_task not in ref_solver.supported_tasks:
+#                 print("Solver does not support the specified task")
+#             default_config['general']['save'] = False
+#             accepted_graphs = []
+#             step_size = 100
+#             i = 0
+#             while len(accepted_graphs) < default_config["general"]["num"]:
+#                 i += 1
+#                 num = default_config["general"]["num"] - len(accepted_graphs)
+#                 graphs = generator.generate('stable', default_config)
+#                 accepted_graphs.extend(gen_utils._ensure_runtime(graphs, default_config, ref_solver, ref_task))
+#                 print(f'{accepted_graphs=}')
+#                 num_extension = default_config['stable']['num_extension']
+#                 size_extension = default_config['stable']['size_extension']
+#                 size_grounded = default_config['stable']['size_grounded']
+#                 default_config['stable']['num_extension'] = [num_extension[0] + step_size, num_extension[1] + (2*step_size)]
+#                 default_config['stable']['size_extension'] = [size_extension[0] + step_size, size_extension[1] + (2*step_size)]
+#                 default_config['stable']['size_grounded'] = [size_grounded[0] + step_size, size_grounded[1] + (2*step_size)]
+#                 print(default_config['stable']['num_extension'])
+#                 print(default_config['stable']['size_extension'])
+#                 print(default_config['stable']['size_grounded'])
+#                 print(f'{step_size=}')
+#                 if i % 5 == 0:
+#                     step_size += int(round(step_size * 0.5))
+#             gen_utils.save_instances(accepted_graphs, default_config['general'],'stable')
 
 
 
-        else:
-            print("To ensure instance runtime you have to specify a solver and a task")
-            exit()
+#         else:
+#             print("To ensure instance runtime you have to specify a solver and a task")
+#             exit()
 
-    else:
-        save_directory = generator.generate('stable',default_config)
-    if add:
-        general_configs = default_config['general']
-        ctx.invoke(add_benchmark,
-                   name=general_configs['name'],
-                   path=save_directory,
-                   format=tuple(general_configs['format']),
-                   random_arguments=False,
-                   extension_arg_files="arg",
-                   generate=None
-                   )
+#     else:
+#         save_directory = generator.generate('stable',default_config)
+#     if add:
+#         general_configs = default_config['general']
+#         ctx.invoke(add_benchmark,
+#                    name=general_configs['name'],
+#                    path=save_directory,
+#                    format=tuple(general_configs['format']),
+#                    random_arguments=False,
+#                    extension_arg_files="arg",
+#                    generate=None
+#                    )
 
-@click.command()
-@click.pass_context
-@click.option("--num","-n",required=True,type=click.INT, help='Number of instances to generate')
-@click.option("--name",help='Benchmark name')
-@click.option(
-    "--save_to",
-    "-st",
-    type=click.Path(exists=True, resolve_path=True),
-    help="Directory to store benchmark in. Default is the current working directory.")
-@click.option("--num_args","-a", help='Number of arguments.')
-@click.option("--generate_solutions", "-gs", is_flag=True,help="Generate solutions for instance.")
-@click.option("--generate_arg_files", "-ga", help='Generate additional argument files for DS/DC problems.')
-@click.option("--solver", "-s", help='Solver (id/name) for solution generation')
-@click.option("--timeout", "-t",help='Timeout for instances in seconds. Instances that exceed this value are discarded')
-@click.option("--timemin","-tm",help='Minimum solving time of instance.')
-@click.option("--format","-f", type=click.Choice(['apx','tgf']),help='Format of instances to generate')
-@click.option("--task","-t",help='Tasks to generate solutions for.')
-@click.option("--random_size","-rs",nargs=2,type=click.INT,default=None, help='Random number of arguments per instances. Usage: -rs [min] [max]')
-@click.option("--add",is_flag=True,help="Add benchmark to database.")
-def scc_generator(ctx,num, name, save_to, num_args, generate_solutions, generate_arg_files,solver, timeout, timemin, format, task, random_size, add):
+# @click.command()
+# @click.pass_context
+# @click.option("--num","-n",required=True,type=click.INT, help='Number of instances to generate')
+# @click.option("--name",help='Benchmark name')
+# @click.option(
+#     "--save_to",
+#     "-st",
+#     type=click.Path(exists=True, resolve_path=True),
+#     help="Directory to store benchmark in. Default is the current working directory.")
+# @click.option("--num_args","-a", help='Number of arguments.')
+# @click.option("--generate_solutions", "-gs", is_flag=True,help="Generate solutions for instance.")
+# @click.option("--generate_arg_files", "-ga", help='Generate additional argument files for DS/DC problems.')
+# @click.option("--solver", "-s", help='Solver (id/name) for solution generation')
+# @click.option("--timeout", "-t",help='Timeout for instances in seconds. Instances that exceed this value are discarded')
+# @click.option("--timemin","-tm",help='Minimum solving time of instance.')
+# @click.option("--format","-f", type=click.Choice(['apx','tgf']),help='Format of instances to generate')
+# @click.option("--task","-t",help='Tasks to generate solutions for.')
+# @click.option("--random_size","-rs",nargs=2,type=click.INT,default=None, help='Random number of arguments per instances. Usage: -rs [min] [max]')
+# @click.option("--add",is_flag=True,help="Add benchmark to database.")
+# def scc_generator(ctx,num, name, save_to, num_args, generate_solutions, generate_arg_files,solver, timeout, timemin, format, task, random_size, add):
 
-    if not save_to:
-        save_to = os.getcwd()
-        ctx.params['save_to'] = save_to
-    if len(random_size) < 1:
-        ctx.params['random_size'] = None
-    default_config =  gen_utils.read_default_config(str(definitions.GENERATOR_DEFAULTS_JSON))
-    gen_utils.update_configs(ctx, default_config,generator_type='scc')
-    if default_config['general']['timemin'] and default_config['general']['timeout']:
-        if (solver and task):
+#     if not save_to:
+#         save_to = os.getcwd()
+#         ctx.params['save_to'] = save_to
+#     if len(random_size) < 1:
+#         ctx.params['random_size'] = None
+#     default_config =  gen_utils.read_default_config(str(definitions.GENERATOR_DEFAULTS_JSON))
+#     gen_utils.update_configs(ctx, default_config,generator_type='scc')
+#     if default_config['general']['timemin'] and default_config['general']['timeout']:
+#         if (solver and task):
 
-            engine = DatabaseHandler.get_engine()
-            session = DatabaseHandler.create_session(engine)
-            ref_solver =  DatabaseHandler.get_solver(session, solver)
-            ref_task = DatabaseHandler.get_task(session, task)
-            if ref_task not in ref_solver.supported_tasks:
-                symbols = [ t.symbol for t in ref_solver.supported_tasks]
-                print(f"Solver {ref_solver.solver_full_name} does not support the specified task {ref_task.symbol}.")
-                print(f'Please choose one of the following tasks:\n{symbols}')
-                exit()
+#             engine = DatabaseHandler.get_engine()
+#             session = DatabaseHandler.create_session(engine)
+#             ref_solver =  DatabaseHandler.get_solver(session, solver)
+#             ref_task = DatabaseHandler.get_task(session, task)
+#             if ref_task not in ref_solver.supported_tasks:
+#                 symbols = [ t.symbol for t in ref_solver.supported_tasks]
+#                 print(f"Solver {ref_solver.solver_full_name} does not support the specified task {ref_task.symbol}.")
+#                 print(f'Please choose one of the following tasks:\n{symbols}')
+#                 exit()
 
-            default_config['general']['save'] = False
-            num_to_generate = default_config["general"]["num"]
-            generated = 0
-            save_directory = ''
-            threshold = default_config['general']['threshold']
-            while generated < num_to_generate:
-                num = num_to_generate - generated
+#             default_config['general']['save'] = False
+#             num_to_generate = default_config["general"]["num"]
+#             generated = 0
+#             save_directory = ''
+#             threshold = default_config['general']['threshold']
+#             while generated < num_to_generate:
+#                 num = num_to_generate - generated
 
-                sizes_batchs = gen_utils.get_batch_size(num,default_config['general']['batch_size'])
-                print(sizes_batchs)
-                sizes_batchs = list(filter(lambda num: num != 0, sizes_batchs))
-                for size_batch in sizes_batchs:
-                    default_config["general"]["num"] = size_batch
-                    graphs = generator.generate('scc', default_config)
-                    curr_accepted,too_easy,too_hard = gen_utils._ensure_runtime(graphs, default_config, ref_solver, ref_task)
-                    print(f'{too_easy=} {too_hard=}')
-                    if len(curr_accepted) > 0:
+#                 sizes_batchs = gen_utils.get_batch_size(num,default_config['general']['batch_size'])
+#                 print(sizes_batchs)
+#                 sizes_batchs = list(filter(lambda num: num != 0, sizes_batchs))
+#                 for size_batch in sizes_batchs:
+#                     default_config["general"]["num"] = size_batch
+#                     graphs = generator.generate('scc', default_config)
+#                     curr_accepted,too_easy,too_hard = gen_utils._ensure_runtime(graphs, default_config, ref_solver, ref_task)
+#                     print(f'{too_easy=} {too_hard=}')
+#                     if len(curr_accepted) > 0:
 
-                        save_directory = gen_utils.save_instances(curr_accepted, default_config['general'],'scc',generated)
-                        generated += len(curr_accepted)
-                    if len(curr_accepted) < size_batch * threshold: # less than 20 % of graphs in batch are accepted
-                        gen_utils.tweak_configs('scc',default_config,too_easy, too_hard)
-                        break
+#                         save_directory = gen_utils.save_instances(curr_accepted, default_config['general'],'scc',generated)
+#                         generated += len(curr_accepted)
+#                     if len(curr_accepted) < size_batch * threshold: # less than 20 % of graphs in batch are accepted
+#                         gen_utils.tweak_configs('scc',default_config,too_easy, too_hard)
+#                         break
 
-        else:
-            print("To ensure instance runtime you have to specify a solver and a task")
-            exit()
-    else:
+#         else:
+#             print("To ensure instance runtime you have to specify a solver and a task")
+#             exit()
+#     else:
 
-        save_directory = generator.generate('scc',default_config)
-    if add:
-        general_configs = default_config['general']
-        ctx.invoke(add_benchmark,
-                name=general_configs['name'],
-                path=save_directory,
-                format=tuple(general_configs['format']),
-                random_arguments=False,
-                extension_arg_files="arg",
-                generate=None
-                )
+#         save_directory = generator.generate('scc',default_config)
+#     if add:
+#         general_configs = default_config['general']
+#         ctx.invoke(add_benchmark,
+#                 name=general_configs['name'],
+#                 path=save_directory,
+#                 format=tuple(general_configs['format']),
+#                 random_arguments=False,
+#                 extension_arg_files="arg",
+#                 generate=None
+#                 )
 @click.command()
 @click.pass_context
 @click.option("--num","-n",required=True,type=click.INT, help='Number of instances to generate')
@@ -1818,79 +1375,9 @@ def grounded_generator(ctx,num, name, save_to, num_args, generate_solutions, gen
                    generate=None
                    )
 
-# @click.command()
-# @click.option("--tag", cls=CustomClickOptions.StringAsOption, default=[],help="Experiment tag to be tested.")
-# @click.option("--task",
-#               "-t",
-#               required=False,
-#               callback=CustomClickOptions.check_problems,
-#               help="Comma-separated list of task IDs or symbols to be tested.")
-# @click.option("--benchmark", cls=CustomClickOptions.StringAsOption, default=[],help="Benchmark name or id to be tested.")
-# @click.option("--solver",
-#               "-s",
-#               required=True,
-#               cls=CustomClickOptions.StringAsOption,
-#               default=[],
-#               help="Comma-separated list of solver ids")
-# @click.option("--filter",
-#               "-f",
-#               cls=CustomClickOptions.FilterAsDictionary,
-#               multiple=True,
-#               help="Filter results in database. Format: [column:value]")
-# @click.option("--combine",
-#               "-c",
-#               cls=CustomClickOptions.StringAsOption,
-#               default=[])
-# @click.option(
-#     "--save_to",
-#     "-st",
-#     type=click.Path(exists=True, resolve_path=True),
-#     help="Directory to store benchmark in. Default is the current working directory.")
-# @click.option("--last", "-l",is_flag=True,help="Calculate stats for the last finished experiment.")
-# @click.option("--file_name",'-fn')
-# def label(tag, task, benchmark, solver, filter, combine, last, save_to, file_name):
-#     if last:
-#         tag.append(utils.get_from_last_experiment("Tag"))
-
-
-#     engine = DatabaseHandler.get_engine()
-#     session = DatabaseHandler.create_session(engine)
-
-#     grouping = ['tag', 'task_id', 'benchmark_id', 'solver_full_name','instance']
-#     if combine:
-#         grouping = [x for x in grouping if x not in combine]
-
-#     df = stats.prepare_data(DatabaseHandler.get_results(session, solver, task, benchmark, tag,
-#                                     filter))
-
-
-#     mean_df = df.groupby(grouping,as_index=False).apply(lambda _df: _df.runtime.mean())
-#     mean_df.columns = mean_df.columns.fillna('runtime')
-#     best_df = mean_df.groupby('instance',as_index=False).apply(lambda _df: _df.loc[_df.runtime.idxmin()][['solver_full_name','instance','runtime']])
-#     best_df['label'] = best_df.solver_full_name.astype('category').cat.codes
-
-#     solvers = session.query(Solver).all()
-
-#     mapping_path = {}
-#     mapping_format = {}
-#     for s in solvers:
-#         mapping_path[s.solver_full_name] = s.solver_path
-#         mapping_format[s.solver_full_name] = s.solver_format
-
-
-#     best_df['solver_path'] = best_df.solver_full_name.map(mapping_path)
-#     best_df['solver_format'] = best_df.solver_full_name.map(mapping_format)
-#     if not file_name:
-#         file_name = 'labels.csv'
-#     else:
-#         file_name = f'{file_name}.csv'
-
-#     best_df.to_csv(os.path.join(save_to,file_name))
-
-#cli.add_command(label)
 cli.add_command(grounded_generator)
-cli.add_command(scc_generator)
-cli.add_command(stable_generator)
+# cli.add_command(scc_generator)
+# cli.add_command(stable_generator)
 cli.add_command(fetch)
 cli.add_command(logs)
 cli.add_command(dumphelp_markdown)
@@ -1904,9 +1391,7 @@ cli.add_command(solvers)
 cli.add_command(run)
 cli.add_command(calculate)
 cli.add_command(plot)
-cli.add_command(export)
 cli.add_command(status)
 cli.add_command(validate)
 cli.add_command(significance)
 cli.add_command(delete_solver)
-cli.add_command(debug)

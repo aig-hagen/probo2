@@ -1,0 +1,6 @@
+header_bold: true
+min_bold: ['sum','mean','timeouts','errors']
+max_bold: ['IPC','coverage','solved']
+caption: null
+label: null
+name_map: null

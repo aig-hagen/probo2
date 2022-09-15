@@ -141,6 +141,7 @@ __pycache__/
 *.out
 !default_config.yaml
 !example_config.yaml
+!pretty_latex_table_config.yaml
 *.csv
 *.db
 *.ipynb

@@ -32,6 +32,10 @@ post_hoc_table_export_functions_dict = {}
 def post_hoc_table_export_functions_register(key,function):
     register(key, function, post_hoc_table_export_functions_dict)
 
+validation_table_export_functions_dict = {}
+def validation_table_export_functions_register(key,function):
+    register(key, function, validation_table_export_functions_dict)
+
 archive_functions_dict = {}
 def archive_functions_register(key, function):
     register(key, function, archive_functions_dict)
