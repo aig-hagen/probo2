@@ -1,3 +1,4 @@
+
 def register(key, function, function_dict):
     if key in function_dict:
         raise KeyError('Key {} is already pre-defined.'.format(key))

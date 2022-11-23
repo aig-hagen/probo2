@@ -2,30 +2,34 @@
 
 
 
-import subprocess
-import json
+import csv
 import logging
 import os
-
+import subprocess
 import sys
+from functools import reduce
+
 import click
 import pandas as pd
-
+import yaml
 from tabulate import tabulate
 
+import src.functions.register as register
 import src.utils.CustomClickOptions as CustomClickOptions
 import src.utils.definitions as definitions
 import src.utils.Status as Status
-from src.utils import benchmark_handler, config_handler, definitions, fetching, utils
-from src.generators import generator_utils as gen_utils
-from src.generators import generator
-import src.functions.register as register
-from src.functions import benchmark, non_parametric_post_hoc, plot_post_hoc, plot_validation, print_significance, statistics, printing, table_export, archive, score, validation, print_validation, parametric_significance, non_parametric_significance, parametric_post_hoc, post_hoc_table_export,validation_table_export
+from src.functions import (archive, benchmark, non_parametric_post_hoc,
+                           non_parametric_significance, parametric_post_hoc,
+                           parametric_significance)
 from src.functions import plot as plotter
-from src.utils import solver_handler, experiment_handler, config_handler
-from functools import reduce
-import csv
-import yaml
+from src.functions import (plot_post_hoc, plot_validation,
+                           post_hoc_table_export, print_significance,
+                           print_validation, printing, score, statistics,
+                           table_export, validation, validation_table_export)
+from src.generators import generator
+from src.generators import generator_utils as gen_utils
+from src.utils import config_handler, definitions, utils
+
 csv.field_size_limit(sys.maxsize)
 
 
@@ -52,7 +56,7 @@ def version():
     pass
 
 
-@click.command(cls=CustomClickOptions.command_required_option_from_option('guess'))
+@click.command(cls=CustomClickOptions.command_required_option_from_option('fetch'))
 @click.option("--name", "-n", required=True, help="Name of the solver")
 @click.option("--path","-p",
               required=True,
@@ -60,7 +64,7 @@ def version():
               help="Path to solver executable")
 @click.option("--format",
               "-f",
-              type=click.Choice(['apx', 'tgf'], case_sensitive=False),
+              type=click.Choice(['apx', 'tgf','i23'], case_sensitive=False),
               required=False,
               help="Supported format of solver.")
 @click.option('--tasks',
@@ -75,12 +79,13 @@ def version():
               required=True,
               help="Version of solver.")
 @click.option(
-    "--guess","-g",
+    "--fetch","-f",
     is_flag=True,
     help="Pull supported file format and computational problems from solver.")
 @click.option("--yes",is_flag=True,help="Skip prompt.")
 @click.option("--no_check", is_flag=True)
-def add_solver(name, path, format, tasks, version, guess,yes, no_check):
+@click.pass_context
+def add_solver(ctx, name, path, format, tasks, version, fetch,yes, no_check):    
     """ Adds a solver to the database.
     Adding has to be confirmed by user.
     \f
@@ -96,35 +101,11 @@ def add_solver(name, path, format, tasks, version, guess,yes, no_check):
      Raises:
           None
       """
-    if guess:
-        try:
-            if not tasks:
-                tasks = solver_handler.fetch_tasks(path)
-            if not format:
-                format = solver_handler.fetch_format(path)
-            else:
-                format = [format]
-        except ValueError as e:
-            print(e)
-            exit()
-    if not isinstance(format, list):
-        format = [format]
-    solver_info = {'name': name,'version': version,
-                   'path': path,'tasks': tasks,'format': format}
-    if not no_check:
-        is_working = solver_handler.check_interface(solver_info)
-    else:
-        is_working = True
-
-    if is_working:
-        solver_handler.print_summary(solver_info)
-        if not yes:
-            click.confirm(
-                "Are you sure you want to add this solver?"
-                ,abort=True,default=True)
-        id = solver_handler.add_solver(solver_info)
-        print(f"Solver {solver_info['name']} added with ID: {id}")
-        logging.info(f"Solver {solver_info['name']} added with ID: {id}")
+    from src.utils.solver_handler import AddSolverParameter,parse_cli_input
+    context = AddSolverParameter(**ctx.params)
+    parse_cli_input(context)
+    
+    #logging.info(f"Solver {solver_info['name']} added with ID: {id}")
 
 @click.command()
 @click.option("--name",
@@ -167,7 +148,8 @@ def add_solver(name, path, format, tasks, version, guess,yes, no_check):
               help="Generate additional argument files with a random argument."
               )
 @click.option("--function",'-fun', type=click.Choice(register.benchmark_functions_dict.keys()),multiple=True,help=' Custom functions to add additional attributes to benchmark.' )
-def add_benchmark(name, path, format, additional_extension,dynamic_files,no_check, generate, random_arguments, function):
+@click.pass_context
+def add_benchmark(ctx, name, path, format, additional_extension,dynamic_files,no_check, generate, random_arguments, function):
     """ Adds a benchmark to the database.
      Before a benchmark is added to the database, it is checked if each instance is present in all specified file formats.
      Missing instances can be generated after the completion test (user has to confirm generation) or beforehand via the --generate/-g option.
@@ -190,46 +172,9 @@ def add_benchmark(name, path, format, additional_extension,dynamic_files,no_chec
       Raises:
            None
        """
-    
-    if isinstance(additional_extension, tuple):
-        if not additional_extension:
-            additional_extension = ['arg']
-        if len(additional_extension) > 1:
-            additional_extension = list(additional_extension)
-        else:
-            additional_extension = additional_extension[0]
-    elif not isinstance(additional_extension, str):
-        print(f"Type {type(additional_extension)} of additional extension is not valid.")
-        exit()
-
-
-
-    benchmark_info = {'name': name, 'path': path,'format': list(format),'ext_additional': additional_extension, 'dynamic_files': dynamic_files}
-
-    if generate:
-        benchmark_handler.generate_instances(benchmark_info, generate)
-        #new_benchmark.generate_instances(generate)
-    if random_arguments:
-        benchmark_handler.generate_argument_files(benchmark_info,extension=additional_extension)
-    if not no_check:
-        benchmark_handler.check(benchmark_info)
-
-    if dynamic_files:
-        benchmark_handler.check_dynamic(benchmark_info)
-
-
-    for fun in function:
-        benchmark_info.update(register.benchmark_functions_dict[fun](benchmark_info))
-
-    benchmark_handler.print_summary(benchmark_info)
-    click.confirm(
-        "Are you sure you want to add this benchmark to the database?",
-        abort=True,default=True)
-    benchmark_handler.add_benchmark(benchmark_info)
-    print(f"Benchmark {benchmark_info['name']} added to database with ID: {benchmark_info['id']}.")
-    logging.info(f"Benchmark {benchmark_info['name']} added to database with ID: {benchmark_info['id']}.")
-
-
+    from src.utils.benchmark_handler import AddBenchmarkParamter,parse_cli_input
+    context = AddBenchmarkParamter(**ctx.params)
+    parse_cli_input(context)
 
 @click.command()
 @click.option(
@@ -239,7 +184,7 @@ def add_benchmark(name, path, format, additional_extension,dynamic_files,no_chec
     is_flag=True,
     help="Execute all solvers supporting the specified tasks on specified instances.")
 @click.option("--solver",
-              "-s",
+              "-solv",
               required=False,
               default=None,
               cls=CustomClickOptions.StringAsOption,
@@ -297,9 +242,10 @@ def add_benchmark(name, path, format, additional_extension,dynamic_files,no_chec
 @click.option("--name_map","-n",cls=CustomClickOptions.StringAsOption,
               required=False,default=None,help='Comma seperated list of solver names mapping. Format: <old>:<new>')
 @click.option("--score",'-s',default=None,type=click.Choice(list(register.score_functions_dict.keys()) + ['all']),multiple=True)
+@click.option("--solver_arguments",type=click.Path(exists=True,resolve_path=True),help='Path to solver arguments file.')
 @click.pass_context
 def run(ctx, all,benchmark, task, solver, timeout, dry, name,
-        notify, track, repetitions, rerun, subset, save_to, multi,statistics, config,plot,name_map,printing, table_export,archive,score):
+        notify, track, repetitions, rerun, subset, save_to, multi,statistics, config,plot,name_map,printing, table_export,archive,score,solver_arguments):
     """Run solver.
     \f
     Args:
@@ -317,6 +263,7 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
         track (str): Comma-seperated list of tracks to solve.
 
     """
+    from src.utils import experiment_handler
 
     cfg = config_handler.load_default_config()
 
@@ -341,7 +288,11 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
     cfg.merge_user_input(ctx.params)
 
 
-    cfg.check()
+    is_valid = cfg.check()
+    cfg.print()
+    
+    if not is_valid:
+        exit()
     
     experiment_handler.run_experiment(cfg)
 
@@ -505,7 +456,7 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
 @click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
 def calculate(
               name, statistics,score,raw,config,printing,table_export, save_to,last):
-    
+    from src.utils import experiment_handler
     if last:
         last_experiment = experiment_handler.get_last_experiment()
         if last_experiment is not None:
@@ -643,6 +594,7 @@ def plot(ctx, name,  save_to,kind,raw,config,last):
         send ([type]): [description]
         last ([type]): [description]
     """
+    from src.utils import experiment_handler
     cfg = config_handler.load_default_config()
     if last:
         last_experiment = experiment_handler.get_last_experiment()
@@ -695,6 +647,7 @@ def benchmarks(verbose,id):
     Raises:
         None
    """
+    from src.utils import benchmark_handler
     if verbose:
         benchmark_handler.print_benchmarks(extra_columns=['ext_additional','dynamic_files'])
     else:
@@ -711,6 +664,7 @@ def benchmarks(verbose,id):
 @click.option("--verbose", "-v", is_flag=True, default=False, required=False)
 @click.option("--id",type=click.INT,help="Print information of solver")
 def solvers(verbose,id):
+    from src.utils import solver_handler
     """Prints solvers in database to console.
 
     Args:
@@ -794,6 +748,7 @@ def validate(name,config,mode,reference,extension,
         update_db ([type]): [description]
         extension ([type]): [description]
     """
+    from src.utils import experiment_handler
     if last:
         last_experiment = experiment_handler.get_last_experiment()
         if last_experiment is not None:
@@ -914,6 +869,8 @@ def significance(name, task, benchmark, solver, filter, combine, parametric,
         equal_sample_size ([type]): [description]
         last ([type]): [description]
     """
+    from src.utils import experiment_handler
+    
     if last:
         last_experiment = experiment_handler.get_last_experiment()
         if last_experiment is not None:
@@ -989,6 +946,7 @@ def delete_solver(id, all):
     Raises:
         None
    """
+    import src.utils.solver_handler as solver_handler
     if id is not None:
         click.confirm(
                  "Are you sure you want to delete this solver in the database?",
@@ -1014,6 +972,7 @@ def delete_benchmark(id, all):
     Raises:
         None
    """
+    from src.utils import benchmark_handler
     if id is not None:
         click.confirm(
                  "Are you sure you want to delete this benchmark in the database?",
@@ -1033,6 +992,9 @@ def last(verbose):
         Infos include experiment tag, benchmark names, solved tasks, executed solvers and and the time when the experiment was finished
 
     """
+    from src.utils import experiment_handler
+
+
     last_experiment = experiment_handler.get_last_experiment()
     if last_experiment is not None:
         cfg = config_handler.load_config_via_name(last_experiment['name'])
@@ -1050,6 +1012,8 @@ def experiments(list,name):
     Args:
         tag ([type]): [description]
     """
+    from src.utils import experiment_handler
+
     if list:
         print("========== Experiments Overview ==========")
         experiment_handler.print_experiment_index()
@@ -1124,6 +1088,9 @@ def fetch(ctx,benchmark, save_to,solver,install):
         name ([type]): [description]
         save_to ([type]): [description]
     """
+    import json
+
+    from src.utils import fetching
 
     with open(definitions.FETCH_BENCHMARK_DEFAULTS_JSON,'r') as file:
         json_string = file.read()
@@ -1374,7 +1341,12 @@ def grounded_generator(ctx,num, name, save_to, num_args, generate_solutions, gen
                    extension_arg_files="arg",
                    generate=None
                    )
+@click.command()
+def web():
+    subprocess.run(['python',definitions.WEB_INTERFACE_FILE])
+    
 
+cli.add_command(web)
 cli.add_command(grounded_generator)
 # cli.add_command(scc_generator)
 # cli.add_command(stable_generator)

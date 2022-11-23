@@ -7,6 +7,7 @@ import src.probo2_data.solver_test_data
 import src.generators
 import src.experiment_configs
 import src.results
+import src.webinterface
 from importlib_resources import files
 # Defaults for paths
 ROOT_DIR = os.path.abspath(os.curdir)  # Root of project
@@ -16,6 +17,7 @@ TEST_DATABASE_PATH = os.path.join(str(DATABASE_DIR), "probo2_old.db")
 CONFIGS_DIRECTORY = str(files(src.experiment_configs))
 RESULT_DIRECTORY = str(files(src.results))
 EXPERIMENT_INDEX = str(files(src.probo2_data).joinpath("experiment_index.csv"))
+WEB_INTERFACE_FILE = str(files(src.webinterface).joinpath("web_interface.py"))
 
 
 # Solver interface test files

@@ -1,22 +1,99 @@
 
 
 import json
-from sys import stdout
-import tabulate
-
-
-
-import src.utils.definitions as definitions
 import os
-import pandas as pd
-import src.utils.utils as utils
-import subprocess
 import re
-from json import JSONEncoder
+import subprocess
 import time
+
 from pathlib import Path
 
-def add_solver(solver_info: dict):
+import pandas as pd
+import tabulate
+
+import src.utils.definitions as definitions
+import src.utils.utils as utils
+
+from dataclasses import dataclass
+from click import confirm
+
+
+@dataclass
+class Solver:
+    name: str
+    version: str
+    path: str
+    tasks: list
+    format: list
+    id: int
+
+@dataclass
+class AddSolverParameter():
+    name: str
+    path: str
+    version: int
+    fetch: bool
+    format: list
+    tasks: list
+    yes: bool
+    no_check: bool
+
+
+
+
+def parse_cli_input(parameter: AddSolverParameter):
+    
+    if parameter.fetch:
+        try:
+            if not parameter.tasks:
+                tasks = fetch_tasks(parameter.path)
+            if not parameter.format:
+                format = fetch_format(parameter.path)
+            else:
+                format = [format]
+        except ValueError as e:
+            print(e)
+            exit()
+    if not isinstance(format, list):
+        format = [format]
+    
+    solver_info = {'name': parameter.name,'version': parameter.version,
+                   'path': parameter.path,'tasks': tasks,'format': format, 'id': None}
+    new_solver = Solver(**solver_info)
+    if not parameter.no_check:
+        is_working = check_interface(new_solver)
+    else:
+        is_working = True
+    if is_working:
+        if not parameter.yes:
+            confirm(
+                "Are you sure you want to add this solver?"
+                ,abort=True,default=True)
+        id = add_solver(new_solver)
+        print_summary(new_solver.__dict__)
+        print(f"Solver {new_solver.name} added with ID: {new_solver.id}")
+        #logging.info(f"Solver {solver_info['name']} added with ID: {id}")
+
+def add_solver(solver: Solver):
+    if not os.path.exists(definitions.SOLVER_FILE_PATH) or (os.stat(definitions.SOLVER_FILE_PATH).st_size == 0):
+        with open(definitions.SOLVER_FILE_PATH,'w') as solver_file:
+            id = 1
+            solver.id = id
+            json.dump([solver.__dict__], solver_file,indent=2)
+        return id
+    else:
+        with open(definitions.SOLVER_FILE_PATH,'r+') as solver_file:
+            solver_data = json.load(solver_file)
+            _df = pd.DataFrame(solver_data)
+            id = int(_df.id.max() + 1)
+            solver.id = id
+            solver_data.append(solver.__dict__)
+            solver_file.seek(0)
+            json.dump(solver_data, solver_file,indent=2)
+        return id
+
+
+def _add_solver(solver_info: dict):
     if not os.path.exists(definitions.SOLVER_FILE_PATH) or (os.stat(definitions.SOLVER_FILE_PATH).st_size == 0):
         with open(definitions.SOLVER_FILE_PATH,'w') as solver_file:
             id = 1
@@ -76,10 +153,10 @@ def fetch_format(solver_path):
 
 
 
-def check_interface(solver_info) -> bool:
-        init_cmd = _init_cmd_params(solver_info['path'])
+def check_interface(solver: Solver) -> bool:
+        init_cmd = _init_cmd_params(solver.path)
 
-        solver_format = solver_info['format'][0]
+        solver_format = solver.format[0]
         if 'apx' in solver_format:
             instance = str(definitions.TEST_INSTANCE_APX)
         elif 'tgf' in solver_format:
@@ -87,9 +164,9 @@ def check_interface(solver_info) -> bool:
 
 
 
-        for test_task in solver_info['tasks']:
+        for test_task in solver.tasks:
             cmd_params = init_cmd.copy()
-            cmd_params.extend([solver_info['path'],
+            cmd_params.extend([solver.path,
                     "-p", test_task,
                     "-f", instance,
                     "-fo", solver_format])
@@ -148,7 +225,7 @@ def print_solvers(extra_columns=None, tablefmt=None):
     else:
         print("No solvers found.")
 
-def load_solver(identifiers):
+def load_solver(identifiers, as_class=False):
     if isinstance(identifiers,str):
         if identifiers == 'all':
             return load_solver_json()
@@ -198,8 +275,12 @@ def load_solver_by_identifier(identifier: list) -> list:
     """
     solver_json = load_solver_json()
     solver_list = []
+
+
     for solver in solver_json:
-        if solver['name'] in identifier or solver['id'] in identifier:
+        if solver['name'] in identifier:
+            solver_list.append(solver)
+        elif solver['id'] in identifier or str(solver['id']) in identifier:
             solver_list.append(solver)
     return solver_list
 
@@ -298,3 +379,10 @@ def run_solver(solver_info,task,timeout,instance,format,additional_arguments_loo
             print("\nError occured:",err)
             results.update({'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': additional_argument, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode,'error': err,'cut_off':timeout})
             return results
+
+
+if __name__ == "__main__":
+    solvers = load_solver('all')
+    
+    test_solver = Solver(**solvers[0])
+    print(test_solver.__dict__)

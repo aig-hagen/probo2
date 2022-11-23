@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 def create_plots(result_df: pd.DataFrame, cfg: config_handler.Config):
     saved_files = []
     print("========== PLOTTING ==========")
-    if cfg.plot =='all':
+    if cfg.plot =='all' or 'all' in cfg.plot:
         cfg.plot = register.plot_dict.keys()
     saved_plots = []
     default_plt_options = pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
