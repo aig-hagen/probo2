@@ -175,7 +175,8 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
-
+*.png
+*.pid
 # Installer logs
 probo2_old.db
 probo2.db
@@ -207,3 +208,4 @@ env.bak/
 venv.bak/
 
 >>>>>>> master
+Test_Run_13.zip

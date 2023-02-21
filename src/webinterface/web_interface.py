@@ -95,12 +95,17 @@ def set_parameter(key,value):
 def show_side_menu():
     with ui.left_drawer().props('width=250').classes('bg-grey-3'):
         ui.button('Experiment Status',on_click=lambda e:ui.open(status_page,e.socket)).props('icon="hourglass_empty"').props('flat')
+        ui.button('Solvers',on_click=lambda e:ui.open(solvers_page,e.socket)).props('icon="functions"').props('flat')
+        ui.button('Benchmarks',on_click=lambda e:ui.open(benchmarks_page,e.socket)).props('icon="description"').props('flat')
+
+       
         
 
 
 def show_settings():    
     with ui.card():
-        with ui.card_section():
+        #ui.badge('Test')
+        with ui.card_section().classes('bg-grey-3'):
                 ui.label('Probo2 Web').classes('text-h6')
                 ui.label('Experiment Configuration').classes('text-subtitle2')
         with ui.expansion(text='General',icon='settings').classes('w-full').props('expand-separator'):
@@ -321,7 +326,8 @@ def show_solver_card():
         with ui.dialog() as dialog:
             with ui.card().classes('flex justify-center w-1/4').style('overflow: hidden'):
                 table = ui.table(table_options).classes('max-h-80')
-                table.view.on('cellClicked', handle_solver_selection_click)
+                #table.view.on('cellClicked', handle_solver_selection_click)
+                table.call_api_method('cellClicked',handle_solver_selection_click)
                 with ui.row().classes('flex justify-center w-full'):
                     ui.button(on_click=lambda: dialog.submit(selected_solvers)).props('round icon=done color=positive')
                     ui.button(on_click=lambda: dialog.submit(None)).props('round icon=close color=negative')
@@ -361,7 +367,8 @@ def show_benchmark_card():
         with ui.dialog() as dialog:
             with ui.card().classes('flex justify-center w-1/4').style('overflow: hidden'):
                 table = ui.table(table_options).classes('max-h-80')
-                table.view.on('cellClicked', handle_benchmark_selection_click)
+                #table.view.on('cellClicked', handle_benchmark_selection_click)
+                table.call_api_method('cellClicked',handle_benchmark_selection_click)
                 with ui.row().classes('flex justify-center w-full'):
                     ui.button(on_click=lambda: dialog.submit(selected_benchmarks)).props('round icon=done color=positive')
                     ui.button(on_click=lambda: dialog.submit(None)).props('round icon=close color=negative')
@@ -420,17 +427,122 @@ def status_page() -> None:
                     for solver in current_task['solvers']:
                         current_solver = current_task['solvers'][solver]
                         ui.label(f'{current_solver["name"]}: {current_solver["solved"]}/{current_solver["total"]} ')
-                
+
+@ui.page('/solvers/add')
+def add_solver_page():
+    from src.utils import solver_handler
+    add_solver_options = solver_handler.AddSolverOptions('','','',True,None,None,True,False)
+    show_solvers_side_menu()
+    
+    with ui.row().classes('flex justify-center w-full'):
+        with ui.card():
+            #ui.badge('Test')
+            with ui.card_section():
+                    ui.label('Probo2 Web').classes('text-h6')
+                    ui.label('Add Solver').classes('text-subtitle2')
+            name = ui.input('Name',placeholder='MyAwesomeSolver').bind_value(add_solver_options,'name')
+            path = ui.input('Path',placeholder='path/to/solver').bind_value(add_solver_options,'path')
+            version = ui.input('Version',placeholder='3.141').bind_value(add_solver_options,'version')
+      
+            fetch = ui.checkbox('Fetch Task, Format').bind_value(add_solver_options,'fetch')
+            no_check = ui.checkbox('No Check',value=False).bind_value(add_solver_options,'no_check')
+            with ui.row().classes('flex justify-center w-full'):
+                ui.button('Add',on_click=lambda: _add_solver(add_solver_options) ).props('icon="add" color=positive')
+
+import yaml
+def _add_solver(options: solver_handler.AddSolverOptions):
+    new_solver = solver_handler._create_solver_obj(options)
+    
+    with ui.dialog() as dialog, ui.card():
+        ui.label(yaml.safe_dump(new_solver.__dict__))
+        with ui.row():
+            ui.button('Yes', on_click=lambda: _check_solver_interface(dialog,options,new_solver))
+            ui.button('No', on_click=lambda: dialog.close())
+        dialog.open()
+
+def _check_solver_interface(d:ui.dialog,options: solver_handler.AddSolverOptions,new_solver):
+    
+    if not options.no_check:
+        is_working = solver_handler.check_interface(new_solver)
+    else:
+        is_working = True
+    
+    if not is_working:
+        ui.notify('Something went wrong when testing the interface!')
+        d.close()
+        return
+    id = solver_handler.add_solver(new_solver)
+    ui.notify(f'Solver added with id: {id}')
+    d.close()
+
+solver_to_delete = set()
+def handle_solver_to_delete_selection(sender, msg):
+    solver_to_delete_id = msg.data['id']
+    if msg.selected:
+        solver_to_delete.add(solver_to_delete_id)
+    else:
+        solver_to_delete.remove(solver_to_delete_id)
+
+@ui.page('/solvers/delete')
+def delete_solver_page():
+    show_solvers_side_menu()
+    table_options = _build_solver_table_options()
+    def delete_solvers():
+        if solver_to_delete:
+            for _solver in solver_to_delete:
+                solver_handler.delete_solver(_solver)
+        table_options = _build_solver_table_options()
+        table.options = table_options
+        table.update()
+    with ui.row().classes('flex justify-center w-full'):
+      
+        with ui.card().classes('flex justify-center w-1/4').style('overflow: hidden'):
+            table = ui.table(table_options).classes('max-h-80')
+            table.view.on('cellClicked', handle_solver_to_delete_selection)
+            ui.button('Delete',on_click=delete_solvers)
+
+    
             
 
+@ui.page('/solvers/database')
+def database_solver_page():
+    show_solvers_side_menu()
+    table_options = _build_solver_table_options()
+    with ui.row().classes('flex justify-center w-full'):
+        with ui.card().classes('flex justify-center w-1/3').style('overflow: hidden'):
+            ui.table(table_options)
+        
+
+
+
+def show_solvers_side_menu()-> None:
+    with ui.left_drawer().props('width=200').classes('bg-grey-3'):
+        with ui.column():
+            ui.button('Add',on_click=lambda e:ui.open(add_solver_page,e.socket)).props('icon="add"').props('flat')
+            ui.button('Delete',on_click=lambda e:ui.open(delete_solver_page,e.socket)).props('icon="delete"').props('flat')
+            ui.button('Show',on_click=lambda e:ui.open(database_solver_page,e.socket)).props('icon="description"').props('flat')
+
+        
+
+
+@ui.page('/solvers')
+def solvers_page() -> None:
+    #load solvers.md
+    with open(definitions.SOLVERS_MD,'r') as md:
+        md_content = md.read()
+    show_solvers_side_menu()
+    with ui.row().classes('flex justify-center w-full'):
+        ui.markdown(f'''{md_content}''')
+    
+
+@ui.page('/benchmarks')
+def benchmarks_page() -> None:
+    ui.label('Welcome')
+
+              
+ui.run(title='probo2')
+
 
 
     
-    
-   
-
-
-
-ui.run(title='probo2-webinterface')
-
 

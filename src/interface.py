@@ -26,6 +26,7 @@ from src.functions import (plot_post_hoc, plot_validation,
                            post_hoc_table_export, print_significance,
                            print_validation, printing, score, statistics,
                            table_export, validation, validation_table_export)
+from src.functions.ml import features
 from src.generators import generator
 from src.generators import generator_utils as gen_utils
 from src.utils import config_handler, definitions, utils
@@ -45,7 +46,7 @@ def init():
 
 
 
-
+_version = "1.0"
 
 @click.group()
 def cli():
@@ -53,7 +54,7 @@ def cli():
 
 @click.command()
 def version():
-    pass
+    print(f"probo2 {_version}")
 
 
 @click.command(cls=CustomClickOptions.command_required_option_from_option('fetch'))
@@ -101,8 +102,8 @@ def add_solver(ctx, name, path, format, tasks, version, fetch,yes, no_check):
      Raises:
           None
       """
-    from src.utils.solver_handler import AddSolverParameter,parse_cli_input
-    context = AddSolverParameter(**ctx.params)
+    from src.utils.solver_handler import AddSolverOptions,parse_cli_input
+    context = AddSolverOptions(**ctx.params)
     parse_cli_input(context)
     
     #logging.info(f"Solver {solver_info['name']} added with ID: {id}")
@@ -1001,7 +1002,29 @@ def last(verbose):
         cfg.print()
     else:
         print("No experiment found.")
+
+@click.command()
+@click.option("--id", required=False,help='ID of benchmark to delete.')
+@click.option( "--save_to",
+    "-st",
+    type=click.Path(exists=True, resolve_path=True),
+    help="Directory to store benchmark features in. Default is the current working directory.")
+@click.option('--feature','-f',multiple=True,type=click.Choice(list(register.feature_calculation_functions_dict.keys())),help='Node features to calculate.')
+@click.option('--embedding','-e',multiple=True, type=click.Choice(list(register.embeddings_calculation_functions_dict.keys())),help='Node embeddings to generate.')
+def features(id,save_to,feature,embedding):
+    """Calculates node features and embeddings
+    """
+    from src.functions.ml import features
+    from src.utils import benchmark_handler
+    if save_to is None:
+        from os import getcwd
+        save_to = getcwd()
     
+    benchmark_info = benchmark_handler.load_benchmark(id)[0]
+    features.calculate_features(benchmark_info, feature, embedding, save_to)
+
+cli.add_command(features)
+
 
 @click.command()
 @click.option("--list","-l", is_flag=True)
@@ -1342,8 +1365,23 @@ def grounded_generator(ctx,num, name, save_to, num_args, generate_solutions, gen
                    generate=None
                    )
 @click.command()
-def web():
-    subprocess.run(['python',definitions.WEB_INTERFACE_FILE])
+@click.option("--start",'-s',is_flag=True)
+@click.option("--close",'-c',is_flag=True)
+def web(start,close):
+    # from daemonize import Daemonize
+    # pid = "/tmp/probo2_web.pid"
+    # from src.webinterface import deamon_test
+    # deamon_test.start()
+    if start:
+        from src.webinterface import web_interface
+        web_interface.start()
+        #subprocess.run(['python',definitions.WEB_INTERFACE_FILE])
+    if close:
+        subprocess.run(['python','/home/jklein/dev/probo2/src/webinterface/web_interface_shutdown.py'])
+    
+   
+
+
     
 
 cli.add_command(web)
@@ -1367,3 +1405,4 @@ cli.add_command(status)
 cli.add_command(validate)
 cli.add_command(significance)
 cli.add_command(delete_solver)
+cli.add_command(version)

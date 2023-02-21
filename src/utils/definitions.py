@@ -8,6 +8,7 @@ import src.generators
 import src.experiment_configs
 import src.results
 import src.webinterface
+import src.probo2_data.markdown
 from importlib_resources import files
 # Defaults for paths
 ROOT_DIR = os.path.abspath(os.curdir)  # Root of project
@@ -48,6 +49,9 @@ LAST_EXPERIMENT_SUMMARY_JSON_PATH = str(files(src.probo2_data).joinpath('probo2_
 # YAML files
 PRETTY_LATEX_TABLE_CONFIG =  str(files(src.probo2_data).joinpath('pretty_latex_table_config.yaml'))
 
+# Markdown files
+MARK_DOWN_ROOT = files(src.probo2_data.markdown)
+SOLVERS_MD = str(MARK_DOWN_ROOT.joinpath('solvers.md'))
 
 ALEMBIC_INIT_FILE_PATH = os.path.join(str(DATABASE_DIR),'alembic.ini')
 

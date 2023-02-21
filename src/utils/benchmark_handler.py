@@ -250,7 +250,7 @@ def generate_instances(benchmark: Benchmark, generate_format, present_format='')
       None
     """
     if not present_format:
-        present_formats= benchmark.format
+        present_formats= benchmark.format # BUG: Falls benchmark.format keine Liste ist
         for form in present_formats:
             if form != generate_format:
                 present_format = form
@@ -586,7 +586,7 @@ def load_benchmark_by_identifier(identifier: list) -> list:
     for benchmark in benchmark_json:
         if benchmark['name'] in identifier: 
             benchmark_list.append(benchmark)
-        elif benchmark['id'] in identifier or str(benchmark['id']) in identifier:
+        elif benchmark['id'] == identifier or str(benchmark['id']) in identifier:
             benchmark_list.append(benchmark)
     return benchmark_list
 

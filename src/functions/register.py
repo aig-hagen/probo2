@@ -84,3 +84,10 @@ print_significance_functions_dict = {}
 def print_significance_functions_register(key, function):
     register(key, function, print_significance_functions_dict)
 
+feature_calculation_functions_dict = {}
+def feature_calculation_register(key,function):
+    register(key, function, feature_calculation_functions_dict)
+
+embeddings_calculation_functions_dict = {}
+def embeddings_calculation_register(key,function):
+    register(key, function, embeddings_calculation_functions_dict)
