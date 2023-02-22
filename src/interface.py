@@ -1378,7 +1378,46 @@ def web(start,close):
         #subprocess.run(['python',definitions.WEB_INTERFACE_FILE])
     if close:
         subprocess.run(['python','/home/jklein/dev/probo2/src/webinterface/web_interface_shutdown.py'])
+
+
+@click.command()
+@click.option(
+    "--save_to",
+    "-st",
+    type=click.Path(exists=True, resolve_path=True),
+    help="Directory to generate files in. Default is the current working directory.")
+def tikz(save_to):
+    from os import getcwd
+    from networkx import DiGraph
+    from networkx.drawing import nx_latex
     
+    print("Enter a graph in tgf format:")
+    args = []
+    attacks = []
+    attacks_section = False
+    while True:
+        try:
+            line = input()
+        except EOFError:
+            break
+        if "#" in line:
+            attacks_section = True
+            continue
+        if not attacks_section:
+            args.append(line)
+        else:
+            attacks.append(tuple(line.split(" ")))
+    
+    af = DiGraph()
+    af.add_nodes_from(args)
+    af.add_edges_from(attacks)
+    tikz_str = nx_latex.to_latex(af,tikz_options=" > = stealth,shorten > = 1pt,auto, node distance = 3cm,semithick")
+    with open(os.path.join(save_to,'graph.tikz'),'w') as f:
+        f.write(tikz_str)
+
+cli.add_command(tikz)
+
+
    
 
 

@@ -416,7 +416,7 @@ def _set_solver_parameters(solver_info,instance,task,format,additional_arguments
 
 
 
-def _write_results_to_file(output_file_dir,solver_parameters:SolverParameters):
+def _run_solver_write_results_to_file(output_file_dir,solver_parameters:SolverParameters):
 
     if output_file_dir is None:
         logger.error(f"Output destination not found:{output_file_dir}")
@@ -435,7 +435,7 @@ def _write_results_to_file(output_file_dir,solver_parameters:SolverParameters):
         run_time = end_time_current_run - start_time_current_run
     return {'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.additional_argument, 'runtime': run_time, 'result': out_file_path, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout}
 
-def _run_solver_with_parameters(solver_parameters: SolverParameters):
+def _run_solver(solver_parameters: SolverParameters):
     if not os.path.exists(solver_parameters.solver_dir):
         logger.error(f"Solver path not found:{solver_parameters.solver_dir}")
         raise subprocess.CalledProcessError(returncode=-1,cmd=solver_parameters.final_params,output="Solver path not found.")
@@ -457,9 +457,9 @@ def run_solver(solver_info,task,timeout,instance,format,additional_arguments_loo
     
     try:
         if output_file_dir is not None:
-           results.update(_write_results_to_file(output_file_dir,solver_parameters))
+           results.update(_run_solver_write_results_to_file(output_file_dir,solver_parameters))
         else:
-            results.update(_run_solver_with_parameters(solver_parameters))
+            results.update(_run_solver(solver_parameters))
         return results
     except subprocess.TimeoutExpired as e:
         logger.error(f'Solver {solver_info.get("solver_name")} timed out on instance {solver_parameters.instance_name}')
@@ -470,3 +470,7 @@ def run_solver(solver_info,task,timeout,instance,format,additional_arguments_loo
         print("\nError occured:",err)
         results.update({'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.additional_argument, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode,'error': err,'cut_off':solver_parameters.timeout})
         return results
+
+
+def run_solver_accaptence(solver,task,instance,arg,timeout,format):
+    pass
