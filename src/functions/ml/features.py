@@ -72,7 +72,6 @@ def calculate_features(benchmark_info: dict,feature,embedding,save_to):
         instance_graph,args_ids, ids_args = build_graph(instance_path,parse_format)
      
         instance_features = {calculate: register.feature_calculation_functions_dict[calculate](instance_graph) for calculate in feature}
-        print(instance_features)
         instance_embeddings = {calculate: register.embeddings_calculation_functions_dict[calculate](instance_graph) for calculate in embedding}
         instance_name = os.path.basename(instance_path)[:-4]
         
@@ -80,26 +79,12 @@ def calculate_features(benchmark_info: dict,feature,embedding,save_to):
         instance_features_save_to = os.path.join(features_save_to,f'{instance_name}_features.csv')
         args_ids_save_to = os.path.join(mappings_save_to,f'{instance_name}_args_to_ids.csv')
         ids_args_save_to = os.path.join(mappings_save_to,f'{instance_name}_ids_to_args.csv')
-        with open(args_ids_save_to, 'w') as csvfile:
-            fieldnames = ['arg', 'id']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-            writer.writeheader()
-            for key in args_ids:
-                writer.writerow({'arg': key, 'id': args_ids[key]})
-        with open(ids_args_save_to, 'w') as csvfile:
-            fieldnames = ['id', 'arg']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-            writer.writeheader()
-            for key in ids_args:
-                writer.writerow({'id': key, 'arg': ids_args[key]})
+        _write_args_ids_map(args_ids, args_ids_save_to)
+        _write_ids_args_map(ids_args, ids_args_save_to)
         np.savez(os.path.join(embeddings_save_to,f'{instance_name}_embeddings.npz'),**instance_embeddings)
         
-        instance_features_df = pd.DataFrame(instance_features)
-        print(instance_features_df)
-        instance_features_df['id'] = instance_features_df.index
-        instance_features_df['arg'] = instance_features_df['id'].map(ids_args)
+        instance_features_df = _init_features_df(ids_args, instance_features)
+        instance_features_df.to_csv(instance_features_save_to)
         all_instances_index.append({'instance_name': instance_name,
                                     'format':parse_format,
                                     'embeddings_path': os.path.relpath(instance_embeddings_save_to,save_to),
@@ -108,6 +93,30 @@ def calculate_features(benchmark_info: dict,feature,embedding,save_to):
                                      'ids_args_map': os.path.relpath(ids_args_save_to,save_to)})
     
     pd.DataFrame(all_instances_index).to_csv(os.path.join(save_to,f"{benchmark_info['name']}_index.csv"))
+
+def _init_features_df(ids_args, instance_features):
+    instance_features_df = pd.DataFrame(instance_features)
+    instance_features_df['id'] = instance_features_df.index
+    instance_features_df['arg'] = instance_features_df['id'].map(ids_args)
+    return instance_features_df
+
+def _write_ids_args_map(ids_args, ids_args_save_to):
+    with open(ids_args_save_to, 'w') as csvfile:
+        fieldnames = ['id', 'arg']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        writer.writeheader()
+        for key in ids_args:
+            writer.writerow({'id': key, 'arg': ids_args[key]})
+
+def _write_args_ids_map(args_ids, args_ids_save_to):
+    with open(args_ids_save_to, 'w') as csvfile:
+        fieldnames = ['arg', 'id']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        writer.writeheader()
+        for key in args_ids:
+            writer.writerow({'arg': key, 'id': args_ids[key]})
 
         
         

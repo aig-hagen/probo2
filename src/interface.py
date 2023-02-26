@@ -1004,7 +1004,7 @@ def last(verbose):
         print("No experiment found.")
 
 @click.command()
-@click.option("--id", required=False,help='ID of benchmark to delete.')
+@click.option("--id", required=False,help='ID of benchmark to calculate features.')
 @click.option( "--save_to",
     "-st",
     type=click.Path(exists=True, resolve_path=True),
@@ -1024,6 +1024,33 @@ def features(id,save_to,feature,embedding):
     features.calculate_features(benchmark_info, feature, embedding, save_to)
 
 cli.add_command(features)
+@click.command()
+@click.option("--benchmark","-b", required=False,multiple=True,help='ID of benchmark to calculate features.')
+@click.option("--solver","-s", required=False,multiple=True,help='ID of ground-truth solver to calculate features.')
+@click.option( "--save_to",
+    "-st",
+    type=click.Path(exists=True, resolve_path=True),
+    help="Directory to store benchmark features in. Default is the current working directory.")
+@click.option("--timeout",type=click.INT,help='Timeout for accaptance tasks')
+@click.option("--task","-t",multiple=True, help='Accaptance task to create labels')
+def labels(benchmark,solver,save_to,task,timeout):
+    from src.utils import benchmark_handler
+    from src.utils import solver_handler
+    from src.functions.ml import labels
+    if save_to is None:
+        from os import getcwd
+        save_to = getcwd()
+    solver = solver_handler.load_solver(list(solver))[0]
+    benchmarks = benchmark_handler.load_benchmark(list(benchmark))
+    tasks = list(task)
+
+    if tasks:
+        options = labels.AccaptanceLabelOptions(solver=solver,tasks=tasks,benchmarks=benchmarks,timeout=timeout,save_to=save_to)
+        labels.get_label_accaptance(options)
+
+cli.add_command(labels)
+
+
 
 
 @click.command()

@@ -473,4 +473,39 @@ def run_solver(solver_info,task,timeout,instance,format,additional_arguments_loo
 
 
 def run_solver_accaptence(solver,task,instance,arg,timeout,format):
-    pass
+    cmd_params = []
+    if solver['path'].endswith('.sh'):
+        cmd_params.append('bash')
+    elif solver['path'].endswith('.py'):
+        cmd_params.append('python')
+    
+    instance_name = Path(instance).stem
+    params = [solver['path'],
+          "-p", task,
+          "-f", instance,
+          "-fo", format,
+          "-a", arg]
+    
+    solver_dir = os.path.dirname(solver['path'])
+    final_params = cmd_params + params
+    try:
+        start_time_current_run = time.perf_counter()
+        output = utils.run_process(final_params,
+                        capture_output=True, timeout=timeout, check=True,cwd=solver_dir)
+        end_time_current_run = time.perf_counter()
+        run_time = end_time_current_run - start_time_current_run
+        result = output.stdout.decode("utf-8")
+
+        accepted = True if 'YES' in result else False
+        
+        return {'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': arg, 'runtime': run_time, 'result': result,'accepted': accepted, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off': timeout}
+    except subprocess.TimeoutExpired as e:
+        #logger.error(f'Solver {solver_info.get("solver_name")} timed out on instance {solver_parameters.instance_name}')
+        return {'instance': instance_name,'format':format,'task': task,'timed_out':True,'additional_argument': arg, 'runtime': timeout, 'result': result,'accepted': accepted, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off': timeout}
+        
+    except subprocess.CalledProcessError as err:
+        logger.error(f'Something went wrong running solver {solver.get("solver_name")}: {err}')
+        print("\nError occured:",err)
+        return {'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': arg, 'runtime': None, 'result': result,'accepted': accepted, 'exit_with_error': True, 'error_code': err.returncode,'error': err,'cut_off':timeout}
+      
+
