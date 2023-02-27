@@ -1050,6 +1050,29 @@ def labels(benchmark,solver,save_to,task,timeout):
 
 cli.add_command(labels)
 
+@click.command()
+@click.option('--name','-n',help='Experiment name')
+@click.option('--raw','-r', type=click.Path(exists=True, resolve_path=True),help='Path of raw.csv')
+def board(name,raw):
+    """Launch a dashboard to visualize results."""
+    from src.utils import experiment_handler
+    from src.probo2board import board
+    if name:
+        experiment_df = experiment_handler.load_results_via_name(name)
+    elif raw:
+        experiment_df = pd.read_csv(raw)
+    else:
+        print('Experiment not found!')
+    
+    if experiment_df is None:
+        exit()
+    board.launch(experiment_df)
+    
+
+cli.add_command(board)
+
+
+
 
 
 

@@ -581,12 +581,14 @@ def load_benchmark_by_identifier(identifier: list) -> list:
     Returns:
         list: _description_
     """
+    if not isinstance(identifier,list):
+        identifier = [identifier]
     benchmark_json = load_benchmark_json()
     benchmark_list = []
     for benchmark in benchmark_json:
         if benchmark['name'] in identifier: 
             benchmark_list.append(benchmark)
-        elif benchmark['id'] == identifier or str(benchmark['id']) in identifier:
+        elif benchmark['id'] in identifier or str(benchmark['id']) in identifier:
             benchmark_list.append(benchmark)
     return benchmark_list
 
