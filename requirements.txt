@@ -14,5 +14,5 @@ networkx
 pyyaml
 tqdm
 nicegui
-karateclub~=1.3.3
+karateclub
 
