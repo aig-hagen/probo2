@@ -10,7 +10,7 @@ typing-extensions
 psutil
 importlib-resources
 multiprocess
-networkx
+networkx~=2.6
 pyyaml
 tqdm
 nicegui
