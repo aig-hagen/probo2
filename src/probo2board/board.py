@@ -4,6 +4,8 @@ import hvplot.pandas
 import holoviews as hv
 import numpy as np
 import hvplot
+from src.functions import register,statistics
+from functools import reduce
 
 hv.extension('bokeh', 'plotly')
 
@@ -11,6 +13,7 @@ pn.extension('tabulator', sizing_mode="stretch_width")
 import src.probo2board.pipelines as pipelines
 from src.utils import benchmark_handler
 
+STATS = ['sum','mean','solved','errors','timeouts','coverage']
 
 def launch(df: pd.DataFrame) -> None:
 
@@ -40,8 +43,19 @@ def launch(df: pd.DataFrame) -> None:
                                           value=benchmark_options,
                                           sizing_mode='scale_width')
     
+    # ========== Tables ==========
     table_df_pipline = pipelines.get_pipeline_table(df,reps,tasks,benchmarks,solvers)
     table = table_df_pipline.pipe(pn.widgets.Tabulator, pagination='remote', page_size=20)
+    stats_results = []
+    for stat in STATS:
+        _res = register.stat_dict[stat](df,avg_reps=False)
+        stats_results.append(_res[0]) # DataFrame is on position 0, 
+    
+    df_stats_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), stats_results)
+    df_stats_merged['solver_full_name'] = df_stats_merged.solver_name +'_'+ df_stats_merged.solver_version
+    df_stats_merged = df_stats_merged.drop(['tag','solver_name','solver_version'],axis=1)
+    stats_table_df_pipline = pipelines.get_pipeline_table(df_stats_merged[df_stats_merged.columns[::-1]],reps,tasks,benchmarks,solvers)
+    stats_table = stats_table_df_pipline.pipe(pn.widgets.Tabulator, pagination='remote', page_size=20)
 
 
     # ========== PLOTS ==========
@@ -76,7 +90,7 @@ def launch(df: pd.DataFrame) -> None:
     summary_widget = generate_summary(df)
 
     #========== BACKEND TOGGLES =========
-    backend_toggle = pn.widgets.RadioButtonGroup(options=['bokeh', 'plotly','matplotlib'],value='bokeh')
+    backend_toggle = pn.widgets.RadioButtonGroup(options=['bokeh', 'plotly'],value='bokeh') # matlibplot does not work
     watcher = backend_toggle.param.watch(callback, ['options', 'value'], onlychanged=False)
 
 
@@ -84,7 +98,7 @@ def launch(df: pd.DataFrame) -> None:
     template = pn.template.FastListTemplate(
     title=f'Probo2Board-{df.iloc[0].tag}', 
     sidebar=[backend_toggle,settings_html,rep_html,reps,tasks_html,tasks,benchmarks_html,benchmarks,solver_html,solvers],
-    main=[summary_html,summary_widget,pn.pane.Markdown('## Plots'),cactus_plot.panel(),count_plot.panel(),pn.pane.Markdown('## Raw'),table.panel()],
+    main=[summary_html,summary_widget,pn.pane.Markdown('## Plots'),cactus_plot.panel(),count_plot.panel(),pn.pane.Markdown('## Statistics'),stats_table.panel(),pn.pane.Markdown('## Raw'),table.panel()],
     accent_base_color="#7BA0C8",
     header_background="#0E559C",
     logo='https://www.fernuni-hagen.de/aig/images/aig_logo.png',
