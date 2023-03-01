@@ -1,4 +1,6 @@
 # Probo2 - Evaluation tool for abstract argumentation solvers
+![GitHub](https://img.shields.io/github/license/aig-hagen/probo2)
+
 A python tool that bundles all functionalities needed to collect, validate, analyze, and represent data in the context of benchmarking argumentation solvers.
 
 
@@ -139,6 +141,9 @@ Another example can be found in the [example_config.yaml](https://github.com/aig
 - [Probo2 - Evaluation tool for abstract argumentation solvers](#probo2---evaluation-tool-for-abstract-argumentation-solvers)
   - [Table of Contents](#table-of-contents)
   - [Setup](#setup)
+  - [Experiments](#experiments)
+    - [Configuration Files](#configuration-files)
+    - [Example](#example)
   - [Commands](#commands)
     - [add-solver](#add-solver)
     - [solvers](#solvers)
@@ -154,6 +159,7 @@ Another example can be found in the [example_config.yaml](https://github.com/aig
     - [calculate](#calculate)
     - [validate](#validate)
     - [significance](#significance)
+    - [board](#board)
 
 ### add-solver
 Usage: *probo2 add-solver [OPTIONS]*
@@ -698,5 +704,21 @@ Usage: *probo2 significance [OPTIONS]*
 ```
 probo2 significance --tag MyExperiment --parametric ANOVA --php scheffe
 ```
+### board
+Probo2 provides an interactive dashboard to visualize results of experiments. The dashboard contains plots and tables which can be filtered using checkboxes in the sidebar.
+![](src/probo2_data/ressources/probo2Board.gif)
 
+Usage: *probo2 board [OPTIONS]*
 
+  Launch dashboard for experiment visualization.
+
+**Options**:
+
++ *--tag, -t*
+
+    Experiment tag
++ *--raw, -r*
+  
+  Full path to a raw results file  (raw.csv).
+
+  **Note**: Only needed when no tag is specified.
