@@ -1,4 +1,7 @@
 # Probo2 - Evaluation tool for abstract argumentation solvers
+
+![](src/probo2_data/ressources/probo2_logo.png)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A python tool that bundles all functionalities needed to collect, validate, analyze, and represent data in the context of benchmarking argumentation solvers.
