@@ -6,6 +6,7 @@ import numpy as np
 import hvplot
 from src.functions import register,statistics
 from functools import reduce
+from src.utils import Status
 
 hv.extension('bokeh', 'plotly')
 
@@ -94,11 +95,34 @@ def launch(df: pd.DataFrame) -> None:
     watcher = backend_toggle.param.watch(callback, ['options', 'value'], onlychanged=False)
 
 
+    progress_info = Status.get_total_number_instances_per_solver()
 
+    progress_bars = []
+    running = pn.Column(*[
+    pn.Row(pn.panel(bs, width=100), pn.indicators.Progress(width=300, value=10+i*10, bar_color=bs))
+        for i, bs in enumerate(pn.indicators.Progress.param.bar_color.objects)
+        ])
+    for task, _solvers in progress_info.items():
+        solver_progress_bars_per_task = []
+        for _solver, info in _solvers.items():
+            row = pn.Column(pn.pane.Str(f'{_solver}',style={'color': '#818589'},width=100),pn.indicators.Progress(name=f'Progress {_solver}', value=info['solved'], width=info['total'], bar_color='success',margin=[0,0]))#,f'{info["solved"]}/{info["total"]}')
+            solver_progress_bars_per_task.append(row)
+        progress_bars.append(pn.Column(f'### {task}',*solver_progress_bars_per_task))
+    
+    
+    progress_bars_final = pn.Column(
+    '# Progress',
+    pn.Row(*progress_bars)
+    )
+ 
+    #progress = pn.indicators.Progress(name='Progress', value=20, width=200)
+    
+
+    main_components = progress_bars_final + [summary_html,summary_widget,pn.pane.Markdown('## Plots'),cactus_plot.panel(),count_plot.panel(),pn.pane.Markdown('## Statistics'),stats_table.panel(),pn.pane.Markdown('## Raw'),table.panel()]
     template = pn.template.FastListTemplate(
     title=f'Probo2Board-{df.iloc[0].tag}', 
     sidebar=[backend_toggle,settings_html,rep_html,reps,tasks_html,tasks,benchmarks_html,benchmarks,solver_html,solvers],
-    main=[summary_html,summary_widget,pn.pane.Markdown('## Plots'),cactus_plot.panel(),count_plot.panel(),pn.pane.Markdown('## Statistics'),stats_table.panel(),pn.pane.Markdown('## Raw'),table.panel()],
+    main=main_components,
     accent_base_color="#7BA0C8",
     header_background="#0E559C",
     logo='https://www.fernuni-hagen.de/aig/images/aig_logo.png',
@@ -130,8 +154,15 @@ def prep_data_count_plot(df):
     conds = [((df.timed_out == False) & (df.exit_with_error == False)),df.timed_out == True,df.exit_with_error == True]
     choices = ['Solved','Timed out','Aborted']
     df['Status'] = np.select(conds,choices)
-    value_counts = df.groupby(['repetition','task','benchmark_id','solver_id'],group_keys=True).apply(lambda _df: _df.value_counts(['Status'])).unstack(level='Status').reset_index()
-   
+    
+  
+    if len(df.Status.unique()) > 1:
+        value_counts = df.groupby(['repetition','task','benchmark_id','solver_id'],group_keys=True).apply(lambda _df: _df.value_counts(['Status'])).unstack(level='Status').reset_index()
+    else:
+        value_counts = df.groupby(['repetition','task','benchmark_id','solver_id'],group_keys=False).apply(lambda _df: _df.value_counts(['Status'])).reset_index()
+        value_counts.columns = value_counts.columns.get_level_values(0) # without this line solver_id is a dataframe not a series
+ 
+      
     benchmarks = benchmark_handler.load_benchmark(list(df.benchmark_id.unique()))
     
     benchmark_id_name_map = { b['id']:b['name'] for b in benchmarks}
@@ -144,8 +175,10 @@ def prep_data_count_plot(df):
 
     benchmark_id_map = df[['benchmark_id','benchmark_name']].drop_duplicates()
     benchmark_id_map = dict(zip(benchmark_id_map.benchmark_id, benchmark_id_map.benchmark_name))
-    value_counts['solver_full_name'] = value_counts.solver_id.map(solver_id_map)
+    value_counts['solver_full_name'] = value_counts['solver_id'].map(solver_id_map)
     value_counts['benchmark_name'] = value_counts.benchmark_id.map(benchmark_id_map)
+
+
     if 'Solved' not in value_counts.columns:
         value_counts['Solved'] = 0
     if 'Timed out' not in value_counts.columns:

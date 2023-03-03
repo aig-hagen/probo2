@@ -67,3 +67,21 @@ def increment_instances_counter(task, solver_id):
         status_data['tasks'][task]['solvers'][str(solver_id)]['solved'] += 1
     with open(str(definitions.STATUS_FILE_DIR), 'w') as outfile:
         json.dump(status_data, outfile)
+
+def get_total_number_instances_per_solver():
+    with open(str(definitions.STATUS_FILE_DIR)) as status_json_file:
+        status_data = json.load(status_json_file)
+    
+    info = {}
+    for task in status_data['tasks'].keys():
+        info[task] = {}
+        for solver_id, solver_info in status_data['tasks'][task]['solvers'].items():
+
+            info[task][f'{solver_info["name"]}_{solver_info["version"]}'] = {'solved': solver_info['solved'], 'total': solver_info['total'] }  
+        
+    return info
+        
+
+
+if __name__ == '__main__':
+    get_total_number_instances_per_solver()
