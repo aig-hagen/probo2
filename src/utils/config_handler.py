@@ -10,7 +10,7 @@ import src.functions.register as register
 import yaml
 import pandas as pd
 class Config(object):
-    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,save_output=None,archive_output=None,archive=None,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,score=None,validation=None,significance=None,raw_results_path=None,exclude_task=None,solver_arguments=None):
+    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,status_file_path=None,save_output=None,archive_output=None,archive=None,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,score=None,validation=None,significance=None,raw_results_path=None,exclude_task=None,solver_arguments=None):
         self.task = task
         self.exclude_task = exclude_task
         self.benchmark = benchmark
@@ -35,6 +35,7 @@ class Config(object):
         self.validation = validation
         self.significance = significance
         self.solver_arguments = solver_arguments
+        self.status_file_path = status_file_path
 
     def write_config(self):
         save_to = os.path.join(definitions.CONFIGS_DIRECTORY,self.name)

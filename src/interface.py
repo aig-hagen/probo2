@@ -684,11 +684,23 @@ def solvers(verbose,id):
             solver_handler.print_solvers()
 
 @click.command()
-def status():
+@click.option('--tag','-t',help='Tag of experiments to show status.')
+def status(tag):
     """Provides an overview of the progress of the currently running experiment.
 
     """
-    if os.path.exists(str(definitions.STATUS_FILE_DIR)):
+    from src.utils import experiment_handler
+    from src.utils import config_handler
+    experiment_df = pd.read_csv(definitions.EXPERIMENT_INDEX)
+    selected_experiment = experiment_df[experiment_df.name == tag]
+    if tag:
+        experiment_df = pd.read_csv(definitions.EXPERIMENT_INDEX)
+        selected_experiment = experiment_df[experiment_df.name == tag]
+        cfg_selected_experiment = config_handler.load_config_yaml(selected_experiment['config_path'].iloc[0],as_obj=True)
+
+        Status.print_status_summary(cfg_selected_experiment.status_file_path)
+
+    elif os.path.exists(str(definitions.STATUS_FILE_DIR)):
         Status.print_status_summary()
     else:
         print("No status query is possible.")

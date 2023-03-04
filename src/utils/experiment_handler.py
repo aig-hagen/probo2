@@ -283,7 +283,6 @@ def set_supported_tasks(solver_list, config: config_handler.Config):
 
 def run_experiment(config: config_handler.Config):
 
-    Status.init_status_file(config)
 
     solver_list = solver_handler.load_solver(config.solver)
     benchmark_list = benchmark_handler.load_benchmark(config.benchmark)
@@ -307,9 +306,11 @@ def run_experiment(config: config_handler.Config):
     else:
         config.save_to = os.path.join(config.save_to, config.name)
     cfg_experiment_result_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
+    status_file_path = os.path.join(cfg_experiment_result_directory,'status.json')
+    config.status_file_path = status_file_path
+    Status.init_status_file(config)
     config.dump(cfg_experiment_result_directory)
     write_experiment_index(config, cfg_experiment_result_directory)
-    Status.init_status_file(config)
     print('========== Experiment Summary ==========')
     config.print()
     print('========== RUNNING EXPERIMENT ==========')
@@ -348,7 +349,7 @@ def run_experiment(config: config_handler.Config):
                                 result['tag'] = config.name
                                 write_result(result,result_path,config.result_format)
                                 if rep == 1:
-                                    Status.increment_instances_counter(task,solver['id'])
+                                    Status.increment_instances_counter(config,task,solver['id'])
                 else:
                     print(f"    {solver['name']} SKIPPED! No files in supported solver format: {','.join(solver['format'])}")
         Status.increment_task_counter()

@@ -7,6 +7,8 @@ import hvplot
 from src.functions import register,statistics
 from functools import reduce
 from src.utils import Status
+from src.utils import config_handler
+from src.utils import definitions
 
 hv.extension('bokeh', 'plotly')
 
@@ -20,7 +22,7 @@ def launch(df: pd.DataFrame) -> None:
 
     df['solver_full_name'] = df.solver_name +'_'+ df.solver_version
     # Define Options
-
+   
     solver_options = sorted(list(df.solver_full_name.unique()))
     rep_options = sorted(list(df.repetition.unique()))
     tasks_options = sorted(list(df.task.unique()))
@@ -93,19 +95,21 @@ def launch(df: pd.DataFrame) -> None:
     #========== BACKEND TOGGLES =========
     backend_toggle = pn.widgets.RadioButtonGroup(options=['bokeh', 'plotly'],value='bokeh') # matlibplot does not work
     watcher = backend_toggle.param.watch(callback, ['options', 'value'], onlychanged=False)
+    # TODO: load experimet satus file 
 
-
-    progress_info = Status.get_total_number_instances_per_solver()
+    #========== PROGRESS BARS ==========
+    experiment_index_df = pd.read_csv(definitions.EXPERIMENT_INDEX)
+    cfg_path_experiment = experiment_index_df[experiment_index_df.name == df.tag.iloc[0]]['config_path'].iloc[0]
+    cfg_experiment = config_handler.load_config_yaml(cfg_path_experiment,as_obj=True)
+    progress_info = Status.get_total_number_instances_per_solver(path=cfg_experiment.status_file_path)
+    
+   # test_bar = pn.Row(pn.panel("Pyglaf_iccma21:",width=130),pn.indicators.Progress(width=300, value=150,align='center',margin=0),f'213/350')
 
     progress_bars = []
-    running = pn.Column(*[
-    pn.Row(pn.panel(bs, width=100), pn.indicators.Progress(width=300, value=10+i*10, bar_color=bs))
-        for i, bs in enumerate(pn.indicators.Progress.param.bar_color.objects)
-        ])
     for task, _solvers in progress_info.items():
         solver_progress_bars_per_task = []
         for _solver, info in _solvers.items():
-            row = pn.Column(pn.pane.Str(f'{_solver}',style={'color': '#818589'},width=100),pn.indicators.Progress(name=f'Progress {_solver}', value=info['solved'], width=info['total'], bar_color='success',margin=[0,0]))#,f'{info["solved"]}/{info["total"]}')
+            row = pn.Row(pn.pane.Str(f'{_solver}',style={'color': '#818589'},width=130),pn.indicators.Progress(name=f'Progress {_solver}', value=info['solved'], width=info['total'], bar_color='success',align='center'),f'{info["solved"]}/{info["total"]}')
             solver_progress_bars_per_task.append(row)
         progress_bars.append(pn.Column(f'### {task}',*solver_progress_bars_per_task))
     
