@@ -1453,7 +1453,7 @@ def web(start,close):
 #     from networkx import DiGraph
 #     from networkx.drawing import nx_latex
     
-#     print("Enter a graph in tgf format:")
+#     print("Enter a graph in format:")
 #     args = []
 #     attacks = []
 #     attacks_section = False
@@ -1479,6 +1479,83 @@ def web(start,close):
 
 # cli.add_command(tikz)
 
+@click.command()
+@click.option('--task','-t',help='Task to solve')
+@click.option('--solver','-s',help='Solver to use.')
+@click.option('--arg','-a',help='Query argument for DS and DC problems.')
+def quick(task,solver,arg):
+    """
+    """
+    from src.functions import cli_input
+    from os import getcwd,path
+    user_input = cli_input.get_user_input()
+    input_graph_format = cli_input.get_input_format(user_input)
+    instance_path = path.join(getcwd(),f'temp_instance_file.{input_graph_format}')
+    with open(instance_path,'w') as f:
+        f.write("\n".join(user_input))
+    #TODO : 
+    #   
+    # @click.option('--plement dry run ( running solver without time measurement etc)
+@click.command()
+@click.option('--num_arguments',default=250,help='Number of arguments per instance')
+@click.option('--num_skept_arguments', default=75, help='Number of skeptical accepted arguments')
+@click.option('--size_ideal_extension',default=50)
+@click.option('--num_cred_arguments',default=30)
+@click.option('--num_pref_exts',default=10)
+@click.option('--p_ideal_attacked',default=0.5 )
+@click.option('--p_ideal_attack_back',default=0.5 )
+@click.option('--p_other_skept_args_attacked',default=0.5)
+@click.option('--p_other_skept_args_attack_back',default=0.5 )
+@click.option('--p_cred_args_attacked',default=0.5)
+@click.option('--p_cred_args_attack_back',default=0.5)
+@click.option('--p_other_attacks',default=0.5)
+@click.option('--num_instances',default=100)
+@click.option('--save_to','-st',type=click.Path(exists=True, resolve_path=True),help="Directory to store benchmark in. Default is the current working directory.")
+@click.option('--format','-fo',multiple=True,help='Output format of graphs')
+def kwt_gen(num_arguments,
+            num_skept_arguments,
+            size_ideal_extension,
+            num_cred_arguments,
+            num_pref_exts,
+            p_ideal_attacked,
+            p_ideal_attack_back,
+            p_other_skept_args_attacked,
+            p_other_skept_args_attack_back,
+            p_cred_args_attacked,
+            p_cred_args_attack_back,
+            p_other_attacks,
+            num_instances,
+            save_to,
+            format):
+    """Generate instances using the kwt generator"""
+    from src.generators import kwt_generator
+    from src.generators import generator_utils
+    from tqdm import tqdm
+    kwt_generator = kwt_generator.KwtDungTheoryGenerator(num_arguments=num_arguments,
+                                                         num_skept_arguments=num_skept_arguments,
+                                                         size_ideal_extension=size_ideal_extension,
+                                                         num_cred_arguments=num_cred_arguments,
+                                                         num_pref_exts=num_pref_exts,
+                                                         p_ideal_attacked=p_ideal_attacked,
+                                                         p_ideal_attack_back=p_ideal_attack_back,
+                                                         p_other_skept_args_attacked=p_other_skept_args_attacked,
+                                                         p_other_skept_args_attack_back=p_other_skept_args_attack_back,
+                                                         p_cred_args_attacked=p_cred_args_attacked,
+                                                         p_cred_args_attack_back=p_cred_args_attack_back,
+                                                         p_other_attacks=p_other_attacks)
+    kwt_instances_path = os.path.join(save_to,'kwt_instances')
+    os.makedirs(kwt_instances_path,exist_ok=True)
+    for i in tqdm(range(0,num_instances),desc='Generating kwt instances'):
+        af = kwt_generator.generate_instance()
+        for f in format:
+            af_parsed = generator_utils.parse_graph(f,af)
+            af_path = os.path.join(kwt_instances_path,f'kwt_{i}.{f}')
+            with open(af_path,'w') as af_file:
+                af_file.write(af_parsed)
+cli.add_command(kwt_gen)
+
+
+cli.add_command(quick)
 cli.add_command(web)
 cli.add_command(grounded_generator)
 # cli.add_command(scc_generator)

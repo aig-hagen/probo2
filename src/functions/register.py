@@ -91,3 +91,8 @@ def feature_calculation_register(key,function):
 embeddings_calculation_functions_dict = {}
 def embeddings_calculation_register(key,function):
     register(key, function, embeddings_calculation_functions_dict)
+
+parse_user_input_dict = {}
+def parse_user_input_register(key, function):
+    register(key, function, parse_user_input_dict)
+    

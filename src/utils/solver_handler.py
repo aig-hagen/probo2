@@ -509,3 +509,5 @@ def run_solver_accaptence(solver,task,instance,arg,timeout,format):
         return {'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': arg, 'runtime': None, 'result': result,'accepted': accepted, 'exit_with_error': True, 'error_code': err.returncode,'error': err,'cut_off':timeout}
       
 
+def dry_run():
+    pass
