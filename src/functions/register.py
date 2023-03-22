@@ -88,6 +88,11 @@ feature_calculation_functions_dict = {}
 def feature_calculation_register(key,function):
     register(key, function, feature_calculation_functions_dict)
 
+
+homophilic_feature_calculation_functions_dict = {}
+def homophilic_feature_calculation_register(key,function):
+    register(key, function, homophilic_feature_calculation_functions_dict)
+
 embeddings_calculation_functions_dict = {}
 def embeddings_calculation_register(key,function):
     register(key, function, embeddings_calculation_functions_dict)

@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from click import confirm
 
 import logging
+from tqdm import tqdm
 
 logging.basicConfig(filename=str(definitions.LOG_FILE_PATH),format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logger = logging.getLogger(__name__)
@@ -58,19 +59,46 @@ def _parse_fetch_options(parameter: AddSolverOptions):
             exit()
     return _tasks,_format
 
-
-def parse_cli_input(parameter: AddSolverOptions):
+def _check_add_solver_options(options: AddSolverOptions):
+    if options.format is None:
+        print(f'No format found. Format fetching enabled.')
+        options.fetch = True
+     
+    if options.tasks is None:
+        print(f'No tasks found. Task fetching enabled.')
+        options.fetch = True
     
-    if parameter.fetch:
-        tasks,format = _parse_fetch_options(parameter)
+    if options.name is None:
+        from os.path import basename
+        from pathlib import Path
+        # Handle also extensions like .py or .sh
+        options.name = basename(Path(options.path).with_suffix(''))
+        print(f'No name found. Name {options.name} derived from path.')
+    
+    if options.version is None:
+        print(f'No version found. Setting default version to 1.0')
+        options.version = 1.0
+    
+
+
+    
+
+
+def parse_cli_input(options: AddSolverOptions):
+
+    _check_add_solver_options(options)
+    
+    
+    if options.fetch:
+        tasks,format = _parse_fetch_options(options)
         
     if not isinstance(format, list):
         format = [format]
     
-    solver_info = {'name': parameter.name,'version': parameter.version,
-                   'path': parameter.path,'tasks': tasks,'format': format, 'id': None}
+    solver_info = {'name': options.name,'version': options.version,
+                   'path': options.path,'tasks': tasks,'format': format, 'id': None}
     new_solver = Solver(**solver_info)
-    if not parameter.no_check:
+    if not options.no_check:
         is_working = check_interface(new_solver)
     else:
         is_working = True
@@ -79,12 +107,12 @@ def parse_cli_input(parameter: AddSolverOptions):
         logger.error(f'{new_solver.name}: Solver interface check failed.')
         print('Solver not working.')
         exit()
-    if not parameter.yes:
+    print_summary(new_solver.__dict__)
+    if not options.yes:
         confirm(
             "Are you sure you want to add this solver?"
             ,abort=True,default=True)
     id = add_solver(new_solver)
-    print_summary(new_solver.__dict__)
     print(f"Solver {new_solver.name} added with ID: {new_solver.id}")
     logger.info(f"Solver {new_solver.name} added with ID: {new_solver.id}")
     return new_solver
@@ -131,24 +159,6 @@ def add_solver(solver: Solver):
        
 
 
-def _add_solver(solver_info: dict):
-    if not os.path.exists(definitions.SOLVER_FILE_PATH) or (os.stat(definitions.SOLVER_FILE_PATH).st_size == 0):
-        with open(definitions.SOLVER_FILE_PATH,'w') as solver_file:
-            id = 1
-            solver_info['id'] = id
-            json.dump([solver_info], solver_file,indent=2)
-        return id
-    else:
-        with open(definitions.SOLVER_FILE_PATH,'r+') as solver_file:
-            solver_data = json.load(solver_file)
-            _df = pd.DataFrame(solver_data)
-            id = int(_df.id.max() + 1)
-            solver_info['id'] = id
-            solver_data.append(solver_info)
-
-            solver_file.seek(0)
-            json.dump(solver_data, solver_file,indent=2)
-        return id
 
 def _init_cmd_params(solver_path):
     if solver_path.endswith('.sh'):
@@ -170,6 +180,7 @@ def fetch(solver_path, to_fetch):
 
             solver_property = solver_output[solver_output.find("[") + 1:solver_output.find("]")].split(",")
         except subprocess.CalledProcessError as err:
+                print('Somethin went wrong fetching informations from solver:')
                 logger.error(f'Error code: {err.returncode} stdout: {err.output.decode("utf-8")} stderr: {err.stderr.decode("utf-8")}')
                 print("Error code: {}\nstdout: {}\nstderr:{}\n".format(err.returncode, err.output.decode("utf-8"), err.stderr.decode("utf-8")))
                 exit()
@@ -192,18 +203,18 @@ def fetch_format(solver_path):
 
 
 
+test_instance_paths = { 'apx': definitions.TEST_INSTANCE_APX,
+                       'tgf': definitions.TEST_INSTANCE_TGF,
+                       'i23': definitions.TEST_INSTANCE_I23}
+
 def check_interface(solver: Solver) -> bool:
-        init_cmd = _init_cmd_params(solver.path)
+    init_cmd = _init_cmd_params(solver.path)
 
-        solver_format = solver.format[0]
-        if 'apx' in solver_format:
-            instance = str(definitions.TEST_INSTANCE_APX)
-        elif 'tgf' in solver_format:
-            instance = str(definitions.TEST_INSTANCE_TGF)
-
-
-
-        for test_task in solver.tasks:
+    for solver_format in solver.format:
+        print(f'Testing interface of {solver.name} for format {solver_format}.')
+        #solver_format = solver.format[0]
+        instance = test_instance_paths[solver_format]
+        for test_task in tqdm(solver.tasks,desc='Testing supported tasks'):
             cmd_params = init_cmd.copy()
             cmd_params.extend([solver.path,
                     "-p", test_task,
@@ -238,7 +249,7 @@ def check_interface(solver: Solver) -> bool:
                 logger.error(f'Something went wrong when testing the interface: {err}\nOutput:{err.output}')
                 return False
 
-        return True
+        return True 
 
 
 def print_summary(solver_info: dict):
@@ -509,5 +520,40 @@ def run_solver_accaptence(solver,task,instance,arg,timeout,format):
         return {'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': arg, 'runtime': None, 'result': result,'accepted': accepted, 'exit_with_error': True, 'error_code': err.returncode,'error': err,'cut_off':timeout}
       
 
-def dry_run():
-    pass
+def dry_run(solver,task,instance,arg,format,timeout):
+    cmd_params = []
+    if solver['path'].endswith('.sh'):
+        cmd_params.append('bash')
+    elif solver['path'].endswith('.py'):
+        cmd_params.append('python')
+    
+    if arg:
+        params = [solver['path'],
+          "-p", task,
+          "-f", instance,
+          "-fo", format,
+          "-a", arg]
+    else:
+        params = [solver['path'],
+          "-p", task,
+          "-f", instance,
+          "-fo", format]
+    
+    solver_dir = os.path.dirname(solver['path'])
+    final_params = cmd_params + params
+    print(f'Running solver {solver["name"]}:')
+    try:
+        start_time_current_run = time.perf_counter()
+        output = utils.run_process(final_params,
+                        capture_output=True, timeout=timeout, check=True,cwd=solver_dir)
+        end_time_current_run = time.perf_counter()
+        run_time = end_time_current_run - start_time_current_run
+        result = output.stdout.decode("utf-8")
+        print(f'Runtime: {run_time}\nResult:{result}')
+
+    except subprocess.TimeoutExpired as e:
+       print(f'Solver {solver["name"]} timeout.')
+        
+    except subprocess.CalledProcessError as err:
+        print("\nError occured:",err)
+      

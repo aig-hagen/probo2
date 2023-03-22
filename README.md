@@ -6,6 +6,27 @@
 
 A python tool that bundles all functionalities needed to collect, validate, analyze, and represent data in the context of benchmarking argumentation solvers.
 
+## Changelog
+
+### v1.1 - 22.03.2023
++ **add-solver** command:
+    - Interface test checks all supported tasks and formats of solver
+    - ICCMA23 instance format (.i23) added to solver interface check
+    - Added progressbars to interface check
+    - Name is derived from path if not specified
+
++ **kwt-gen** command:
+  - Added instance generation via a config file ( see /generators/generator_configs/kwt_example.yaml)
+  - Added parsing of generated instances to ICCMA23 (.i23) format
+  - Added option to generate random query arguments for DS an DC tasks
+  - Added option to add generated instances as a benchmark to the database
+  
++ **quick** command:
+    - Added new command to get a quick result for a single instance
++ **board** command:
+    - Added new command to create a dashboard for result visualization
+
++ Added calculation of node and edge homophily  
 
 ## Table of Contents
 1.[Setup](#setup)
@@ -142,6 +163,8 @@ Another example can be found in the [example_config.yaml](https://github.com/aig
 ## Commands
 
 - [Probo2 - Evaluation tool for abstract argumentation solvers](#probo2---evaluation-tool-for-abstract-argumentation-solvers)
+  - [Changelog](#changelog)
+    - [v1.1 - 22.03.2023](#v11---22032023)
   - [Table of Contents](#table-of-contents)
   - [Setup](#setup)
   - [Experiments](#experiments)

@@ -26,7 +26,7 @@ class Benchmark:
 
 
 @dataclass
-class AddBenchmarkParamter:
+class AddBenchmarkOptions:
     name: str
     path: str
     format: list
@@ -36,10 +36,11 @@ class AddBenchmarkParamter:
     random_arguments: bool
     dynamic_files: bool
     function: list
+    yes: bool
 
 
 
-def parse_cli_input(parameter: AddBenchmarkParamter):
+def parse_cli_input(parameter: AddBenchmarkOptions):
     
     if isinstance(parameter.additional_extension, tuple):
         if not parameter.additional_extension:
@@ -75,9 +76,10 @@ def parse_cli_input(parameter: AddBenchmarkParamter):
             new_benchmark.meta_data.update(register.benchmark_functions_dict[fun](new_benchmark))
 
     print_summary(new_benchmark)
-    click.confirm(
-        "Are you sure you want to add this benchmark to the database?",
-        abort=True,default=True)
+    if not parameter.yes:
+        click.confirm(
+            "Are you sure you want to add this benchmark to the database?",
+            abort=True,default=True)
     add_benchmark(new_benchmark)
     print(f"Benchmark {new_benchmark.name} added to database with ID: {new_benchmark.id}.")
     #logging.info(f"Benchmark {new_benchmark['name']} added to database with ID: {new_benchmark.id}.")

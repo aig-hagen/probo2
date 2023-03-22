@@ -46,7 +46,7 @@ def init():
 
 
 
-_version = "1.0"
+_version = "1.1"
 
 @click.group()
 def cli():
@@ -57,8 +57,9 @@ def version():
     print(f"probo2 {_version}")
 
 
-@click.command(cls=CustomClickOptions.command_required_option_from_option('fetch'))
-@click.option("--name", "-n", required=True, help="Name of the solver")
+#@click.command(cls=CustomClickOptions.command_required_option_from_option('fetch'))
+@click.command()
+@click.option("--name", "-n", required=False, help="Name of the solver")
 @click.option("--path","-p",
               required=True,
               type=click.Path(exists=True,resolve_path=True),
@@ -77,7 +78,7 @@ def version():
 @click.option("--version",
               "-v",
               type=click.types.STRING,
-              required=True,
+              required=False,
               help="Version of solver.")
 @click.option(
     "--fetch","-f",
@@ -149,8 +150,9 @@ def add_solver(ctx, name, path, format, tasks, version, fetch,yes, no_check):
               help="Generate additional argument files with a random argument."
               )
 @click.option("--function",'-fun', type=click.Choice(register.benchmark_functions_dict.keys()),multiple=True,help=' Custom functions to add additional attributes to benchmark.' )
+@click.option("--yes",is_flag=True,help="Skip prompt.")
 @click.pass_context
-def add_benchmark(ctx, name, path, format, additional_extension,dynamic_files,no_check, generate, random_arguments, function):
+def add_benchmark(ctx, name, path, format, additional_extension,dynamic_files,no_check, generate, random_arguments, function,yes):
     """ Adds a benchmark to the database.
      Before a benchmark is added to the database, it is checked if each instance is present in all specified file formats.
      Missing instances can be generated after the completion test (user has to confirm generation) or beforehand via the --generate/-g option.
@@ -173,8 +175,8 @@ def add_benchmark(ctx, name, path, format, additional_extension,dynamic_files,no
       Raises:
            None
        """
-    from src.utils.benchmark_handler import AddBenchmarkParamter,parse_cli_input
-    context = AddBenchmarkParamter(**ctx.params)
+    from src.utils.benchmark_handler import AddBenchmarkOptions,parse_cli_input
+    context = AddBenchmarkOptions(**ctx.params)
     parse_cli_input(context)
 
 @click.command()
@@ -1402,7 +1404,7 @@ def fetch(ctx,benchmark, save_to,solver,install):
 @click.option("--solver", "-s", help='Solver (id/name) for solution generation')
 @click.option("--timeout", "-t",help='Timeout for instances in seconds. Instances that exceed this value are discarded')
 @click.option("--timemin","-tm",help='Minimum solving time of instance.')
-@click.option("--format","-f", type=click.Choice(['apx','tgf']),help='Format of instances to generate')
+@click.option("--format","-f", type=click.Choice(['apx','tgf','i23']),help='Format of instances to generate')
 @click.option("--task","-t",help='Tasks to generate solutions for.')
 @click.option("--random_size","-rs",nargs=2,type=click.INT,default=None, help='Random number of arguments per instances. Usage: -rs [min] [max]')
 @click.option("--add",is_flag=True,help="Add benchmark to database.")
@@ -1483,19 +1485,57 @@ def web(start,close):
 @click.option('--task','-t',help='Task to solve')
 @click.option('--solver','-s',help='Solver to use.')
 @click.option('--arg','-a',help='Query argument for DS and DC problems.')
-def quick(task,solver,arg):
-    """
+@click.option('--timeout',default=600)
+@click.option('--file','-f',help='Input file. If not provided you can input a instances via the terminal.')
+@click.option('--format','-fo',help='Instances Format')
+def quick(task,solver,arg,timeout,file,format):
+    """Quick run for single instances or user input instances.
     """
     from src.functions import cli_input
-    from os import getcwd,path
-    user_input = cli_input.get_user_input()
-    input_graph_format = cli_input.get_input_format(user_input)
-    instance_path = path.join(getcwd(),f'temp_instance_file.{input_graph_format}')
-    with open(instance_path,'w') as f:
-        f.write("\n".join(user_input))
-    #TODO : 
-    #   
-    # @click.option('--plement dry run ( running solver without time measurement etc)
+    from src.utils import solver_handler
+    from os import getcwd,path,remove
+    
+    file_from_cli = False
+    if file is None:
+        user_input = cli_input.get_user_input()
+        input_graph_format = cli_input.get_input_format(user_input)
+        instance_path = path.join(getcwd(),f'temp_instance_file.{input_graph_format}')
+        with open(instance_path,'w') as f:
+            f.write("\n".join(user_input))
+        file = instance_path
+        format = input_graph_format
+        file_from_cli = True
+    
+    if ('DS' in task or 'DC' in task) and arg is None:
+        arg = input(f'Please specify a query argument for the {task} task:\n')
+
+    
+    if format is None:
+        format = file[-3:]
+
+    if solver is None:
+    # Select any solver which supports the specified task
+        all_solvers = solver_handler.load_solver('all')
+        for s in all_solvers:
+            if task in s['tasks']:
+                solver_to_run = s
+                break
+    else:
+        solver_to_run = solver_handler.load_solver([solver])[0]
+    
+    solver_handler.dry_run(solver_to_run,task,file,arg,format,timeout)
+    
+    # Clean up
+    if file_from_cli:
+        # Delete tmp file
+        try:
+            remove(instance_path)
+        except Exception as e:
+            print(f'Something went wrong when deleting the tmp file: {e}')
+        
+
+    
+
 @click.command()
 @click.option('--num_arguments',default=250,help='Number of arguments per instance')
 @click.option('--num_skept_arguments', default=75, help='Number of skeptical accepted arguments')
@@ -1510,8 +1550,13 @@ def quick(task,solver,arg):
 @click.option('--p_cred_args_attack_back',default=0.5)
 @click.option('--p_other_attacks',default=0.5)
 @click.option('--num_instances',default=100)
+@click.option('--name','-n',default='KWT_instances',help='Name of created benchmark.')
+@click.option('--add','-a',help='Add benchmark to database.')
+@click.option('--query_args',is_flag=True,help='Generate query arguments for DS,DC problems')
 @click.option('--save_to','-st',type=click.Path(exists=True, resolve_path=True),help="Directory to store benchmark in. Default is the current working directory.")
 @click.option('--format','-fo',multiple=True,help='Output format of graphs')
+@click.option('--config','-cfg',type=click.Path(exists=True, resolve_path=True),help="Full path to config file")
+@click.option('--extension_query','-ext',default='arg',help='Extension of query arguments')
 def kwt_gen(num_arguments,
             num_skept_arguments,
             size_ideal_extension,
@@ -1526,12 +1571,32 @@ def kwt_gen(num_arguments,
             p_other_attacks,
             num_instances,
             save_to,
-            format):
+            format,
+            config,
+            add,
+            name,
+            query_args,extension_query):
     """Generate instances using the kwt generator"""
     from src.generators import kwt_generator
     from src.generators import generator_utils
     from tqdm import tqdm
-    kwt_generator = kwt_generator.KwtDungTheoryGenerator(num_arguments=num_arguments,
+    from random import choice
+    import yaml
+    if config is not None:
+        with open(config,'r') as config_file:
+            if config.endswith('yaml'):
+                config = yaml.load(config_file, Loader=yaml.FullLoader)
+        kwt_generator = kwt_generator.KwtDungTheoryGenerator(**config['generator'])
+        name = config['general']['name']
+        format = config['general']['format']
+        add = config['general']['add']
+        query_args = config['general']['query_args']
+        extension_query = config['general']['extension_query']
+        save_to = config['general']['save_to']
+        num_instances = config['general']['num_instances']
+    else:
+
+        kwt_generator = kwt_generator.KwtDungTheoryGenerator(num_arguments=num_arguments,
                                                          num_skept_arguments=num_skept_arguments,
                                                          size_ideal_extension=size_ideal_extension,
                                                          num_cred_arguments=num_cred_arguments,
@@ -1543,15 +1608,33 @@ def kwt_gen(num_arguments,
                                                          p_cred_args_attacked=p_cred_args_attacked,
                                                          p_cred_args_attack_back=p_cred_args_attack_back,
                                                          p_other_attacks=p_other_attacks)
-    kwt_instances_path = os.path.join(save_to,'kwt_instances')
+    if save_to is None:
+        save_to = os.getcwd()
+    kwt_instances_path = os.path.join(save_to,name)
     os.makedirs(kwt_instances_path,exist_ok=True)
     for i in tqdm(range(0,num_instances),desc='Generating kwt instances'):
         af = kwt_generator.generate_instance()
+        if query_args:
+            query_arg = choice(list(af.nodes()))
+            af_query_path = os.path.join(kwt_instances_path,f'kwt_{i}.{extension_query}')
+            with open(af_query_path,'w') as af_query_file:
+                af_query_file.write(query_arg)
+
         for f in format:
             af_parsed = generator_utils.parse_graph(f,af)
             af_path = os.path.join(kwt_instances_path,f'kwt_{i}.{f}')
             with open(af_path,'w') as af_file:
                 af_file.write(af_parsed)
+    
+    if add:
+        from src.utils.benchmark_handler import AddBenchmarkOptions,parse_cli_input
+        
+        options = AddBenchmarkOptions(name=name,path=kwt_instances_path,format=format,additional_extension=extension_query,no_check=False,dynamic_files=None,random_arguments=False,generate=None,function=None,yes=True)
+        parse_cli_input(options)
+    
+    
+
+
 cli.add_command(kwt_gen)
 
 

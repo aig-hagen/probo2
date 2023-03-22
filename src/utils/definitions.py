@@ -26,8 +26,10 @@ TEST_INSTANCES_REF_PATH = str(files(src.probo2_data.solver_test_data).joinpath("
 TEST_INSTANCE_ARG = str(files(src.probo2_data.solver_test_data).joinpath("a.arg"))
 TEST_INSTANCE_APX = str(files(src.probo2_data.solver_test_data).joinpath("a.apx"))
 TEST_INSTANCE_TGF = str(files(src.probo2_data.solver_test_data).joinpath("a.tgf"))
+TEST_INSTANCE_I23 = str(files(src.probo2_data.solver_test_data).joinpath("a.i23"))
 TEST_INSTANCE_APXM = str(files(src.probo2_data.solver_test_data).joinpath("a.apxm"))
 TEST_INSTANCE_TGFM = str(files(src.probo2_data.solver_test_data).joinpath("a.tgfm"))
+
 
 CSS_TEMPLATES_PATH = str(files(src.probo2_data).joinpath("css"))
 
