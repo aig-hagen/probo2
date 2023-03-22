@@ -72,6 +72,9 @@ def _write_instance_labels_to_csv(save_to, instance_name, instance_results):
     instance_df = pd.DataFrame(instance_results)
     instance_df['label'] = instance_df.accepted.astype(int)
     instance_df.to_csv(instance_label_save_to)
+
+def label_fastes_solvers(df: pd.DataFrame):
+    
                 
                 
                 

@@ -94,6 +94,8 @@ def calculate_features(benchmark_info: dict,feature,embedding,save_to):
     
     pd.DataFrame(all_instances_index).to_csv(os.path.join(save_to,f"{benchmark_info['name']}_index.csv"))
 
+
+
 def _init_features_df(ids_args, instance_features):
     instance_features_df = pd.DataFrame(instance_features)
     instance_features_df['id'] = instance_features_df.index
@@ -120,7 +122,7 @@ def _write_args_ids_map(args_ids, args_ids_save_to):
 
         
         
-        
+
     
 #========== networkx features ==========
 def degree_centrality(graph: nx.DiGraph):
@@ -152,6 +154,37 @@ def harmonic_centrality(graph: nx.DiGraph):
 def betweenness_centrality(graph: nx.DiGraph):
     return nx.betweenness_centrality(graph)
 
+
+
+def node_homophily(G: nx.DiGraph, label_key='label'):
+    num_nodes = G.number_of_nodes()
+    sum_ratio_same_label = 0
+    for node,label in G.nodes.items():
+        num_neighbors_ego_node = len(list(G.neighbors(node)))
+        if num_neighbors_ego_node == 0:
+            continue
+        labels_neighbors = [ G.nodes[n][label_key] for n in G.neighbors(node)]
+        num_neighbours_with_same_label_as_ego_node = labels_neighbors.count(label['label'])
+        ratio_same_label = num_neighbours_with_same_label_as_ego_node / num_neighbors_ego_node
+        sum_ratio_same_label += ratio_same_label
+    
+    homophily_node = sum_ratio_same_label / num_nodes
+    return homophily_node
+
+def edge_homophily(G: nx.DiGraph, label_key='label'):
+    num_edges = G.number_of_edges()
+    num_edges_with_same_label = 0
+    
+    for a,b in G.edges():
+       if G.nodes[a]['label'] == G.nodes[b][label_key]:
+            num_edges_with_same_label += 1
+    
+    edge_homophily = num_edges_with_same_label / num_edges
+    return edge_homophily
+    
+
+register.homophilic_feature_calculation_register('node_homophily',node_homophily)
+register.homophilic_feature_calculation_register('edge_homophily',edge_homophily)
 
 
 
