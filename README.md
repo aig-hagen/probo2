@@ -263,6 +263,7 @@ Usage: *probo2 add-benchmark [OPTIONS]*
   (user has to confirm generation) or beforehand via the --generate/-g
   option. It is also possilbe to generate random argument files for the
   DC/DS problems with the --random_arguments/-rnd option. By default, the following attributes are saved for a benchmark: name, path, format, and the extension of query argument files. However, it is possible to specify additional attributes using your functions. See section "custom function" for further information.
+  If no benchmark name via the --name option is provided, the name is derived from the benchmark path. Instance formats and the file extension of the query arguments (used for DS and DC tasks) are automatically set if not specified. For this the file extensions of all files in the given path are compared with the default file formats\extensions (see src/utils/definitions.DefaultInstanceFormats and src/utils/definitions.DefaultQueryFormats). Formats are set to the intesection between found formats and default formats. 
 
 **Options**:
 + *-n, --name *
