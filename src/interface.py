@@ -66,7 +66,7 @@ def version():
               help="Path to solver executable")
 @click.option("--format",
               "-f",
-              type=click.Choice(['apx', 'tgf','i23'], case_sensitive=False),
+              type=click.Choice(definitions.DefaultInstanceFormats, case_sensitive=False),
               required=False,
               help="Supported format of solver.")
 @click.option('--tasks',
@@ -103,17 +103,18 @@ def add_solver(ctx, name, path, format, tasks, version, fetch,yes, no_check):
      Raises:
           None
       """
-    from src.utils.solver_handler import AddSolverOptions,parse_cli_input
-    context = AddSolverOptions(**ctx.params)
-    parse_cli_input(context)
+    from src.utils.options.CommandOptions import AddSolverOptions
+    from src.utils import solver_handler
+    options = AddSolverOptions(**ctx.params)
+    options.check()
+    solver_handler.add_solver(options)
     
-    #logging.info(f"Solver {solver_info['name']} added with ID: {id}")
+    
 
 @click.command()
 @click.option("--name",
               "-n",
               type=click.types.STRING,
-              required=True,
               help="Name of benchmark/fileset")
 @click.option("--path",
               "-p",
@@ -122,9 +123,8 @@ def add_solver(ctx, name, path, format, tasks, version, fetch,yes, no_check):
               help="Path to instances")
 @click.option("--format",
               "-f",
-              required=True,
               multiple=True,
-              type=click.Choice(["apx","tgf"]),
+              type=click.Choice(definitions.DefaultInstanceFormats.as_list()),
               help="Supported formats of benchmark/fileset")
 @click.option(
     "--additional_extension",
@@ -175,9 +175,11 @@ def add_benchmark(ctx, name, path, format, additional_extension,dynamic_files,no
       Raises:
            None
        """
-    from src.utils.benchmark_handler import AddBenchmarkOptions,parse_cli_input
-    context = AddBenchmarkOptions(**ctx.params)
-    parse_cli_input(context)
+    from src.utils.benchmark_handler import add_benchmark
+    from src.utils.options.CommandOptions import AddBenchmarkOptions
+    options = AddBenchmarkOptions(**ctx.params)
+    options.check()
+    add_benchmark(options)
 
 @click.command()
 @click.option(
@@ -1189,7 +1191,7 @@ def fetch(ctx,benchmark, save_to,solver,install):
         current_benchmark_options = fetch_options[benchmark_name]
         path_benchmark = fetching._fetch_benchmark(benchmark_name,save_to,current_benchmark_options)
         if path_benchmark:
-            ctx.invoke(add_benchmark,
+            ctx.invoke(_add_benchmark_to_database,
                    name=benchmark_name,
                    path=path_benchmark,
                    format=tuple(current_benchmark_options['format']),
@@ -1420,7 +1422,7 @@ def grounded_generator(ctx,num, name, save_to, num_args, generate_solutions, gen
     save_directory = generator.generate('grounded',default_config)
     if add:
         general_configs = default_config['general']
-        ctx.invoke(add_benchmark,
+        ctx.invoke(_add_benchmark_to_database,
                    name=general_configs['name'],
                    path=save_directory,
                    format=tuple(general_configs['format']),

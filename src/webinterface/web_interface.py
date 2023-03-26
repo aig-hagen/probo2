@@ -471,7 +471,7 @@ def _check_solver_interface(d:ui.dialog,options: solver_handler.AddSolverOptions
         ui.notify('Something went wrong when testing the interface!')
         d.close()
         return
-    id = solver_handler.add_solver(new_solver)
+    id = solver_handler._add_solver_to_database(new_solver)
     ui.notify(f'Solver added with id: {id}')
     d.close()
 

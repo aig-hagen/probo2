@@ -19,6 +19,7 @@ from click import confirm
 
 import logging
 from tqdm import tqdm
+from src.utils.options.CommandOptions import AddSolverOptions
 
 logging.basicConfig(filename=str(definitions.LOG_FILE_PATH),format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logger = logging.getLogger(__name__)
@@ -33,16 +34,7 @@ class Solver:
     format: list
     id: int
 
-@dataclass(frozen=False)
-class AddSolverOptions():
-    name: str
-    path: str
-    version: str
-    fetch: bool
-    format: list
-    tasks: list
-    yes: bool
-    no_check: bool
+
 
 
 def _parse_fetch_options(parameter: AddSolverOptions):
@@ -59,36 +51,9 @@ def _parse_fetch_options(parameter: AddSolverOptions):
             exit()
     return _tasks,_format
 
-def _check_add_solver_options(options: AddSolverOptions):
-    if options.format is None:
-        print(f'No format found. Format fetching enabled.')
-        options.fetch = True
-     
-    if options.tasks is None:
-        print(f'No tasks found. Task fetching enabled.')
-        options.fetch = True
-    
-    if options.name is None:
-        from os.path import basename
-        from pathlib import Path
-        # Handle also extensions like .py or .sh
-        options.name = basename(Path(options.path).with_suffix(''))
-        print(f'No name found. Name {options.name} derived from path.')
-    
-    if options.version is None:
-        print(f'No version found. Setting default version to 1.0')
-        options.version = 1.0
-    
 
+def add_solver(options: AddSolverOptions):
 
-    
-
-
-def parse_cli_input(options: AddSolverOptions):
-
-    _check_add_solver_options(options)
-    
-    
     if options.fetch:
         tasks,format = _parse_fetch_options(options)
         
@@ -112,7 +77,7 @@ def parse_cli_input(options: AddSolverOptions):
         confirm(
             "Are you sure you want to add this solver?"
             ,abort=True,default=True)
-    id = add_solver(new_solver)
+    id = _add_solver_to_database(new_solver)
     print(f"Solver {new_solver.name} added with ID: {new_solver.id}")
     logger.info(f"Solver {new_solver.name} added with ID: {new_solver.id}")
     return new_solver
@@ -151,7 +116,7 @@ def _append_to_solver_file(solver: Solver) -> int:
 
 
 
-def add_solver(solver: Solver):
+def _add_solver_to_database(solver: Solver):
     if not os.path.exists(definitions.SOLVER_FILE_PATH) or (os.stat(definitions.SOLVER_FILE_PATH).st_size == 0):
         return _write_to_empty_solver_file(solver)
     else:

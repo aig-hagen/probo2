@@ -75,3 +75,21 @@ SUPPORTED_TRACKS = {'CO': ['EE-CO', 'SE-CO', 'DC-CO', 'DS-CO',"CE-CO",'EC-CO','E
                     'STG': ["EE-STG","SE-STG","DC-STG","DS-STG","CE-STG",'EC-STG','ES-STG'],
                     'ID':["SE-ID","DS-ID" ]
                     }
+
+from enum import Enum
+
+class DefaultInstanceFormats(Enum):
+  APX = 'apx'
+  TGF = 'tgf'
+  I23 = 'i23'
+
+  def as_list():
+    return [f.value for f in DefaultInstanceFormats]
+
+class DefaultQueryFormats(Enum):
+  ARG = 'arg'
+
+  def as_list():
+    return [f.value for f in DefaultQueryFormats]
+
+

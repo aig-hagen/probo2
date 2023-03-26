@@ -10,6 +10,8 @@ import click
 import numpy as np
 import random
 from pathlib import Path
+from src.utils.options.CommandOptions import AddBenchmarkOptions
+from tqdm import tqdm
 
 from dataclasses import dataclass
 
@@ -24,67 +26,43 @@ class Benchmark:
     meta_data: dict
 
 
-
-@dataclass
-class AddBenchmarkOptions:
-    name: str
-    path: str
-    format: list
-    additional_extension: list
-    no_check: bool
-    generate: list
-    random_arguments: bool
-    dynamic_files: bool
-    function: list
-    yes: bool
+def get_unique_formats_from_path(path: str):
+    existing_formats = set()
+    for instance in tqdm(os.listdir(path),desc='Scanning instance formats'):
+        extension = Path(instance).suffix[1:]
+        existing_formats.add(extension)
+    return existing_formats
 
 
 
-def parse_cli_input(parameter: AddBenchmarkOptions):
-    
-    if isinstance(parameter.additional_extension, tuple):
-        if not parameter.additional_extension:
-            parameter.additional_extension = ['arg']
-        if len(parameter.additional_extension) > 1:
-            parameter.additional_extension = list(parameter.additional_extension)
-        else:
-            parameter.additional_extension = parameter.additional_extension[0]
-    elif not isinstance(parameter.additional_extension, str):
-        print(f"Type {type(parameter.additional_extension)} of additional extension is not valid.")
-        exit()
-
-
-
-    benchmark_info = {'name': parameter.name, 'path': parameter.path,'format': list(parameter.format),'ext_additional': parameter.additional_extension, 'dynamic_files': parameter.dynamic_files,'meta_data': {},'id': None}
+def add_benchmark(options: AddBenchmarkOptions):
+    benchmark_info = {'name': options.name, 'path': options.path,'format': list(options.format),'ext_additional': options.additional_extension, 'dynamic_files': options.dynamic_files,'meta_data': {},'id': None}
     new_benchmark = Benchmark(**benchmark_info)
-
-    if parameter.generate:
-        generate_instances(new_benchmark, new_benchmark.generate)
+    if options.generate:
+        generate_instances(new_benchmark, options.generate)
         #new_benchmark.generate_instances(generate)
-    if parameter.random_arguments:
-        generate_argument_files(new_benchmark,extension=parameter.additional_extension)
-    if not parameter.no_check:
+    if options.random_arguments:
+        generate_argument_files(new_benchmark,extension=options.additional_extension)
+    if not options.no_check:
         check(new_benchmark)
 
-    if parameter.dynamic_files:
+    if options.dynamic_files:
         check_dynamic(new_benchmark)
 
-    if parameter.function:
+    if options.function:
         from src.functions import register
         from src.functions import benchmark
-        for fun in parameter.function:
+        for fun in options.function:
             new_benchmark.meta_data.update(register.benchmark_functions_dict[fun](new_benchmark))
 
     print_summary(new_benchmark)
-    if not parameter.yes:
+    if not options.yes:
         click.confirm(
             "Are you sure you want to add this benchmark to the database?",
             abort=True,default=True)
-    add_benchmark(new_benchmark)
+    new_benchmark.id = _add_benchmark_to_database(new_benchmark)
     print(f"Benchmark {new_benchmark.name} added to database with ID: {new_benchmark.id}.")
     #logging.info(f"Benchmark {new_benchmark['name']} added to database with ID: {new_benchmark.id}.")
-
-    pass
 
 
 
@@ -99,7 +77,7 @@ def get_file_size(file, unit='MB'):
     if unit == 'MB':
         return  round(total_size  / float(1<<20))
 
-def add_benchmark(benchmark: Benchmark):
+def _add_benchmark_to_database(benchmark: Benchmark):
     if not os.path.exists(definitions.BENCHMARK_FILE_PATH) or (os.stat(definitions.BENCHMARK_FILE_PATH).st_size == 0):
         with open(definitions.BENCHMARK_FILE_PATH,'w') as benchmark_file:
             id = 1
@@ -275,7 +253,6 @@ def generate_instances(benchmark: Benchmark, generate_format, present_format='')
                 gen_single_instance(present_instance, generate_instance_path, generate_format)
                 num_generated += 1
     print(f'{num_generated} .{generate_format} instances generated.')
-    print(generate_instance_path)
     benchmark.format.append(generate_format)
 
 
