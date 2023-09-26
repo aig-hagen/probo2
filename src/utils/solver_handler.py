@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import time
+import io
 
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from click import confirm
 
 import logging
 from tqdm import tqdm
-from src.utils.options.CommandOptions import AddSolverOptions
+from src.utils.options.CommandOptions import AddSolverOptions, EditSolverOptions
 
 logging.basicConfig(filename=str(definitions.LOG_FILE_PATH),format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logger = logging.getLogger(__name__)
@@ -81,6 +82,27 @@ def add_solver(options: AddSolverOptions):
     print(f"Solver {new_solver.name} added with ID: {new_solver.id}")
     logger.info(f"Solver {new_solver.name} added with ID: {new_solver.id}")
     return new_solver
+
+def edit_solver(options: EditSolverOptions):
+    solver_infos = load_solver_by_identifier(options.id)
+    if not solver_infos or solver_infos is None:
+        print(f'No solver with id {options.id} found. Please run solvers command to get a list of solvers in database.')
+        exit()
+    solver_infos = solver_infos[0] # load_solver returns a list,
+    print('Changing values:')
+    for attribute, value in options.__dict__.items():
+        if attribute in solver_infos.keys() and value is not None:
+            if attribute != 'id':
+                print(f'+ {attribute}: {solver_infos[attribute]} -> {value} ')
+            solver_infos[attribute] = value
+    confirm('Apply changes?',abort=True,default=True)
+    update_solver(solver_infos)
+    print(f'Updated solver!')
+    
+    
+
+
+    
 
 def _create_solver_obj(parameter: AddSolverOptions):
     if parameter.fetch:
@@ -282,7 +304,7 @@ def load_solver_by_task(task:str)-> list:
             support.append(solver)
     return support
 
-def load_solver_by_identifier(identifier: list) -> list:
+def load_solver_by_identifier(identifier) -> list:
     """Load solvers by name or id
 
     Args:
@@ -294,6 +316,9 @@ def load_solver_by_identifier(identifier: list) -> list:
     solver_json = load_solver_json()
     solver_list = []
 
+    if not isinstance(identifier,list):
+        identifier = [identifier]
+
 
     for solver in solver_json:
         if solver['name'] in identifier:
@@ -302,11 +327,21 @@ def load_solver_by_identifier(identifier: list) -> list:
             solver_list.append(solver)
     return solver_list
 
-def _update_solver_json_after_delete(solvers: list):
+def _update_solver_json(solvers: list):
     json_str = json.dumps(solvers, indent=2)
-
     with open(definitions.SOLVER_FILE_PATH, "w") as f:
         f.write(json_str)
+
+def update_solver(solver_infos):
+    solvers = load_solver('all')
+    for i,solver in enumerate(solvers):
+        if solver['id'] == solver_infos['id']:
+            solvers[i] = solver_infos
+            break
+    
+    _update_solver_json(solvers)
+
+
 
 def delete_solver(id) -> bool:
     solvers = load_solver('all')
@@ -318,12 +353,13 @@ def delete_solver(id) -> bool:
         if solver['id'] == id or solver['name'] == id:
             deleted = True
             solvers.remove(solver)
+            break
     if not deleted:
         print(f"Unable to delete solver {id}. Solver not found.")
         logger.error(f"Unable to delete solver {id}. Solver not found.")
         return False
     
-    _update_solver_json_after_delete(solvers)
+    _update_solver_json(solvers)
     print(f"Solver {id} deleted")
     logger.info(f"Solver {id} deleted")
     return True
@@ -353,10 +389,13 @@ class SolverParameters:
     timeout: str
     final_params: list
     format: list
+    time_measurement: str
 
-def _set_solver_parameters(solver_info,instance,task,format,additional_arguments_lookup,dynamic_files_lookup,repetition,timeout) -> SolverParameters:
+def _set_solver_parameters(solver_info,instance,task,format,additional_arguments_lookup,dynamic_files_lookup,repetition,timeout,time_measurement='default') -> SolverParameters:
     cmd_params = []
     additional_argument = ""
+    if time_measurement == 'default':
+        cmd_params.append('time')
     if solver_info['path'].endswith('.sh'):
         cmd_params.append('bash')
     elif solver_info['path'].endswith('.py'):
@@ -384,7 +423,8 @@ def _set_solver_parameters(solver_info,instance,task,format,additional_arguments
                                         additional_argument=additional_argument,
                                         timeout=timeout,
                                         final_params=final_params,
-                                        format=format)
+                                        format=format,
+                                        time_measurement=time_measurement)
     
     return solver_parameter
     
@@ -404,11 +444,24 @@ def _run_solver_write_results_to_file(output_file_dir,solver_parameters:SolverPa
 
     out_file_path = os.path.join(output_file_dir,f'{solver_parameters.instance_name}_{solver_parameters.repetition}.out')
     with open(out_file_path,'w') as output:
+        out_time = open('temp.time','w+')
         start_time_current_run = time.perf_counter()
         utils.run_process(solver_parameters.final_params,
-                        timeout=solver_parameters.timeout, check=True,cwd=solver_parameters.solver_dir,stdout=output)
+                        timeout=solver_parameters.timeout, check=True,cwd=solver_parameters.solver_dir,stdout=output,stderr=out_time)
         end_time_current_run = time.perf_counter()
-        run_time = end_time_current_run - start_time_current_run
+        out_time.close()
+        if solver_parameters.time_measurement == 'default':
+            out_time = open('temp.time','r')
+            out_str = out_time.read()
+            out_time.close()
+            os.remove("temp.time")
+            # out_str = out_time.stdout.decode("utf-8")
+            time_list = out_str.split(" ")
+            time_user = float(time_list[0].split('user')[0])
+            time_system = float(time_list[1].split('system')[0])
+            run_time = time_user + time_system
+        else:
+            run_time = end_time_current_run - start_time_current_run
     return {'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.additional_argument, 'runtime': run_time, 'result': out_file_path, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout}
 
 def _run_solver(solver_parameters: SolverParameters):
@@ -417,10 +470,18 @@ def _run_solver(solver_parameters: SolverParameters):
         raise subprocess.CalledProcessError(returncode=-1,cmd=solver_parameters.final_params,output="Solver path not found.")
     
     start_time_current_run = time.perf_counter()
-    utils.run_process(solver_parameters.final_params,
+    out = utils.run_process(solver_parameters.final_params,
                     capture_output=True, timeout=solver_parameters.timeout, check=True,cwd=solver_parameters.solver_dir)
     end_time_current_run = time.perf_counter()
-    run_time = end_time_current_run - start_time_current_run
+    if solver_parameters.time_measurement == 'default':
+        out_str = out.stdout.decode("utf-8")
+        time_list = out.stderr.decode("utf-8").split(" ")
+        time_user = float(time_list[0].split('user')[0])
+        time_system = float(time_list[1].split('system')[0])
+        run_time = time_user + time_system
+    else:
+        run_time = end_time_current_run - start_time_current_run
+    print(f'Runtime:{run_time}')
     return {'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.additional_argument, 'runtime': run_time, 'result': None, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout}
             
 

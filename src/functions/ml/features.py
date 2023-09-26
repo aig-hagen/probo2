@@ -52,7 +52,7 @@ def build_graph(instance_path, format):
     return parse_function_dict[format](f_content)
 
 
-def calculate_features(benchmark_info: dict,feature,embedding,save_to):
+def calculate_graph_level_features(benchmark_info: dict,feature,embedding,save_to):
     if not os.path.exists(save_to):
         print(f'Path {save_to} not found')
         exit()
@@ -93,6 +93,7 @@ def calculate_features(benchmark_info: dict,feature,embedding,save_to):
                                      'ids_args_map': os.path.relpath(ids_args_save_to,save_to)})
     
     pd.DataFrame(all_instances_index).to_csv(os.path.join(save_to,f"{benchmark_info['name']}_index.csv"))
+    return features_save_to,embeddings_save_to
 
 
 
@@ -154,6 +155,25 @@ def harmonic_centrality(graph: nx.DiGraph):
 def betweenness_centrality(graph: nx.DiGraph):
     return nx.betweenness_centrality(graph)
 
+def num_nodes(graph: nx.DiGraph):
+    return graph.number_of_nodes()
+def num_edges(graph: nx.DiGraph):
+    return graph.number_of_edges()
+
+
+register.feature_calculation_register('test', test)
+register.feature_calculation_register('degree_centrality', degree_centrality)
+register.feature_calculation_register('out_degree_centrality', out_degree_centrality)
+register.feature_calculation_register('in_degree_centrality', in_degree_centrality)
+register.feature_calculation_register('eigenvector_centrality', eigenvector_centrality)
+register.feature_calculation_register('katz_centrality', katz_centrality)
+register.feature_calculation_register('closeness_centrality', closeness_centrality)
+register.feature_calculation_register('betweenness_centrality', betweenness_centrality)
+register.feature_calculation_register('harmonic_centrality', harmonic_centrality)
+register.feature_calculation_register('num_nodes', num_nodes)
+register.feature_calculation_register('num_edges', num_edges)
+
+
 
 
 def node_homophily(G: nx.DiGraph, label_key='label'):
@@ -185,6 +205,97 @@ def edge_homophily(G: nx.DiGraph, label_key='label'):
 
 register.homophilic_feature_calculation_register('node_homophily',node_homophily)
 register.homophilic_feature_calculation_register('edge_homophily',edge_homophily)
+
+
+# Benchmark level features
+
+def num_instances(benchmark_info):
+    pass
+
+def num_instances_per_type(benchmark_info):
+    pass
+
+
+def avg_num_nodes(benchmark_info):
+    pass
+
+def avg_num_attacks(benchmark_info):
+    pass
+
+def infer_graph_type(instance_name):
+    return ''
+
+def avg_in_degree(graph: nx.DiGraph):
+    in_degrees = graph.in_degree()
+    avg_deg = sum([d for (i,d) in in_degrees]) / graph.number_of_nodes()
+    return avg_deg
+
+def avg_out_degree(graph:nx.DiGraph):
+    out_degrees = graph.out_degree()
+    avg_deg = sum([d for (i,d) in out_degrees]) / graph.number_of_nodes()
+    return avg_deg
+
+
+register.feature_calculation_register('avg_out_deg',avg_out_degree)
+register.feature_calculation_register('avg_in_deg',avg_in_degree)
+
+
+
+
+def calculate_benchmark_level_features(benchmark_info: dict,feature,save_to):
+    if not os.path.exists(save_to):
+        print(f'Path {save_to} not found')
+        exit()
+    
+    save_to = os.path.join(save_to,f"{benchmark_info['name']}_features_bechmark_level")
+    #embeddings_save_to = os.path.join(save_to,'embeddings')
+    features_save_to = os.path.join(save_to,'features')
+    #mappings_save_to = os.path.join(save_to,'mappings')
+    #os.makedirs(embeddings_save_to,exist_ok=True)
+    os.makedirs(features_save_to,exist_ok=True)
+    #os.makedirs(mappings_save_to,exist_ok=True)
+
+    parse_format = 'tgf' if 'tgf' in benchmark_info['format'] else benchmark_info['format'][0]
+    instances = benchmark_handler.get_instances(benchmark_info['path'], parse_format,full_path=True)
+    all_instances_features = []
+    c = 0
+    for instance_path in tqdm(instances,desc='Calculating features'):
+        # c += 1
+        # if c == 2:
+        #     break
+        instance_graph,args_ids, ids_args = build_graph(instance_path,parse_format)
+        instance_features = {calculate: register.feature_calculation_functions_dict[calculate](instance_graph) for calculate in feature}
+        #instance_embeddings = {calculate: register.embeddings_calculation_functions_dict[calculate](instance_graph) for calculate in embedding}
+        instance_name = os.path.basename(instance_path)[:-4]
+        graph_type = infer_graph_type(instance_name)
+        instance_features['instance_name'] = instance_name
+        all_instances_features.append(instance_features)
+        #instance_embeddings_save_to = os.path.join(embeddings_save_to,f'{instance_name}_embeddings.npz')
+        #instance_features_save_to = os.path.join(features_save_to,f'{instance_name}_features.csv')
+        #args_ids_save_to = os.path.join(mappings_save_to,f'{instance_name}_args_to_ids.csv')
+        #ids_args_save_to = os.path.join(mappings_save_to,f'{instance_name}_ids_to_args.csv')
+        #_write_args_ids_map(args_ids, args_ids_save_to)
+        #_write_ids_args_map(ids_args, ids_args_save_to)
+        #np.savez(os.path.join(embeddings_save_to,f'{instance_name}_embeddings.npz'),**instance_embeddings)
+        
+        #instance_features_df = _init_features_df(ids_args, instance_features)
+        
+        #instance_features_df.to_csv(instance_features_save_to)
+        # all_instances_index.append({'instance_name': instance_name,
+        #                             'format':parse_format,
+        #                             #'embeddings_path': os.path.relpath(instance_embeddings_save_to,save_to),
+        #                              'features_path': os.path.relpath(instance_features_save_to,save_to)
+        #                              #'args_ids_map': os.path.relpath(args_ids_save_to,save_to),
+        #                              #'ids_args_map': os.path.relpath(ids_args_save_to,save_to)})
+    
+    df = pd.DataFrame(all_instances_features)
+    average_stats = df.describe()
+    print(average_stats)
+    df.to_csv(os.path.join(features_save_to,'benchmark_level_features.csv'),index=False)
+    average_stats.to_latex(os.path.join(features_save_to,'benchmark_level_features_summary.tex'))
+
+    #pd.DataFrame(all_instances_index).to_csv(os.path.join(save_to,f"{benchmark_info['name']}_index.csv"))
+    #return features_save_to,#embeddings_save_to
 
 
 
@@ -290,15 +401,7 @@ def RandNE(graph: nx.DiGraph):
     
 
 
-register.feature_calculation_register('test', test)
-register.feature_calculation_register('degree_centrality', degree_centrality)
-register.feature_calculation_register('out_degree_centrality', out_degree_centrality)
-register.feature_calculation_register('in_degree_centrality', in_degree_centrality)
-register.feature_calculation_register('eigenvector_centrality', eigenvector_centrality)
-register.feature_calculation_register('katz_centrality', katz_centrality)
-register.feature_calculation_register('closeness_centrality', closeness_centrality)
-register.feature_calculation_register('betweenness_centrality', betweenness_centrality)
-register.feature_calculation_register('harmonic_centrality', harmonic_centrality)
+
 
 
 register.embeddings_calculation_register('DeepWalk',deep_walk)

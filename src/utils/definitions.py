@@ -92,4 +92,12 @@ class DefaultQueryFormats(Enum):
   def as_list():
     return [f.value for f in DefaultQueryFormats]
 
+class DefaultReferenceExtensions(Enum):
+  REF = 'ref'
+  OUT = 'out'
+  RES = 'res'
+
+  def as_list():
+    return [f.value for f in DefaultReferenceExtensions]
+
 

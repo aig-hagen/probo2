@@ -151,8 +151,22 @@ def add_solver(ctx, name, path, format, tasks, version, fetch,yes, no_check):
               )
 @click.option("--function",'-fun', type=click.Choice(register.benchmark_functions_dict.keys()),multiple=True,help=' Custom functions to add additional attributes to benchmark.' )
 @click.option("--yes",is_flag=True,help="Skip prompt.")
+@click.option("--references_path",'-ref',type=click.Path(exists=True,resolve_path=True),help='Path to reference results for validation.')
+@click.option("--extension_references",'-refext',help='Extensions of reference files.')
 @click.pass_context
-def add_benchmark(ctx, name, path, format, additional_extension,dynamic_files,no_check, generate, random_arguments, function,yes):
+def add_benchmark(ctx, 
+                  name, 
+                  path, 
+                  format, 
+                  additional_extension,dynamic_files,
+                  no_check, 
+                  generate, 
+                  random_arguments, 
+                  function,
+                  yes,
+                  references_path,
+                  extension_references
+                  ):
     """ Adds a benchmark to the database.
      Before a benchmark is added to the database, it is checked if each instance is present in all specified file formats.
      Missing instances can be generated after the completion test (user has to confirm generation) or beforehand via the --generate/-g option.
@@ -271,6 +285,8 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
     from src.utils import experiment_handler
 
     cfg = config_handler.load_default_config()
+    
+    
 
 
 
@@ -1027,18 +1043,34 @@ def last(verbose):
     help="Directory to store benchmark features in. Default is the current working directory.")
 @click.option('--feature','-f',multiple=True,type=click.Choice(list(register.feature_calculation_functions_dict.keys())),help='Node features to calculate.')
 @click.option('--embedding','-e',multiple=True, type=click.Choice(list(register.embeddings_calculation_functions_dict.keys())),help='Node embeddings to generate.')
-def features(id,save_to,feature,embedding):
+@click.option('--concat','-c',is_flag=True)
+@click.option('--benchmark_feature','-bf', multiple=True, type=click.Choice(['num_nodes','num_edges','avg_out_deg','avg_in_deg']))
+def features(id, save_to, feature, embedding, concat, benchmark_feature):
     """Calculates node features and embeddings
     """
     from src.functions.ml import features
     from src.utils import benchmark_handler
+    import glob
+    import pandas as pd
+    from os import chdir
     if save_to is None:
         from os import getcwd
         save_to = getcwd()
     
+    
+    
     benchmark_info = benchmark_handler.load_benchmark(id)[0]
-    features.calculate_features(benchmark_info, feature, embedding, save_to)
-
+    if benchmark_feature:
+        features.calculate_benchmark_level_features(benchmark_info,benchmark_feature,save_to)
+    
+    if feature:
+        features_files_path, embeddings_file_path = features.calculate_graph_level_features(benchmark_info, feature, embedding, save_to)
+        if concat:
+            chdir(features_files_path)
+            extension = 'csv'
+            all_filenames = [i for i in glob.glob('*.{}'.format(extension))]
+            combined_csv = pd.concat([pd.read_csv(f) for f in all_filenames ])
+            combined_csv.to_csv( "combined_csv.csv", index=False, encoding='utf-8-sig')
 cli.add_command(features)
 @click.command()
 @click.option("--benchmark","-b", required=False,multiple=True,help='ID of benchmark to calculate features.')
@@ -1191,7 +1223,7 @@ def fetch(ctx,benchmark, save_to,solver,install):
         current_benchmark_options = fetch_options[benchmark_name]
         path_benchmark = fetching._fetch_benchmark(benchmark_name,save_to,current_benchmark_options)
         if path_benchmark:
-            ctx.invoke(_add_benchmark_to_database,
+            ctx.invoke(add_benchmark,
                    name=benchmark_name,
                    path=path_benchmark,
                    format=tuple(current_benchmark_options['format']),
@@ -1422,7 +1454,7 @@ def grounded_generator(ctx,num, name, save_to, num_args, generate_solutions, gen
     save_directory = generator.generate('grounded',default_config)
     if add:
         general_configs = default_config['general']
-        ctx.invoke(_add_benchmark_to_database,
+        ctx.invoke(add_benchmark,
                    name=general_configs['name'],
                    path=save_directory,
                    format=tuple(general_configs['format']),
@@ -1629,17 +1661,57 @@ def kwt_gen(num_arguments,
                 af_file.write(af_parsed)
     
     if add:
-        from src.utils.benchmark_handler import AddBenchmarkOptions,parse_cli_input
+        from src.utils.benchmark_handler import add_benchmark
+        from src.utils.options.CommandOptions import AddBenchmarkOptions
+    
         
         options = AddBenchmarkOptions(name=name,path=kwt_instances_path,format=format,additional_extension=extension_query,no_check=False,dynamic_files=None,random_arguments=False,generate=None,function=None,yes=True)
-        parse_cli_input(options)
+        options.check()
+        add_benchmark(options) 
+        
+
+@click.command()
+@click.pass_context
+@click.option("--id",type=click.INT, help='ID of solver to edit')
+@click.option('--name','-n',type=click.STRING,help='Edit name of solver')
+@click.option('--version','-v',type=click.STRING,help='Edit version of solver')
+@click.option('--path','-p',type=click.Path(exists=True, resolve_path=True),help='Edit path of solver')
+@click.option('--tasks','-t',help='Edit tasks of solver')
+def edit_solver(ctx,id, name, version, path, tasks):
+    """Edit solver in database.
+    """
+    from src.utils.options.CommandOptions import EditSolverOptions
+    from src.utils import solver_handler
+    options = EditSolverOptions(**ctx.params)
+    solver_handler.edit_solver(options)
     
+
+cli.add_command(edit_solver)
+
+@click.command()
+@click.pass_context
+@click.option("--id",type=click.INT,required=True, help='ID of benchmark to edit')
+@click.option('--name','-n',type=click.STRING,help='Edit name attribute of benchmark')
+@click.option('--format','-v',multiple=True,default=None,help='Edit formats of benchmark')
+@click.option('--path','-p',type=click.Path(exists=True, resolve_path=True),help='Edit path attribute of benchmark')
+@click.option('--ext_additional','-ext',help='Extension of query arguments files.')
+@click.option('--dynamic_files','-df', help='Edit flag for dynamic files')
+def edit_benchmark(ctx,id, name,path,format,ext_additional, dynamic_files):
+    """Edit a benchmark in the database.
+    """
+    from src.utils.options.CommandOptions import EditBenchmarkOptions
+    from src.utils import benchmark_handler
+    if not format:
+        ctx.params['format'] = None
+    options = EditBenchmarkOptions(**ctx.params)
+    benchmark_handler.edit_benchmark(options)
+
+cli.add_command(edit_benchmark)
+
     
 
 
 cli.add_command(kwt_gen)
-
-
 cli.add_command(quick)
 cli.add_command(web)
 cli.add_command(grounded_generator)

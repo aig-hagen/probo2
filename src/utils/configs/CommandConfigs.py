@@ -1,16 +1,91 @@
-
-import json
-from json import JSONEncoder
-import os
-
-
-from src.functions import archive, statistics
-from src.utils import benchmark_handler, definitions
-import src.functions.register as register
+from src.utils.configs import CommandConfigInterface
 import yaml
-import pandas as pd
-class Config(object):
-    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,status_file_path=None,save_output=None,archive_output=None,archive=None,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,score=None,validation=None,significance=None,raw_results_path=None,exclude_task=None,solver_arguments=None,time_measurement=None):
+import os
+from src.functions import register
+
+
+class ValidationConfig(CommandConfigInterface):
+    def __init__(self, mode:list, plot: list, table_export, experiment_id) -> None:
+        super().__init__()
+        self.mode = mode
+        self.plot = plot
+        self.table_export = table_export
+        self.experiment_id = experiment_id
+    
+    def print(self):
+        print(yaml.dump(self.__dict__))
+    
+    def check(self):
+        pass
+    
+    def dump(self,path):
+        with open(os.path.join(path,self.yaml_file_name),'w') as cfg_file:
+            yaml.dump(self.__dict__,cfg_file)
+
+
+
+
+class SignificanceTestConfig(CommandConfigInterface):
+    def __init__(self, parametric_test: list, 
+                parametric_post_hoc: list,
+                non_parametric_test: list,
+                non_parametric_post_hoc: list,
+                p_adjust: str,
+                plot: list,
+                table_export
+                 ) -> None:
+        super().__init__()
+        self.parametric_test = parametric_test
+        self.non_parametric_test = non_parametric_test
+        self.parametric_post_hoc = parametric_post_hoc
+        self.non_parametric_post_hoc = non_parametric_post_hoc
+        self.p_adjust = p_adjust
+        self.plot = plot
+        self.table_export = table_export
+    
+    def print(self):
+        print(self.to_string())
+    
+    def to_string(self):
+        return yaml.dump(self.__dict__)
+    
+    def check(self):
+        pass
+    
+    def dump(self,path):
+        with open(os.path.join(path,self.yaml_file_name),'w') as cfg_file:
+            yaml.dump(self.__dict__,cfg_file)
+
+class SolverArgumentConfig(CommandConfigInterface):
+     pass
+
+class ExperimentConfig(CommandConfigInterface):
+    def __init__(self,
+                 name: str, 
+                 task: list, 
+                 benchmark: list, 
+                 solver: list, 
+                 timeout: int, 
+                 repetitions: int, 
+                 result_format,
+                 save_to: str,
+                 yaml_file_name: str,
+                 status_file_path: str,
+                 save_output: bool,
+                 archive_output: bool,
+                 archive: list,
+                 table_export,
+                 copy_raws: bool,
+                 printing: str,
+                 plot: list,
+                 grouping: list,
+                 statistics: list,
+                 score: list,
+                 validation: ValidationConfig ,
+                 significance: SignificanceTestConfig,
+                 solver_arguments: SolverArgumentConfig,
+                 raw_results_path: str,
+                 exclude_task: list):
         self.task = task
         self.exclude_task = exclude_task
         self.benchmark = benchmark
@@ -36,39 +111,13 @@ class Config(object):
         self.significance = significance
         self.solver_arguments = solver_arguments
         self.status_file_path = status_file_path
-        self.time_measurement = time_measurement
-
-    def write_config(self):
-        save_to = os.path.join(definitions.CONFIGS_DIRECTORY,self.name)
-        with open(save_to, 'w') as config_file:
-            config_json = json.dumps(self,cls=ConfigDecoder, indent=4)
-
-    def merge_user_input(self, cfg_to_merge):
-        for key,value in cfg_to_merge.items():
-            if key in self.__dict__.keys():
-                if value is not None or value:
-                    if not value and not isinstance(value,bool):
-                        pass
-                    else:
-                        if isinstance(value,tuple):
-                            value = list(value)
-                        if isinstance(self.__dict__[key],list):
-
-                            if  isinstance(value,list):
-                                _intersection = set.intersection(set(self.__dict__[key]), set(value))
-                                _to_add = list(set.difference(set(value),_intersection ))
-                                self.__dict__[key].extend(_to_add)
-                            else:
-                                if value not in self.__dict__[key]:
-                                    self.__dict__[key].append(value)
-                        else:
-                           
-                            self.__dict__[key] = value
-
-    def print(self):
-        print(yaml.dump(self.__dict__))
+        
+        
     
-    def get_summary_as_string(self):
+    def print(self):
+        print(self.to_string())
+    
+    def to_string(self):
         return yaml.dump(self.__dict__)
 
     def dump(self,path):
@@ -174,115 +223,4 @@ class Config(object):
 
             return False
         return True
-
-
-class ConfigDecoder(JSONEncoder):
-    def default(self, o):
-        return o.__dict__
-
-def load_config_yaml(path: str, as_obj=False) -> Config:
-    with open(path,'r') as config_file:
-        if path.endswith('yaml'):
-            configs = yaml.load(config_file, Loader=yaml.FullLoader)
-            configs['yaml_file_name'] = os.path.basename(path)
-    if not as_obj:
-        return configs
-    else:
-        return Config(**configs)
-
-
-def load_default_config() -> Config:
-    with open(definitions.DEFAULT_CONFIG_PATH,'r') as config_file:
-        if definitions.DEFAULT_CONFIG_PATH.endswith('yaml'):
-            configs = yaml.load(config_file, Loader=yaml.FullLoader)
-            configs['yaml_file_name'] = os.path.basename(definitions.DEFAULT_CONFIG_PATH)
-    return Config(**configs)
-
-
-def load_all_configs(directory: str) -> list:
-    configs = []
-    files_in_directory = os.listdir(directory)
-    for f in files_in_directory:
-        if f.endswith('.yaml'):
-            f_path = os.path.join(directory,f)
-            configs.append(load_config_yaml(f_path))
-    return configs
-
-def load_config_via_name(name):
-    experiment_index = pd.read_csv(definitions.EXPERIMENT_INDEX)
-    if name in experiment_index.name.values:
-        cfg_path = experiment_index[experiment_index.name.values == name]['config_path'].iloc[0]
-        cfg = load_config_yaml(cfg_path,as_obj=True)
-        return cfg
-    else:
-        print(f"No Config with name {name} found.")
-        exit()
-
-
-def create_solver_argument_grid(grid_file_path, solver_list: list) -> list:
-    import itertools
-    with open(grid_file_path,'r') as config_file:
-        if grid_file_path.endswith('yaml'):
-            argument_grids = yaml.load(config_file, Loader=yaml.FullLoader)
-    
-   
-    for solver, argument_configs in argument_grids.items():
-     
-        arguments_list = argument_configs['arguments']
-        argument_prefix = argument_configs['argument_prefix']
-        argument_values_lists = []
-        arg_names = []
-        for argument in arguments_list:
-            print(f"{argument=}")
-            for arg_name, arg_values in argument.items():
-                arg_names.append(arg_name)
-                print(arg_name)
-                print(arg_values)
-                step = arg_values['step']
-                start = arg_values['range'][0]
-                end = arg_values['range'][1] + arg_values['step']
-                
-                argument_values = list(range(start,end,step))
-                argument_values_lists.append(argument_values)
-        argument_combinations = list(itertools.product(*argument_values_lists))
-        prompts = _construct_command_line_prompt(argument_combinations, arg_names, argument_prefix)
-        print(prompts)
-        
-
-def _construct_command_line_prompt(argument_combination_list,argument_names,argument_prefix):
-    # NOTE: argument_names and tuples in argument_values list must be the same order !
-    print(argument_combination_list)
-    print(argument_names)
-    print(argument_prefix)
-
-    argument_prompt = [f"{argument_prefix}{n}" for n in argument_names]
-    print(argument_prompt)
-    all_prompts = []
-    for combination in argument_combination_list:
-        _combs= list(zip(argument_prompt,combination))
-        prompt = list(sum(_combs,())) # hack to flatten the tuples in the list to a list
-        all_prompts.append(prompt)
-    return all_prompts
-
-    # TODO: Create solver with prompts
-    
-    
-    
-        
-
-            
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -10,8 +10,9 @@ import click
 import numpy as np
 import random
 from pathlib import Path
-from src.utils.options.CommandOptions import AddBenchmarkOptions
+from src.utils.options.CommandOptions import AddBenchmarkOptions, EditBenchmarkOptions
 from tqdm import tqdm
+from click import confirm
 
 from dataclasses import dataclass
 
@@ -23,8 +24,27 @@ class Benchmark:
     path: str
     dynamic_files: bool
     id: int
+    has_references: bool
+    references_path: str
+    extension_references: str
     meta_data: dict
 
+def edit_benchmark(options: EditBenchmarkOptions ):
+    benchmark_infos = load_benchmark_by_identifier(options.id)
+    if not benchmark_infos or benchmark_infos is None:
+        print(f'No solver with id {options.id} found. Please run solvers command to get a list of solvers in database.')
+        exit()
+    benchmark_infos = benchmark_infos[0] # load_solver returns a list,
+    print('Changing values:')
+    for attribute, value in options.__dict__.items():
+        if attribute in benchmark_infos.keys() and value is not None:
+            if attribute != 'id':
+                print(f'+ {attribute}: {benchmark_infos[attribute]} -> {value} ')
+            benchmark_infos[attribute] = value
+    confirm('Apply changes?',abort=True,default=True)
+    update_benchmark(benchmark_infos)
+    print(f'Updated benchmark!')
+    
 
 def get_unique_formats_from_path(path: str):
     existing_formats = set()
@@ -36,7 +56,17 @@ def get_unique_formats_from_path(path: str):
 
 
 def add_benchmark(options: AddBenchmarkOptions):
-    benchmark_info = {'name': options.name, 'path': options.path,'format': list(options.format),'ext_additional': options.additional_extension, 'dynamic_files': options.dynamic_files,'meta_data': {},'id': None}
+    benchmark_info = {'name': options.name, 
+                      'path': options.path,
+                      'format': list(options.format),
+                      'ext_additional': options.additional_extension, 
+                      'references_path': options.references_path,
+                      'extension_references': options.extension_references,
+                      'has_references': options.has_references,
+                      'dynamic_files': options.dynamic_files,
+                      'meta_data': {},
+                      'id': None,
+                      }
     new_benchmark = Benchmark(**benchmark_info)
     if options.generate:
         generate_instances(new_benchmark, options.generate)
@@ -63,6 +93,21 @@ def add_benchmark(options: AddBenchmarkOptions):
     new_benchmark.id = _add_benchmark_to_database(new_benchmark)
     print(f"Benchmark {new_benchmark.name} added to database with ID: {new_benchmark.id}.")
     #logging.info(f"Benchmark {new_benchmark['name']} added to database with ID: {new_benchmark.id}.")
+
+def update_benchmark(benchmark_infos):
+    benchmarks = load_benchmark('all')
+    for i,solver in enumerate(benchmarks):
+        if solver['id'] == benchmark_infos['id']:
+            benchmarks[i] = benchmark_infos
+            break
+    
+    _update_benchmark_json(benchmarks)
+
+
+def _update_benchmark_json(benchmarks: list):
+    json_str = json.dumps(benchmarks, indent=2)
+    with open(definitions.BENCHMARK_FILE_PATH, "w") as f:
+        f.write(json_str)
 
 
 
