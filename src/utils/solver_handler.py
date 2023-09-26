@@ -474,14 +474,12 @@ def _run_solver(solver_parameters: SolverParameters):
                     capture_output=True, timeout=solver_parameters.timeout, check=True,cwd=solver_parameters.solver_dir)
     end_time_current_run = time.perf_counter()
     if solver_parameters.time_measurement == 'default':
-        out_str = out.stdout.decode("utf-8")
         time_list = out.stderr.decode("utf-8").split(" ")
         time_user = float(time_list[0].split('user')[0])
         time_system = float(time_list[1].split('system')[0])
         run_time = time_user + time_system
     else:
         run_time = end_time_current_run - start_time_current_run
-    print(f'Runtime:{run_time}')
     return {'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.additional_argument, 'runtime': run_time, 'result': None, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout}
             
 
