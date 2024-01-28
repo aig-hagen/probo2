@@ -1,0 +1,6 @@
+header_bold: true
+min_bold: ['sum','mean']
+max_bold: ['IPC']
+caption: 'Test caption'
+label: 'Test label'
+name_map: null
