@@ -1,6 +1,32 @@
 # Probo2 - Evaluation tool for abstract argumentation solvers
+
+![](src/probo2_data/ressources/probo2_logo.png)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A python tool that bundles all functionalities needed to collect, validate, analyze, and represent data in the context of benchmarking argumentation solvers.
 
+## Changelog
+
+### v1.1 - 22.03.2023
++ **add-solver** command:
+    - Interface test checks all supported tasks and formats of solver
+    - ICCMA23 instance format (.i23) added to solver interface check
+    - Added progressbars to interface check
+    - Name is derived from path if not specified
+
++ **kwt-gen** command:
+  - Added instance generation via a config file ( see /generators/generator_configs/kwt_example.yaml)
+  - Added parsing of generated instances to ICCMA23 (.i23) format
+  - Added option to generate random query arguments for DS an DC tasks
+  - Added option to add generated instances as a benchmark to the database
+  
++ **quick** command:
+    - Added new command to get a quick result for a single instance
++ **board** command:
+    - Added new command to create a dashboard for result visualization
+
++ Added calculation of node and edge homophily  
 
 ## Table of Contents
 1.[Setup](#setup)
@@ -137,8 +163,13 @@ Another example can be found in the [example_config.yaml](https://github.com/aig
 ## Commands
 
 - [Probo2 - Evaluation tool for abstract argumentation solvers](#probo2---evaluation-tool-for-abstract-argumentation-solvers)
+  - [Changelog](#changelog)
+    - [v1.1 - 22.03.2023](#v11---22032023)
   - [Table of Contents](#table-of-contents)
   - [Setup](#setup)
+  - [Experiments](#experiments)
+    - [Configuration Files](#configuration-files)
+    - [Example](#example)
   - [Commands](#commands)
     - [add-solver](#add-solver)
     - [solvers](#solvers)
@@ -154,6 +185,7 @@ Another example can be found in the [example_config.yaml](https://github.com/aig
     - [calculate](#calculate)
     - [validate](#validate)
     - [significance](#significance)
+    - [board](#board)
 
 ### add-solver
 Usage: *probo2 add-solver [OPTIONS]*
@@ -231,6 +263,7 @@ Usage: *probo2 add-benchmark [OPTIONS]*
   (user has to confirm generation) or beforehand via the --generate/-g
   option. It is also possilbe to generate random argument files for the
   DC/DS problems with the --random_arguments/-rnd option. By default, the following attributes are saved for a benchmark: name, path, format, and the extension of query argument files. However, it is possible to specify additional attributes using your functions. See section "custom function" for further information.
+  If no benchmark name via the --name option is provided, the name is derived from the benchmark path. Instance formats and the file extension of the query arguments (used for DS and DC tasks) are automatically set if not specified. For this the file extensions of all files in the given path are compared with the default file formats\extensions (see src/utils/definitions.DefaultInstanceFormats and src/utils/definitions.DefaultQueryFormats). Formats are set to the intesection between found formats and default formats. 
 
 **Options**:
 + *-n, --name *
@@ -698,5 +731,21 @@ Usage: *probo2 significance [OPTIONS]*
 ```
 probo2 significance --tag MyExperiment --parametric ANOVA --php scheffe
 ```
+### board
+Probo2 provides an interactive dashboard to visualize results of experiments. The dashboard contains plots and tables which can be filtered using checkboxes in the sidebar.
+![](src/probo2_data/ressources/probo2Board.gif)
 
+Usage: *probo2 board [OPTIONS]*
 
+  Launch dashboard for experiment visualization.
+
+**Options**:
+
++ *--tag, -t*
+
+    Experiment tag
++ *--raw, -r*
+  
+  Full path to a raw results file  (raw.csv).
+
+  **Note**: Only needed when no tag is specified.

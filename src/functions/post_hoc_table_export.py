@@ -12,9 +12,9 @@ def _save_as_text(df: pd.DataFrame, save_to, test):
     rep = df.repetition.iloc[0]
     benchmark = load_benchmark_by_identifier([int(df.benchmark_id.iloc[0])])[0]['name']
 
-    tbl_text = tabulate.tabulate(df['result'].iloc[0],headers='keys',tablefmt='fancy_grid',showindex=False)
+    tbl_text = tabulate.tabulate(df['result'].iloc[0],headers='keys',tablefmt='pretty',showindex=False)
 
-    file_path = os.path.join(save_to,f'{tag}_{task}_{benchmark}_{test}.txt')
+    file_path = os.path.join(save_to,f'{tag}_{task}_{benchmark}_{test}_{rep}.txt')
     with open(file_path,'w') as f:
         f.write(tbl_text)
 
@@ -36,7 +36,7 @@ def _save_as_csv(df: pd.DataFrame, save_to,test):
     benchmark = load_benchmark_by_identifier([int(df.benchmark_id.iloc[0])])[0]['name']
 
 
-    file_path = os.path.join(save_to,f'{tag}_{task}_{benchmark}_{test}.csv')
+    file_path = os.path.join(save_to,f'{tag}_{task}_{benchmark}_{test}_{rep}.csv')
     with open(file_path,'w') as f:
         f.write(df['result'].iloc[0].to_csv(index=False))
 
@@ -58,7 +58,7 @@ def _save_as_latex(df: pd.DataFrame, save_to, test):
     benchmark = load_benchmark_by_identifier([int(df.benchmark_id.iloc[0])])[0]['name']
 
 
-    file_path = os.path.join(save_to,f'{tag}_{task}_{benchmark}_{test}.tex')
+    file_path = os.path.join(save_to,f'{tag}_{task}_{benchmark}_{test}_{rep}.tex')
     with open(file_path,'w') as f:
         f.write(df['result'].iloc[0].to_latex(index=False))
 

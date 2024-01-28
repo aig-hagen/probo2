@@ -6,7 +6,7 @@
 import src.functions.register as register
 from src.utils import benchmark_handler
 
-def get_instance_counts(benchmark_info: dict) -> dict:
+def get_instance_counts(benchmark: benchmark_handler.Benchmark) -> dict:
     """Get instance count per format.
 
     Args:
@@ -16,23 +16,23 @@ def get_instance_counts(benchmark_info: dict) -> dict:
         dict: Instance count per format with format as key and count as value.
     """
     instance_counts = {}
-    for fo in benchmark_info['format']:
-        instances = benchmark_handler.get_instances(benchmark_info['path'],fo)
+    for fo in benchmark.format:
+        instances = benchmark_handler.get_instances(benchmark.path,fo)
         instance_counts[f'{fo}_count'] = len(instances)
 
-    instance_counts[f"{benchmark_info['ext_additional']}_count"] = len(benchmark_handler.get_instances(benchmark_info['path'], benchmark_info['ext_additional']))
+    instance_counts[f"{benchmark.ext_additional}_count"] = len(benchmark_handler.get_instances(benchmark.path, benchmark.ext_additional))
 
     return instance_counts
 
-def get_benchmark_size(benchmark_info: dict) -> dict:
+def get_benchmark_size(benchmark: benchmark_handler.Benchmark) -> dict:
     size_counts = {}
     total_size = 0
-    for fo in benchmark_info['format']:
-        instances = benchmark_handler.get_instances(benchmark_info['path'],fo)
+    for fo in benchmark.format:
+        instances = benchmark_handler.get_instances(benchmark.path,fo)
 
         size_counts[f'{fo}_size'] = benchmark_handler.get_file_size(instances)
 
-    size_counts[f"{benchmark_info['ext_additional']}_size"] = benchmark_handler.get_file_size((benchmark_handler.get_instances(benchmark_info['path'], benchmark_info['ext_additional'])))
+    size_counts[f"{benchmark.ext_additional}_size"] = benchmark_handler.get_file_size((benchmark_handler.get_instances(benchmark.path, benchmark.ext_additional)))
 
     return size_counts
 

@@ -12,6 +12,123 @@ from tqdm import tqdm
 import shutil
 import tabulate
 from src.utils import Status
+from click import echo
+
+from src.functions import plot,statistics,score,printing,table_export
+from src.functions import validation,plot_validation,validation_table_export,print_validation
+from src.functions import parametric_significance,parametric_post_hoc
+from src.functions import non_parametric_significance,non_parametric_post_hoc
+from src.functions import plot_significance,post_hoc_table_export,plot_post_hoc,print_significance
+import src.functions.register as register
+from functools import reduce
+
+
+def run_pipeline(cfg: config_handler.Config):
+    run_experiment(cfg)
+
+    if cfg.copy_raws:
+        echo('Copying raw files...',nl=False)
+        copy_raws(cfg)
+        echo('done!')
+
+    result_df = load_results_via_name(cfg.name)
+
+   
+
+    saved_file_paths = []
+    if cfg.plot is not None:
+        saved_plots = plot.create_plots(result_df,cfg)
+
+    to_merge = []
+    others =  []
+    if cfg.statistics is not None:
+
+        if cfg.statistics =='all' or 'all' in cfg.statistics:
+            cfg.statistics = register.stat_dict.keys()
+        stats_results = []
+        print("========== STATISTICS ==========")
+        for stat in cfg.statistics:
+            _res = register.stat_dict[stat](result_df)
+            stats_results.append(_res)
+
+        for res in stats_results:
+            if res[1]:
+                to_merge.append(res[0])
+            else:
+                others.append(res[0])
+    if cfg.score is not None:
+        score_results = []
+        if cfg.score =='all' or 'all' in cfg.score:
+                    cfg.score = register.score_functions_dict.keys()
+        for s in cfg.score:
+            _res = register.score_functions_dict[s](result_df)
+            score_results.append(_res)
+        for res in score_results:
+            if res[1]:
+                to_merge.append(res[0])
+            else:
+                others.append(res[0])
+    if len(to_merge) >0:
+        df_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), to_merge)
+        register.print_functions_dict[cfg.printing](df_merged,['tag','task','benchmark_name'])
+        if cfg.table_export is not None:
+            if cfg.table_export == 'all' or 'all' in cfg.table_export:
+                cfg.table_export = register.table_export_functions_dict.keys()
+            for format in cfg.table_export:
+                register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
+    
+    if cfg.validation['mode']:
+        validation_results = validation.validate(result_df, cfg)
+        print_validation.print_results(validation_results)
+        if cfg.validation['plot']:
+            plot_validation.create_plots(validation_results['pairwise'],cfg)
+        if 'pairwise' in cfg.validation['mode']:
+            if cfg.validation['table_export']:
+                if cfg.validation['table_export'] == 'all' or 'all' in cfg.validation['table_export']:
+                    cfg.validation['table_export'] = register.validation_table_export_functions_dict.keys()
+                for f in cfg.validation['table_export']:
+                    register.validation_table_export_functions_dict[f](validation_results['pairwise'],cfg)
+    
+    test_results = {}
+    post_hoc_results = {}
+
+    if cfg.significance['parametric_test']:
+        test_results.update(parametric_significance.test(result_df,cfg))
+    if cfg.significance['non_parametric_test']:
+        test_results.update(non_parametric_significance.test(result_df,cfg))
+    if cfg.significance['parametric_post_hoc']:
+        post_hoc_results.update(parametric_post_hoc.test(result_df,cfg))
+    if cfg.significance['non_parametric_post_hoc']:
+        post_hoc_results.update(non_parametric_post_hoc.test(result_df,cfg))
+    
+    if test_results:
+        print("========== Significance Analysis Summary ==========")
+        for test in test_results.keys():
+            print_significance.print_results(test_results[test],test)
+    
+    if post_hoc_results:
+        print("========== Post-hoc Analysis Summary ==========")
+        for test in post_hoc_results.keys():
+            print_significance.print_results_post_hoc(post_hoc_results[test],test)
+        
+        if cfg.significance['plot']:
+            for post_hoc_test in post_hoc_results.keys():
+                plot_post_hoc.create_plots(post_hoc_results[post_hoc_test],cfg,post_hoc_test)
+        if cfg.significance['table_export']:
+            if cfg.significance['table_export'] == 'all' or 'all' in cfg.significance['table_export']:
+                cfg.significance['table_export'] = register.post_hoc_table_export_functions_dict.keys()
+            for post_hoc_test in post_hoc_results.keys():
+                for f in cfg.significance['table_export']:
+                    register.post_hoc_table_export_functions_dict[f](post_hoc_results[post_hoc_test],cfg,post_hoc_test)
+
+
+
+
+    if cfg.archive is not None:
+        echo('Creating archives...',nl=False)
+        for _format in cfg.archive:
+            register.archive_functions_dict[_format](cfg.save_to)
+        echo('done!')
 
 
 def need_additional_arguments(task: str):
@@ -166,7 +283,6 @@ def set_supported_tasks(solver_list, config: config_handler.Config):
 
 def run_experiment(config: config_handler.Config):
 
-    Status.init_status_file(config)
 
     solver_list = solver_handler.load_solver(config.solver)
     benchmark_list = benchmark_handler.load_benchmark(config.benchmark)
@@ -174,8 +290,14 @@ def run_experiment(config: config_handler.Config):
         set_supported_tasks(solver_list,config)
     if config.exclude_task is not None:
         exclude_task(config)
+
+    solver_arguments = None
     additional_arguments_lookup= None
     dynamic_files_lookup = None
+
+    if config.solver_arguments:
+        config_handler.create_solver_argument_grid(config.solver_arguments, solver_list)
+
     experiment_result_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
     result_path = init_result_path(config,experiment_result_directory)
     config.raw_results_path = result_path
@@ -184,9 +306,11 @@ def run_experiment(config: config_handler.Config):
     else:
         config.save_to = os.path.join(config.save_to, config.name)
     cfg_experiment_result_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
+    status_file_path = os.path.join(cfg_experiment_result_directory,'status.json')
+    config.status_file_path = status_file_path
+    Status.init_status_file(config)
     config.dump(cfg_experiment_result_directory)
     write_experiment_index(config, cfg_experiment_result_directory)
-    Status.init_status_file(config)
     print('========== Experiment Summary ==========')
     config.print()
     print('========== RUNNING EXPERIMENT ==========')
@@ -225,7 +349,7 @@ def run_experiment(config: config_handler.Config):
                                 result['tag'] = config.name
                                 write_result(result,result_path,config.result_format)
                                 if rep == 1:
-                                    Status.increment_instances_counter(task,solver['id'])
+                                    Status.increment_instances_counter(config,task,solver['id'])
                 else:
                     print(f"    {solver['name']} SKIPPED! No files in supported solver format: {','.join(solver['format'])}")
         Status.increment_task_counter()

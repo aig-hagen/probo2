@@ -12,6 +12,7 @@ import numpy as np
 import tempfile
 import subprocess
 import time
+from networkx import DiGraph
 #from progressbar import progressbar
 def solve(solver,task,instance_content,timeout):
 
@@ -173,6 +174,18 @@ def save_instances(instances, general_configs, generator_type,offset=0):
 @dispatch_on_value
 def parse_graph(format,graph):
     pass
+
+@parse_graph.register('i23')
+def _nx_to_i23(format,graph: DiGraph):
+    num_arguments = graph.number_of_nodes()
+    arg_to_id_map = {a:i for i,a in enumerate(graph.nodes,start=1)}
+    file_comment = f'# This file was created by the probo2 kwt-generator.\n'
+    file_header = f'p af {num_arguments}\n'
+    attacks_content = ""
+    for attack in graph.edges:
+        attacks_content += f'{arg_to_id_map[attack[0]]} {arg_to_id_map[attack[1]]}\n'
+    
+    return file_comment + file_header + attacks_content
 
 @parse_graph.register('apx')
 def _nx_to_apx(format,graph) -> str:

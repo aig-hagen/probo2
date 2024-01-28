@@ -15,7 +15,7 @@ def create_plots(result_df: pd.DataFrame, cfg: config_handler.Config):
         saved = register.plot_validation_functions_dict[plt](result_df,cfg)
         saved_plots.append(saved)
     saved_files = pd.concat(saved_plots).to_frame().rename(columns={0:'saved_files'})
-    print('========== DONE ==========')
+    print('')
     return  saved_files.saved_files.to_list()
 
 def _plot_accordance_heatmap(df: pd.DataFrame, cfg: config_handler.Config, plot_directory):
@@ -50,6 +50,7 @@ def _plot_accordance_heatmap(df: pd.DataFrame, cfg: config_handler.Config, plot_
     figure = ax.get_figure()
     file_name = f"{tag}_{task}_{benchmark}_accordance"
     save_path_full = f'{os.path.join(plot_directory,file_name)}.png'
+    figure.suptitle( f"{task} {benchmark}")
     figure.savefig(save_path_full,
                    bbox_inches='tight',
                    transparent=True)

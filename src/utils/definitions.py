@@ -7,6 +7,8 @@ import src.probo2_data.solver_test_data
 import src.generators
 import src.experiment_configs
 import src.results
+import src.webinterface
+import src.probo2_data.markdown
 from importlib_resources import files
 # Defaults for paths
 ROOT_DIR = os.path.abspath(os.curdir)  # Root of project
@@ -16,6 +18,7 @@ TEST_DATABASE_PATH = os.path.join(str(DATABASE_DIR), "probo2_old.db")
 CONFIGS_DIRECTORY = str(files(src.experiment_configs))
 RESULT_DIRECTORY = str(files(src.results))
 EXPERIMENT_INDEX = str(files(src.probo2_data).joinpath("experiment_index.csv"))
+WEB_INTERFACE_FILE = str(files(src.webinterface).joinpath("web_interface.py"))
 
 
 # Solver interface test files
@@ -23,8 +26,10 @@ TEST_INSTANCES_REF_PATH = str(files(src.probo2_data.solver_test_data).joinpath("
 TEST_INSTANCE_ARG = str(files(src.probo2_data.solver_test_data).joinpath("a.arg"))
 TEST_INSTANCE_APX = str(files(src.probo2_data.solver_test_data).joinpath("a.apx"))
 TEST_INSTANCE_TGF = str(files(src.probo2_data.solver_test_data).joinpath("a.tgf"))
+TEST_INSTANCE_I23 = str(files(src.probo2_data.solver_test_data).joinpath("a.i23"))
 TEST_INSTANCE_APXM = str(files(src.probo2_data.solver_test_data).joinpath("a.apxm"))
 TEST_INSTANCE_TGFM = str(files(src.probo2_data.solver_test_data).joinpath("a.tgfm"))
+
 
 CSS_TEMPLATES_PATH = str(files(src.probo2_data).joinpath("css"))
 
@@ -46,6 +51,9 @@ LAST_EXPERIMENT_SUMMARY_JSON_PATH = str(files(src.probo2_data).joinpath('probo2_
 # YAML files
 PRETTY_LATEX_TABLE_CONFIG =  str(files(src.probo2_data).joinpath('pretty_latex_table_config.yaml'))
 
+# Markdown files
+MARK_DOWN_ROOT = files(src.probo2_data.markdown)
+SOLVERS_MD = str(MARK_DOWN_ROOT.joinpath('solvers.md'))
 
 ALEMBIC_INIT_FILE_PATH = os.path.join(str(DATABASE_DIR),'alembic.ini')
 
@@ -67,3 +75,29 @@ SUPPORTED_TRACKS = {'CO': ['EE-CO', 'SE-CO', 'DC-CO', 'DS-CO',"CE-CO",'EC-CO','E
                     'STG': ["EE-STG","SE-STG","DC-STG","DS-STG","CE-STG",'EC-STG','ES-STG'],
                     'ID':["SE-ID","DS-ID" ]
                     }
+
+from enum import Enum
+
+class DefaultInstanceFormats(Enum):
+  APX = 'apx'
+  TGF = 'tgf'
+  I23 = 'i23'
+
+  def as_list():
+    return [f.value for f in DefaultInstanceFormats]
+
+class DefaultQueryFormats(Enum):
+  ARG = 'arg'
+
+  def as_list():
+    return [f.value for f in DefaultQueryFormats]
+
+class DefaultReferenceExtensions(Enum):
+  REF = 'ref'
+  OUT = 'out'
+  RES = 'res'
+
+  def as_list():
+    return [f.value for f in DefaultReferenceExtensions]
+
+

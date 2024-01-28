@@ -8,9 +8,16 @@ import shutil
 from src import probo2_data
 from src.utils import utils
 from src.plotting import CactusPlot, DistributionPlot, ScatterPlot
-from src.analysis.statistics import get_info_as_strings
 import functools
 from src.utils.utils import dispatch_on_value
+
+def get_info_as_strings(df: pd.DataFrame) -> dict:
+    tags = ",".join(df.tag.unique())
+    solvers = ",".join(df.solver_full_name.unique())
+    tasks = ",".join(df.task.unique())
+    benchmarks = ",".join(df.benchmark_name.unique())
+    return {'tag': tags,'solver': solvers, 'task': tasks,'benchmark': benchmarks}
+
 #TODO: Json defaults for all plots, finish Scatter plot implementation,pie chart titles
 def read_default_options(path: str) -> dict:
     with open(path,'rb') as fp:

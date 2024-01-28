@@ -1,3 +1,4 @@
+
 def register(key, function, function_dict):
     if key in function_dict:
         raise KeyError('Key {} is already pre-defined.'.format(key))
@@ -31,6 +32,10 @@ def table_export_functions_register(key,function):
 post_hoc_table_export_functions_dict = {}
 def post_hoc_table_export_functions_register(key,function):
     register(key, function, post_hoc_table_export_functions_dict)
+
+validation_table_export_functions_dict = {}
+def validation_table_export_functions_register(key,function):
+    register(key, function, validation_table_export_functions_dict)
 
 archive_functions_dict = {}
 def archive_functions_register(key, function):
@@ -79,3 +84,20 @@ print_significance_functions_dict = {}
 def print_significance_functions_register(key, function):
     register(key, function, print_significance_functions_dict)
 
+feature_calculation_functions_dict = {}
+def feature_calculation_register(key,function):
+    register(key, function, feature_calculation_functions_dict)
+
+
+homophilic_feature_calculation_functions_dict = {}
+def homophilic_feature_calculation_register(key,function):
+    register(key, function, homophilic_feature_calculation_functions_dict)
+
+embeddings_calculation_functions_dict = {}
+def embeddings_calculation_register(key,function):
+    register(key, function, embeddings_calculation_functions_dict)
+
+parse_user_input_dict = {}
+def parse_user_input_register(key, function):
+    register(key, function, parse_user_input_dict)
+    

@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 def create_plots(result_df: pd.DataFrame, cfg: config_handler.Config):
     saved_files = []
     print("========== PLOTTING ==========")
-    if cfg.plot =='all':
+    if cfg.plot =='all' or 'all' in cfg.plot:
         cfg.plot = register.plot_dict.keys()
     saved_plots = []
     default_plt_options = pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
@@ -174,17 +174,18 @@ def _create_count_plot(df,config: config_handler.Config, plot_options):
     task = df.task.iloc[0]
     tag = df.tag.iloc[0]
     benchmark = df.benchmark_name.iloc[0]
-    plot_options['settings']['title'] = task
+    plot_options['settings']['title'] = f"{task} {benchmark}"
     save_file_name = os.path.join(plot_options['settings']['save_to'],f'{tag}_{task}_{benchmark}_count.png')
     df['Solver'] = df['solver_name'] +'_' + df['solver_version']
     #ax = sns.countplot(data=df,x='Solver',hue='Status')
-    grid_axes = sns.catplot(data=df,x='Solver',hue='Status',col='repetition',kind='count',col_wrap=3)
+    grid_axes = sns.catplot(data=df,x='Solver',hue='Status',kind='count')
     for ax in grid_axes.axes.flat:
         ax.set_xticklabels(ax.get_xticklabels(), rotation=40, ha="right")
         ax.set(xlabel='solver')
     #plt.xticks(rotation=40)
     #plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     figure = grid_axes.fig
+    figure.suptitle( plot_options['settings']['title'])
     figure.savefig(save_file_name,
                    bbox_inches='tight',
                    transparent=True)

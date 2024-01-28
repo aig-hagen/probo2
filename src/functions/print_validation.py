@@ -1,4 +1,3 @@
-from email import header
 import src.functions.register as register
 import pandas as pd
 import tabulate
