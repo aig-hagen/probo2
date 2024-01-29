@@ -675,6 +675,7 @@ def benchmarks(verbose,id):
         if id:
             benchmark = benchmark_handler.load_benchmark_by_identifier([id])
             print(f"========== Summary {benchmark[0]['name']} ==========")
+            benchmark[0]['num_instances'] = benchmark_handler.get_instances_count(benchmark[0]['path'],benchmark[0]['format'][0])
             print(yaml.dump(benchmark, allow_unicode=True, default_flow_style=False))
 
         else:
