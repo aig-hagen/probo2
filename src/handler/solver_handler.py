@@ -207,17 +207,29 @@ def check_interface(solver: Solver) -> bool:
     for solver_format in solver.format:
         print(f'Testing interface of {solver.name} for format {solver_format}.')
         #solver_format = solver.format[0]
-        instance = test_instance_paths[solver_format]
+        if "23" in solver_format:
+            instance = test_instance_paths['i23']
+        else:
+            instance = test_instance_paths[solver_format]
         for test_task in tqdm(solver.tasks,desc='Testing supported tasks'):
             cmd_params = init_cmd.copy()
-            cmd_params.extend([solver.path,
+
+            if solver_format == 'i23' or '23' in solver_format:
+                cmd_params.extend([solver.path,
+                    "-p", test_task,
+                    "-f", instance])
+            else:
+                cmd_params.extend([solver.path,
                     "-p", test_task,
                     "-f", instance,
                     "-fo", solver_format])
 
+
             if 'DS' in test_task or 'DC' in test_task:
-                if solver_format == 'i23': arg_path = definitions.TEST_INSTANCE_ARG_I23
-                else: arg_path = definitions.TEST_INSTANCE_ARG
+                if solver_format == 'i23' or '23' in solver_format:
+                    arg_path = definitions.TEST_INSTANCE_ARG_I23
+                else:
+                    arg_path = definitions.TEST_INSTANCE_ARG
                 with open(str(arg_path),'r') as arg_file:
                     arg = arg_file.read().rstrip('\n')
                     cmd_params.extend(["-a",arg])

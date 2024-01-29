@@ -151,6 +151,8 @@ def print_summary(benchmark: Benchmark):
             print(f"Format: {json.dumps(benchmark.format,indent=4)}" )
         else:
             print(f'{str(key).capitalize()}: {value}')
+
+    print(f'#Instances: {get_instances_count(benchmark.path,benchmark.format[0])}')
     print()
 
 def print_benchmarks(extra_columns=None, tablefmt=None):
