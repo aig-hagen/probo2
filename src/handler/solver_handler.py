@@ -71,8 +71,15 @@ def add_solver(options: AddSolverOptions):
 
     if not is_working:
         logger.error(f'{new_solver.name}: Solver interface check failed.')
-        print('Solver not working.')
-        exit()
+        print('Solver not working properly.')
+        confirm(
+            "Do you want to add this solver anyways?"
+            ,abort=True,default=True)
+        id = _add_solver_to_database(new_solver)
+        print(f"Solver {new_solver.name} added with ID: {new_solver.id}")
+        logger.info(f"Solver {new_solver.name} added with ID: {new_solver.id}")
+        return new_solver
+
     print_summary(new_solver.__dict__)
     if not options.yes:
         confirm(
