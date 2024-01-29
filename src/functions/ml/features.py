@@ -6,20 +6,20 @@ import pandas as pd
 
 import networkx as nx
 import numpy as np
-from src.utils import benchmark_handler
+from src.handler import benchmark_handler
 import karateclub.node_embedding.neighbourhood as node_embeddings
 import karateclub.node_embedding.structural as structural_node_embeddings
 import karateclub.node_embedding.meta as meta_node_embeddings
 import os
 import csv
 
-def tgf_to_nx(tgf_file_content) -> nx.DiGraph: 
+def tgf_to_nx(tgf_file_content) -> nx.DiGraph:
     args_attacks = tgf_file_content.split('#\n')
     args = args_attacks[0].split()
     attacks = args_attacks[1].rstrip().split('\n')
     attacks = [tuple(att.split()) for att in attacks]
-   
-    
+
+
     G = nx.DiGraph()
     ids_args =  dict([(int(x),y) for x,y in enumerate(args)])
     args_ids = {v: k for k, v in ids_args.items()}
@@ -48,7 +48,7 @@ parse_function_dict = {'tgf': tgf_to_nx,'apx': apx_to_nx}
 def build_graph(instance_path, format):
     with open(instance_path,'r') as f:
         f_content = f.read()
-    
+
     return parse_function_dict[format](f_content)
 
 
@@ -56,7 +56,7 @@ def calculate_graph_level_features(benchmark_info: dict,feature,embedding,save_t
     if not os.path.exists(save_to):
         print(f'Path {save_to} not found')
         exit()
-    
+
     save_to = os.path.join(save_to,f"{benchmark_info['name']}_features")
     embeddings_save_to = os.path.join(save_to,'embeddings')
     features_save_to = os.path.join(save_to,'features')
@@ -70,11 +70,11 @@ def calculate_graph_level_features(benchmark_info: dict,feature,embedding,save_t
     all_instances_index = []
     for instance_path in tqdm(instances,desc='Calculating features'):
         instance_graph,args_ids, ids_args = build_graph(instance_path,parse_format)
-     
+
         instance_features = {calculate: register.feature_calculation_functions_dict[calculate](instance_graph) for calculate in feature}
         instance_embeddings = {calculate: register.embeddings_calculation_functions_dict[calculate](instance_graph) for calculate in embedding}
         instance_name = os.path.basename(instance_path)[:-4]
-        
+
         instance_embeddings_save_to = os.path.join(embeddings_save_to,f'{instance_name}_embeddings.npz')
         instance_features_save_to = os.path.join(features_save_to,f'{instance_name}_features.csv')
         args_ids_save_to = os.path.join(mappings_save_to,f'{instance_name}_args_to_ids.csv')
@@ -82,7 +82,7 @@ def calculate_graph_level_features(benchmark_info: dict,feature,embedding,save_t
         _write_args_ids_map(args_ids, args_ids_save_to)
         _write_ids_args_map(ids_args, ids_args_save_to)
         np.savez(os.path.join(embeddings_save_to,f'{instance_name}_embeddings.npz'),**instance_embeddings)
-        
+
         instance_features_df = _init_features_df(ids_args, instance_features)
         instance_features_df.to_csv(instance_features_save_to)
         all_instances_index.append({'instance_name': instance_name,
@@ -91,7 +91,7 @@ def calculate_graph_level_features(benchmark_info: dict,feature,embedding,save_t
                                      'features_path': os.path.relpath(instance_features_save_to,save_to),
                                      'args_ids_map': os.path.relpath(args_ids_save_to,save_to),
                                      'ids_args_map': os.path.relpath(ids_args_save_to,save_to)})
-    
+
     pd.DataFrame(all_instances_index).to_csv(os.path.join(save_to,f"{benchmark_info['name']}_index.csv"))
     return features_save_to,embeddings_save_to
 
@@ -121,10 +121,10 @@ def _write_args_ids_map(args_ids, args_ids_save_to):
         for key in args_ids:
             writer.writerow({'arg': key, 'id': args_ids[key]})
 
-        
-        
 
-    
+
+
+
 #========== networkx features ==========
 def degree_centrality(graph: nx.DiGraph):
     return nx.degree_centrality(graph)
@@ -187,21 +187,21 @@ def node_homophily(G: nx.DiGraph, label_key='label'):
         num_neighbours_with_same_label_as_ego_node = labels_neighbors.count(label['label'])
         ratio_same_label = num_neighbours_with_same_label_as_ego_node / num_neighbors_ego_node
         sum_ratio_same_label += ratio_same_label
-    
+
     homophily_node = sum_ratio_same_label / num_nodes
     return homophily_node
 
 def edge_homophily(G: nx.DiGraph, label_key='label'):
     num_edges = G.number_of_edges()
     num_edges_with_same_label = 0
-    
+
     for a,b in G.edges():
        if G.nodes[a]['label'] == G.nodes[b][label_key]:
             num_edges_with_same_label += 1
-    
+
     edge_homophily = num_edges_with_same_label / num_edges
     return edge_homophily
-    
+
 
 register.homophilic_feature_calculation_register('node_homophily',node_homophily)
 register.homophilic_feature_calculation_register('edge_homophily',edge_homophily)
@@ -246,7 +246,7 @@ def calculate_benchmark_level_features(benchmark_info: dict,feature,save_to):
     if not os.path.exists(save_to):
         print(f'Path {save_to} not found')
         exit()
-    
+
     save_to = os.path.join(save_to,f"{benchmark_info['name']}_features_bechmark_level")
     #embeddings_save_to = os.path.join(save_to,'embeddings')
     features_save_to = os.path.join(save_to,'features')
@@ -277,9 +277,9 @@ def calculate_benchmark_level_features(benchmark_info: dict,feature,save_to):
         #_write_args_ids_map(args_ids, args_ids_save_to)
         #_write_ids_args_map(ids_args, ids_args_save_to)
         #np.savez(os.path.join(embeddings_save_to,f'{instance_name}_embeddings.npz'),**instance_embeddings)
-        
+
         #instance_features_df = _init_features_df(ids_args, instance_features)
-        
+
         #instance_features_df.to_csv(instance_features_save_to)
         # all_instances_index.append({'instance_name': instance_name,
         #                             'format':parse_format,
@@ -287,7 +287,7 @@ def calculate_benchmark_level_features(benchmark_info: dict,feature,save_to):
         #                              'features_path': os.path.relpath(instance_features_save_to,save_to)
         #                              #'args_ids_map': os.path.relpath(args_ids_save_to,save_to),
         #                              #'ids_args_map': os.path.relpath(ids_args_save_to,save_to)})
-    
+
     df = pd.DataFrame(all_instances_features)
     average_stats = df.describe()
     print(average_stats)
@@ -304,7 +304,7 @@ def calculate_benchmark_level_features(benchmark_info: dict,feature,save_to):
 
 
 
-#=========== Node Embeddings =========== 
+#=========== Node Embeddings ===========
 def deep_walk(graph: nx.DiGraph):
     model = node_embeddings.DeepWalk()
 
@@ -398,7 +398,7 @@ def RandNE(graph: nx.DiGraph):
 
 
 
-    
+
 
 
 
@@ -417,6 +417,6 @@ register.embeddings_calculation_register('NMFADMM',NMFADMM)
 register.embeddings_calculation_register('Role2Vec',Role2Vec)
 register.embeddings_calculation_register('NEU',NEU)
 
-   
+
 
 

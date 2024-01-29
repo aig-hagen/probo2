@@ -1,5 +1,5 @@
-import os
 import src.probo2_data
+import os
 import src.probo2_data.json
 import src.probo2_data.solver_test_data
 
@@ -24,6 +24,7 @@ WEB_INTERFACE_FILE = str(files(src.webinterface).joinpath("web_interface.py"))
 # Solver interface test files
 TEST_INSTANCES_REF_PATH = str(files(src.probo2_data.solver_test_data).joinpath("reference"))
 TEST_INSTANCE_ARG = str(files(src.probo2_data.solver_test_data).joinpath("a.arg"))
+TEST_INSTANCE_ARG_I23 = str(files(src.probo2_data.solver_test_data).joinpath("a.arg.i23"))
 TEST_INSTANCE_APX = str(files(src.probo2_data.solver_test_data).joinpath("a.apx"))
 TEST_INSTANCE_TGF = str(files(src.probo2_data.solver_test_data).joinpath("a.tgf"))
 TEST_INSTANCE_I23 = str(files(src.probo2_data.solver_test_data).joinpath("a.i23"))

@@ -29,8 +29,8 @@ from src.functions import (plot_post_hoc, plot_validation,
 from src.functions.ml import features
 from src.generators import generator
 from src.generators import generator_utils as gen_utils
-from src.utils import config_handler, definitions, utils
-
+from src.utils import definitions, utils
+from src.handler import config_handler,benchmark_handler
 csv.field_size_limit(sys.maxsize)
 
 
@@ -66,7 +66,7 @@ def version():
               help="Path to solver executable")
 @click.option("--format",
               "-f",
-              type=click.Choice(definitions.DefaultInstanceFormats, case_sensitive=False),
+              type=click.Choice(definitions.DefaultInstanceFormats.as_list(), case_sensitive=False),
               required=False,
               help="Supported format of solver.")
 @click.option('--tasks',
@@ -81,13 +81,13 @@ def version():
               required=False,
               help="Version of solver.")
 @click.option(
-    "--fetch","-f",
+    "--fetch","-ft",
     is_flag=True,
     help="Pull supported file format and computational problems from solver.")
 @click.option("--yes",is_flag=True,help="Skip prompt.")
 @click.option("--no_check", is_flag=True)
 @click.pass_context
-def add_solver(ctx, name, path, format, tasks, version, fetch,yes, no_check):    
+def add_solver(ctx, name, path, format, tasks, version, fetch,yes, no_check):
     """ Adds a solver to the database.
     Adding has to be confirmed by user.
     \f
@@ -104,12 +104,12 @@ def add_solver(ctx, name, path, format, tasks, version, fetch,yes, no_check):
           None
       """
     from src.utils.options.CommandOptions import AddSolverOptions
-    from src.utils import solver_handler
+    from src.handler import solver_handler
     options = AddSolverOptions(**ctx.params)
     options.check()
     solver_handler.add_solver(options)
-    
-    
+
+
 
 @click.command()
 @click.option("--name",
@@ -154,14 +154,14 @@ def add_solver(ctx, name, path, format, tasks, version, fetch,yes, no_check):
 @click.option("--references_path",'-ref',type=click.Path(exists=True,resolve_path=True),help='Path to reference results for validation.')
 @click.option("--extension_references",'-refext',help='Extensions of reference files.')
 @click.pass_context
-def add_benchmark(ctx, 
-                  name, 
-                  path, 
-                  format, 
+def add_benchmark(ctx,
+                  name,
+                  path,
+                  format,
                   additional_extension,dynamic_files,
-                  no_check, 
-                  generate, 
-                  random_arguments, 
+                  no_check,
+                  generate,
+                  random_arguments,
                   function,
                   yes,
                   references_path,
@@ -189,7 +189,7 @@ def add_benchmark(ctx,
       Raises:
            None
        """
-    from src.utils.benchmark_handler import add_benchmark
+    from src.handler.benchmark_handler import add_benchmark
     from src.utils.options.CommandOptions import AddBenchmarkOptions
     options = AddBenchmarkOptions(**ctx.params)
     options.check()
@@ -285,18 +285,18 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
     from src.utils import experiment_handler
 
     cfg = config_handler.load_default_config()
-    
-    
+
+
 
 
 
     if config:
         user_cfg_yaml = config_handler.load_config_yaml(config)
-        
+
         cfg.merge_user_input(user_cfg_yaml)
     if rerun:
         last_experiment = experiment_handler.get_last_experiment()
-        
+
         if last_experiment is None:
             print("No experiment found.")
             exit()
@@ -304,17 +304,17 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
             user_cfg_yaml = config_handler.load_config_yaml(last_experiment['config_path'])
             cfg.merge_user_input(user_cfg_yaml)
 
-    
+
 
     cfg.merge_user_input(ctx.params)
 
 
     is_valid = cfg.check()
     cfg.print()
-    
+
     if not is_valid:
         exit()
-    
+
     experiment_handler.run_experiment(cfg)
 
     result_df = experiment_handler.load_results_via_name(cfg.name)
@@ -364,7 +364,7 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
                 cfg.table_export = register.table_export_functions_dict.keys()
             for format in cfg.table_export:
                 register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
-    
+
     if cfg.validation['mode']:
         validation_results = validation.validate(result_df, cfg)
         print_validation.print_results(validation_results)
@@ -376,7 +376,7 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
                     cfg.validation['table_export'] = register.validation_table_export_functions_dict.keys()
                 for f in cfg.validation['table_export']:
                     register.validation_table_export_functions_dict[f](validation_results['pairwise'],cfg)
-    
+
     test_results = {}
     post_hoc_results = {}
 
@@ -388,17 +388,17 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
         post_hoc_results.update(parametric_post_hoc.test(result_df,cfg))
     if cfg.significance['non_parametric_post_hoc']:
         post_hoc_results.update(non_parametric_post_hoc.test(result_df,cfg))
-    
+
     if test_results:
         print("========== Significance Analysis Summary ==========")
         for test in test_results.keys():
             print_significance.print_results(test_results[test],test)
-    
+
     if post_hoc_results:
         print("========== Post-hoc Analysis Summary ==========")
         for test in post_hoc_results.keys():
             print_significance.print_results_post_hoc(post_hoc_results[test],test)
-        
+
         if cfg.significance['plot']:
             for post_hoc_test in post_hoc_results.keys():
                 plot_post_hoc.create_plots(post_hoc_results[post_hoc_test],cfg,post_hoc_test)
@@ -485,7 +485,7 @@ def calculate(
             result_df= experiment_handler.load_results_via_name(cfg.name)
         else:
             print("No experiment found.")
-    
+
     elif name is not None:
         result_df= experiment_handler.load_results_via_name(name)
         cfg = config_handler.load_config_via_name(name)
@@ -640,7 +640,7 @@ def plot(ctx, name,  save_to,kind,raw,config,last):
 
     if not save_to:
         cfg.save_to = os.getcwd()
-    
+
 
     cfg.check()
 
@@ -668,7 +668,7 @@ def benchmarks(verbose,id):
     Raises:
         None
    """
-    from src.utils import benchmark_handler
+    from src.handler import benchmark_handler
     if verbose:
         benchmark_handler.print_benchmarks(extra_columns=['ext_additional','dynamic_files'])
     else:
@@ -679,13 +679,13 @@ def benchmarks(verbose,id):
 
         else:
             benchmark_handler.print_benchmarks()
-   
+
 
 @click.command()
 @click.option("--verbose", "-v", is_flag=True, default=False, required=False)
 @click.option("--id",type=click.INT,help="Print information of solver")
 def solvers(verbose,id):
-    from src.utils import solver_handler
+    from src.handler import solver_handler
     """Prints solvers in database to console.
 
     Args:
@@ -700,7 +700,7 @@ def solvers(verbose,id):
             print(yaml.dump(solver, allow_unicode=True, default_flow_style=False))
 
         else:
-            
+
             solver_handler.print_solvers()
 
 @click.command()
@@ -710,7 +710,7 @@ def status(tag):
 
     """
     from src.utils import experiment_handler
-    from src.utils import config_handler
+    from src.handler import config_handler
     experiment_df = pd.read_csv(definitions.EXPERIMENT_INDEX)
     selected_experiment = experiment_df[experiment_df.name == tag]
     if tag:
@@ -798,13 +798,13 @@ def validate(name,config,mode,reference,extension,
     else:
         print('Unable to load results.')
         exit()
-    
+
     if not save_to:
         cfg.save_to = os.getcwd()
     else:
         cfg.save_to = save_to
 
-    
+
     validation_cfg = {"mode": mode,
   "plot": list(plot),
   "table_export": list(table_export)}
@@ -815,16 +815,16 @@ def validate(name,config,mode,reference,extension,
 
         if cfg.validation['plot'] and "pairwise" in validation_results.keys():
             plot_validation.create_plots(validation_results['pairwise'],cfg)
-        
+
         if 'pairwise' in mode:
-            
+
             if cfg.validation['table_export']:
                 if cfg.validation['table_export'] == 'all' or 'all' in cfg.validation['table_export']:
                     cfg.validation['table_export'] = register.validation_table_export_functions_dict.keys()
                 for f in cfg.validation['table_export']:
                     register.validation_table_export_functions_dict[f](validation_results['pairwise'],cfg)
 
-        
+
     else:
         print("Please specify a validation mode via the --mode/-m Option.")
         exit()
@@ -869,7 +869,7 @@ def validate(name,config,mode,reference,extension,
               '-e',
               type=click.Choice(list(register.post_hoc_table_export_functions_dict.keys()) + ['all']),multiple=True)
 @click.option('--plot',
-              
+
               type=click.Choice(list(register.plot_post_hoc_functions_dict.keys()) + ['all']),multiple=True,help="Create a heatmap for pairwise comparision results and a count plot for validation with references.")
 @click.option(
     "--save_to",
@@ -903,7 +903,7 @@ def significance(name, task, benchmark, solver, filter, combine, parametric,
         last ([type]): [description]
     """
     from src.utils import experiment_handler
-    
+
     if last:
         last_experiment = experiment_handler.get_last_experiment()
         if last_experiment is not None:
@@ -917,15 +917,15 @@ def significance(name, task, benchmark, solver, filter, combine, parametric,
     else:
         print('Unable to load results.')
         exit()
-    
+
     if not save_to:
         cfg.save_to = os.getcwd()
     else:
         cfg.save_to = save_to
-    
+
     if table_export == 'all' or 'all' in table_export:
         table_export = register.post_hoc_table_export_functions_dict.keys()
-    
+
 
     sig_cfg =   {   "parametric_test": list(parametric),
                     "non_parametric_test": list(non_parametric),
@@ -946,12 +946,12 @@ def significance(name, task, benchmark, solver, filter, combine, parametric,
         post_hoc_results.update(parametric_post_hoc.test(result_df,cfg))
     if cfg.significance['non_parametric_post_hoc']:
         post_hoc_results.update(non_parametric_post_hoc.test(result_df,cfg))
-    
+
     if test_results:
         print("========== Significance Analysis Summary ==========")
         for test in test_results.keys():
             print_significance.print_results(test_results[test],test)
-    
+
     if post_hoc_results:
         print("========== Post-hoc Analysis Summary ==========")
         for test in post_hoc_results.keys():
@@ -963,7 +963,7 @@ def significance(name, task, benchmark, solver, filter, combine, parametric,
             for post_hoc_test in post_hoc_results.keys():
                 for f in cfg.significance['table_export']:
                     register.post_hoc_table_export_functions_dict[f](post_hoc_results[post_hoc_test],cfg,post_hoc_test)
-        
+
 
 @click.command()
 @click.option("--id", required=False,help='ID or name of solver to delete.')
@@ -979,7 +979,7 @@ def delete_solver(id, all):
     Raises:
         None
    """
-    import src.utils.solver_handler as solver_handler
+    import src.handler.solver_handler as solver_handler
     if id is not None:
         click.confirm(
                  "Are you sure you want to delete this solver in the database?",
@@ -1005,7 +1005,7 @@ def delete_benchmark(id, all):
     Raises:
         None
    """
-    from src.utils import benchmark_handler
+    from src.handler import benchmark_handler
     if id is not None:
         click.confirm(
                  "Are you sure you want to delete this benchmark in the database?",
@@ -1049,20 +1049,20 @@ def features(id, save_to, feature, embedding, concat, benchmark_feature):
     """Calculates node features and embeddings
     """
     from src.functions.ml import features
-    from src.utils import benchmark_handler
+    from src.handler import benchmark_handler
     import glob
     import pandas as pd
     from os import chdir
     if save_to is None:
         from os import getcwd
         save_to = getcwd()
-    
-    
-    
+
+
+
     benchmark_info = benchmark_handler.load_benchmark(id)[0]
     if benchmark_feature:
         features.calculate_benchmark_level_features(benchmark_info,benchmark_feature,save_to)
-    
+
     if feature:
         features_files_path, embeddings_file_path = features.calculate_graph_level_features(benchmark_info, feature, embedding, save_to)
         if concat:
@@ -1082,8 +1082,8 @@ cli.add_command(features)
 @click.option("--timeout",type=click.INT,help='Timeout for accaptance tasks')
 @click.option("--task","-t",multiple=True, help='Accaptance task to create labels')
 def labels(benchmark,solver,save_to,task,timeout):
-    from src.utils import benchmark_handler
-    from src.utils import solver_handler
+    from src.handler import benchmark_handler
+    from src.handler import solver_handler
     from src.functions.ml import labels
     if save_to is None:
         from os import getcwd
@@ -1111,11 +1111,11 @@ def board(name,raw):
         experiment_df = pd.read_csv(raw)
     else:
         print('Experiment not found!')
-    
+
     if experiment_df is None:
         exit()
     board.launch(experiment_df)
-    
+
 
 cli.add_command(board)
 
@@ -1138,7 +1138,7 @@ def experiments(list,name):
     if list:
         print("========== Experiments Overview ==========")
         experiment_handler.print_experiment_index()
-    
+
     if name is not None:
         print('========== Experiment Summary ==========')
         #result_df= experiment_handler.load_results_via_name(name)
@@ -1488,7 +1488,7 @@ def web(start,close):
 #     from os import getcwd
 #     from networkx import DiGraph
 #     from networkx.drawing import nx_latex
-    
+
 #     print("Enter a graph in format:")
 #     args = []
 #     attacks = []
@@ -1505,7 +1505,7 @@ def web(start,close):
 #             args.append(line)
 #         else:
 #             attacks.append(tuple(line.split(" ")))
-    
+
 #     af = DiGraph()
 #     af.add_nodes_from(args)
 #     af.add_edges_from(attacks)
@@ -1526,9 +1526,9 @@ def quick(task,solver,arg,timeout,file,format):
     """Quick run for single instances or user input instances.
     """
     from src.functions import cli_input
-    from src.utils import solver_handler
+    from src.handler import solver_handler
     from os import getcwd,path,remove
-    
+
     file_from_cli = False
     if file is None:
         user_input = cli_input.get_user_input()
@@ -1539,11 +1539,11 @@ def quick(task,solver,arg,timeout,file,format):
         file = instance_path
         format = input_graph_format
         file_from_cli = True
-    
+
     if ('DS' in task or 'DC' in task) and arg is None:
         arg = input(f'Please specify a query argument for the {task} task:\n')
 
-    
+
     if format is None:
         format = file[-3:]
 
@@ -1556,9 +1556,9 @@ def quick(task,solver,arg,timeout,file,format):
                 break
     else:
         solver_to_run = solver_handler.load_solver([solver])[0]
-    
+
     solver_handler.dry_run(solver_to_run,task,file,arg,format,timeout)
-    
+
     # Clean up
     if file_from_cli:
         # Delete tmp file
@@ -1566,9 +1566,9 @@ def quick(task,solver,arg,timeout,file,format):
             remove(instance_path)
         except Exception as e:
             print(f'Something went wrong when deleting the tmp file: {e}')
-        
 
-    
+
+
 
 @click.command()
 @click.option('--num_arguments',default=250,help='Number of arguments per instance')
@@ -1659,16 +1659,16 @@ def kwt_gen(num_arguments,
             af_path = os.path.join(kwt_instances_path,f'kwt_{i}.{f}')
             with open(af_path,'w') as af_file:
                 af_file.write(af_parsed)
-    
+
     if add:
-        from src.utils.benchmark_handler import add_benchmark
+        from src.handler.benchmark_handler import add_benchmark
         from src.utils.options.CommandOptions import AddBenchmarkOptions
-    
-        
+
+
         options = AddBenchmarkOptions(name=name,path=kwt_instances_path,format=format,additional_extension=extension_query,no_check=False,dynamic_files=None,random_arguments=False,generate=None,function=None,yes=True)
         options.check()
-        add_benchmark(options) 
-        
+        add_benchmark(options)
+
 
 @click.command()
 @click.pass_context
@@ -1681,10 +1681,10 @@ def edit_solver(ctx,id, name, version, path, tasks):
     """Edit solver in database.
     """
     from src.utils.options.CommandOptions import EditSolverOptions
-    from src.utils import solver_handler
+    from src.handler import solver_handler
     options = EditSolverOptions(**ctx.params)
     solver_handler.edit_solver(options)
-    
+
 
 cli.add_command(edit_solver)
 
@@ -1700,7 +1700,7 @@ def edit_benchmark(ctx,id, name,path,format,ext_additional, dynamic_files):
     """Edit a benchmark in the database.
     """
     from src.utils.options.CommandOptions import EditBenchmarkOptions
-    from src.utils import benchmark_handler
+    from src.handler import benchmark_handler
     if not format:
         ctx.params['format'] = None
     options = EditBenchmarkOptions(**ctx.params)
@@ -1708,7 +1708,7 @@ def edit_benchmark(ctx,id, name,path,format,ext_additional, dynamic_files):
 
 cli.add_command(edit_benchmark)
 
-    
+
 
 
 cli.add_command(kwt_gen)

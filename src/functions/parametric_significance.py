@@ -2,7 +2,7 @@ from typing_extensions import runtime
 import src.functions.register as register
 import pandas as pd
 import numpy as np
-import src.utils.config_handler as config_handler
+import src.handler.config_handler as config_handler
 import scipy.stats as scis
 
 def test(df: pd.DataFrame, cfg: config_handler.Config):
@@ -19,14 +19,14 @@ def test(df: pd.DataFrame, cfg: config_handler.Config):
 
 def _anova(df: pd.DataFrame):
     runtimes = [ df[df.solver_id == solver].runtime.values for solver in df.solver_id.unique() ]
-    
+
     stat, p = scis.f_oneway(*runtimes)
     return pd.Series({'p_value': p, 'statistics': stat})
-    
-    
+
+
 
 def anova(df: pd.DataFrame, cfg: config_handler.Config):
-    
+
     return df.groupby(['repetition','tag','task','benchmark_id'], as_index=False).apply(lambda _df: _anova(_df))
 
 

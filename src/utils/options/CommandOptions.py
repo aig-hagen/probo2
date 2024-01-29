@@ -4,7 +4,7 @@ from os import listdir
 from pathlib import Path
 import yaml
 from tqdm import tqdm
-from src.utils import benchmark_handler
+from src.handler import benchmark_handler
 import click
 import re
 from pathlib import Path
@@ -19,12 +19,12 @@ class EditSolverOptions(CommandOptionInterface):
         self.tasks = tasks
 
         self.solver_infos = None
-    
+
     def check(self):
         pass
 
-        
-    
+
+
     def print(self):
         print(yaml.dump(self.__dict__))
 
@@ -77,12 +77,12 @@ class EditBenchmarkOptions(CommandOptionInterface):
         self.path = path
         self.format = format
         self.dynamic_files = dynamic_files
-    
+
     def check(self):
         pass
 
-        
-    
+
+
     def print(self):
         print(yaml.dump(self.__dict__))
 
@@ -109,13 +109,12 @@ class AddBenchmarkOptions(CommandOptionInterface):
         self.has_references = has_references
 
     def check(self):
-
         self._check_benchmark_name()
         existing_instance_formats = self._check_instance_formats()
         self._check_query_formats(existing_instance_formats=existing_instance_formats)
         self._check_references()
         self._check_references_for_naming_convention()
-    
+
     def _check_references_for_naming_convention(self):
 
         if self.has_references and self.references_path is not None and self.extension_references is not None:
@@ -127,14 +126,14 @@ class AddBenchmarkOptions(CommandOptionInterface):
             for file in listdir(self.references_path):
                 if file.endswith(f".{self.extension_references}"):
                     references_files_list.append(file)
-            
+
             for instance in listdir(self.path):
                 file_extension = Path(instance).suffix[1:]
                 if file_extension in self.format:
                     format_instance_lookup[file_extension].append(instance)
-            
-            
-                
+
+
+
 
 
             for instance_format in tqdm(self.format,desc='Checking naming convention of reference files'):
@@ -142,18 +141,18 @@ class AddBenchmarkOptions(CommandOptionInterface):
                 r = re.compile(regex)
                 matched_file_names = list(filter(r.match, references_files_list)) # Read Note below
                 total_matched_file_names.extend(matched_file_names)
-                
-            
+
+
             #TODO: dump file paths of reference files to lookup, check if for all files references are present
-            
+
             not_matched_file_names = set(references_files_list).difference(total_matched_file_names)
 
             if not_matched_file_names:
                 print(f'Some references files do not follow the naming convention <instance_name>.<task>.<instance_format>.<reference_extension>:\n{not_matched_file_names}')
                 print('**NOTE: Files that do not follow the naming convention are ignored in the validation process!**')
                 click.confirm('Continue?',default=True,abort=True)
-            
-    
+
+
     def _check_references(self):
         if not self.references_path:
             print('**No path to reference results specified. Searching for references in benchmark instances directory.**')
@@ -193,7 +192,7 @@ class AddBenchmarkOptions(CommandOptionInterface):
                         print('**Validation via reference results disabled.**')
                         self.has_references = False
                         self.extension_references = None
-                        self.references_path = None                     
+                        self.references_path = None
                 else:
                     print(f'**Found references with extension <{self.extension_references}>. Setting references path to <{self.path}>')
                     self.has_references = True
@@ -201,7 +200,7 @@ class AddBenchmarkOptions(CommandOptionInterface):
         else:
             if not self.extension_references:
                 print(f'**No extension for references files found. Searching for default reference extensions: {DefaultReferenceExtensions.as_list()}**')
-                
+
                 existing_extensions_reference_path = benchmark_handler.get_unique_formats_from_path(self.references_path)
 
                 supported_reference_extensions = existing_extensions_reference_path.intersection(
@@ -216,7 +215,7 @@ class AddBenchmarkOptions(CommandOptionInterface):
                     self.has_references = True
                     self.extension_references = list(supported_reference_extensions)[0]
             else:
-                
+
                 existing_extensions_reference_path = benchmark_handler.get_unique_formats_from_path(self.references_path)
                 if not self.extension_references in existing_extensions_reference_path:
                     print(f'**No reference files with specified extension <{self.extension_references}> in direcotry <{self.references_path}> found.**')
@@ -243,18 +242,20 @@ class AddBenchmarkOptions(CommandOptionInterface):
                 else:
                     print(f'**Found references with extension <{self.extension_references}>**')
                     self.has_references = True
-                
-    
+
+
     def _check_benchmark_name(self):
         from os.path import basename
         from pathlib import Path
-            # Handle also extensions like .py or .sh
-        self.name = basename(Path(self.path).with_suffix(''))
-        print(f'**No name found. Name {self.name} derived from path.**\n')
+        # Handle also extensions like .py or .sh
+        if not self.name or self.name is None:
+            self.name = basename(Path(self.path).with_suffix(''))
+            print(f'**No name found. Name {self.name} derived from path.**\n')
+
 
 
     def _check_instance_formats(self):
-        """ Checks the instance formats. 
+        """ Checks the instance formats.
             If no format is specified, instances are scanned for the formats in definition.DefaultInstanceFormats.
             Formats are set to the intesection beetween found formats and default formats.
         """
@@ -275,7 +276,7 @@ class AddBenchmarkOptions(CommandOptionInterface):
             return existing_instance_formats
         else:
             return None
-    
+
     def _check_query_formats(self,existing_instance_formats=None):
         if not self.additional_extension or self.additional_extension is None:
             print(
@@ -287,14 +288,14 @@ class AddBenchmarkOptions(CommandOptionInterface):
 
             supported_query_formats = existing_instance_formats.intersection(
                 set(DefaultQueryFormats.as_list()))
-            
+
             if not supported_query_formats:
                 print(f'**No query files with { DefaultQueryFormats.as_list()} found.**\n')
                 self.random_arguments = click.confirm(text=f'Do you want to create random query arguments with extension {DefaultQueryFormats.ARG.value}?',default=True)
                 self.additional_extension = DefaultQueryFormats.ARG.value
             else:
                 # Handels just a single extension for query arguments
-                print(f'**Setting query format to {list(supported_query_formats)[0]}**\n') 
+                print(f'**Setting query format to {list(supported_query_formats)[0]}**\n')
                 self.additional_extension = list(supported_query_formats)[0]
         else:
             if isinstance(self.additional_extension, tuple):
@@ -309,7 +310,7 @@ class AddBenchmarkOptions(CommandOptionInterface):
                 exit()
 
 
-      
+
 
     def print(self):
         print(yaml.dump(self.__dict__))

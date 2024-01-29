@@ -57,10 +57,10 @@ def add_solver(options: AddSolverOptions):
 
     if options.fetch:
         tasks,format = _parse_fetch_options(options)
-        
+
     if not isinstance(format, list):
         format = [format]
-    
+
     solver_info = {'name': options.name,'version': options.version,
                    'path': options.path,'tasks': tasks,'format': format, 'id': None}
     new_solver = Solver(**solver_info)
@@ -68,7 +68,7 @@ def add_solver(options: AddSolverOptions):
         is_working = check_interface(new_solver)
     else:
         is_working = True
-    
+
     if not is_working:
         logger.error(f'{new_solver.name}: Solver interface check failed.')
         print('Solver not working.')
@@ -98,19 +98,19 @@ def edit_solver(options: EditSolverOptions):
     confirm('Apply changes?',abort=True,default=True)
     update_solver(solver_infos)
     print(f'Updated solver!')
-    
-    
 
 
-    
+
+
+
 
 def _create_solver_obj(parameter: AddSolverOptions):
     if parameter.fetch:
         tasks,format = _parse_fetch_options(parameter)
-        
+
     if not isinstance(format, list):
         format = [format]
-    
+
     solver_info = {'name': parameter.name,'version': parameter.version,
                    'path': parameter.path,'tasks': tasks,'format': format, 'id': None}
     new_solver = Solver(**solver_info)
@@ -143,7 +143,7 @@ def _add_solver_to_database(solver: Solver):
         return _write_to_empty_solver_file(solver)
     else:
         return _append_to_solver_file(solver)
-       
+
 
 
 
@@ -209,7 +209,9 @@ def check_interface(solver: Solver) -> bool:
                     "-fo", solver_format])
 
             if 'DS' in test_task or 'DC' in test_task:
-                with open(str(definitions.TEST_INSTANCE_ARG),'r') as arg_file:
+                if solver_format == 'i23': arg_path = definitions.TEST_INSTANCE_ARG_I23
+                else: arg_path = definitions.TEST_INSTANCE_ARG
+                with open(str(arg_path),'r') as arg_file:
                     arg = arg_file.read().rstrip('\n')
                     cmd_params.extend(["-a",arg])
 
@@ -236,7 +238,7 @@ def check_interface(solver: Solver) -> bool:
                 logger.error(f'Something went wrong when testing the interface: {err}\nOutput:{err.output}')
                 return False
 
-        return True 
+        return True
 
 
 def print_summary(solver_info: dict):
@@ -338,7 +340,7 @@ def update_solver(solver_infos):
         if solver['id'] == solver_infos['id']:
             solvers[i] = solver_infos
             break
-    
+
     _update_solver_json(solvers)
 
 
@@ -358,7 +360,7 @@ def delete_solver(id) -> bool:
         print(f"Unable to delete solver {id}. Solver not found.")
         logger.error(f"Unable to delete solver {id}. Solver not found.")
         return False
-    
+
     _update_solver_json(solvers)
     print(f"Solver {id} deleted")
     logger.info(f"Solver {id} deleted")
@@ -400,7 +402,7 @@ def _set_solver_parameters(solver_info,instance,task,format,additional_arguments
         cmd_params.append('bash')
     elif solver_info['path'].endswith('.py'):
         cmd_params.append('python')
-    
+
     instance_name = Path(instance).stem
     params = [solver_info['path'],
           "-p", task,
@@ -412,7 +414,7 @@ def _set_solver_parameters(solver_info,instance,task,format,additional_arguments
     if dynamic_files_lookup:
         dynamic_file = dynamic_files_lookup[format][instance]
         params.extend([ "-m", dynamic_file])
-    
+
     solver_dir = os.path.dirname(solver_info['path'])
     final_params = cmd_params + params
 
@@ -425,10 +427,10 @@ def _set_solver_parameters(solver_info,instance,task,format,additional_arguments
                                         final_params=final_params,
                                         format=format,
                                         time_measurement=time_measurement)
-    
+
     return solver_parameter
-    
-    
+
+
 
 
 
@@ -468,7 +470,7 @@ def _run_solver(solver_parameters: SolverParameters):
     if not os.path.exists(solver_parameters.solver_dir):
         logger.error(f"Solver path not found:{solver_parameters.solver_dir}")
         raise subprocess.CalledProcessError(returncode=-1,cmd=solver_parameters.final_params,output="Solver path not found.")
-    
+
     start_time_current_run = time.perf_counter()
     out = utils.run_process(solver_parameters.final_params,
                     capture_output=True, timeout=solver_parameters.timeout, check=True,cwd=solver_parameters.solver_dir)
@@ -481,15 +483,15 @@ def _run_solver(solver_parameters: SolverParameters):
     else:
         run_time = end_time_current_run - start_time_current_run
     return {'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.additional_argument, 'runtime': run_time, 'result': None, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout}
-            
+
 
 def run_solver(solver_info,task,timeout,instance,format,additional_arguments_lookup=None,dynamic_files_lookup=None,output_file_dir=None,additional_solver_arguments=None, repetition=None):
-  
+
     results = _init_results_dict(solver_info)
-    
+
     solver_parameters = _set_solver_parameters(solver_info,instance,task,format,additional_arguments_lookup,dynamic_files_lookup,repetition,timeout)
- 
-    
+
+
     try:
         if output_file_dir is not None:
            results.update(_run_solver_write_results_to_file(output_file_dir,solver_parameters))
@@ -513,14 +515,14 @@ def run_solver_accaptence(solver,task,instance,arg,timeout,format):
         cmd_params.append('bash')
     elif solver['path'].endswith('.py'):
         cmd_params.append('python')
-    
+
     instance_name = Path(instance).stem
     params = [solver['path'],
           "-p", task,
           "-f", instance,
           "-fo", format,
           "-a", arg]
-    
+
     solver_dir = os.path.dirname(solver['path'])
     final_params = cmd_params + params
     try:
@@ -532,17 +534,17 @@ def run_solver_accaptence(solver,task,instance,arg,timeout,format):
         result = output.stdout.decode("utf-8")
 
         accepted = True if 'YES' in result else False
-        
+
         return {'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': arg, 'runtime': run_time, 'result': result,'accepted': accepted, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off': timeout}
     except subprocess.TimeoutExpired as e:
         #logger.error(f'Solver {solver_info.get("solver_name")} timed out on instance {solver_parameters.instance_name}')
         return {'instance': instance_name,'format':format,'task': task,'timed_out':True,'additional_argument': arg, 'runtime': timeout, 'result': result,'accepted': accepted, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off': timeout}
-        
+
     except subprocess.CalledProcessError as err:
         logger.error(f'Something went wrong running solver {solver.get("solver_name")}: {err}')
         print("\nError occured:",err)
         return {'instance': instance_name,'format':format,'task': task,'timed_out':False,'additional_argument': arg, 'runtime': None, 'result': result,'accepted': accepted, 'exit_with_error': True, 'error_code': err.returncode,'error': err,'cut_off':timeout}
-      
+
 
 def dry_run(solver,task,instance,arg,format,timeout):
     cmd_params = []
@@ -550,7 +552,7 @@ def dry_run(solver,task,instance,arg,format,timeout):
         cmd_params.append('bash')
     elif solver['path'].endswith('.py'):
         cmd_params.append('python')
-    
+
     if arg:
         params = [solver['path'],
           "-p", task,
@@ -562,7 +564,7 @@ def dry_run(solver,task,instance,arg,format,timeout):
           "-p", task,
           "-f", instance,
           "-fo", format]
-    
+
     solver_dir = os.path.dirname(solver['path'])
     final_params = cmd_params + params
     print(f'Running solver {solver["name"]}:')
@@ -577,7 +579,7 @@ def dry_run(solver,task,instance,arg,format,timeout):
 
     except subprocess.TimeoutExpired as e:
        print(f'Solver {solver["name"]} timeout.')
-        
+
     except subprocess.CalledProcessError as err:
         print("\nError occured:",err)
-      
+

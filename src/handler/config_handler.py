@@ -5,7 +5,8 @@ import os
 
 
 from src.functions import archive, statistics
-from src.utils import benchmark_handler, definitions
+from src.handler import benchmark_handler
+from src.utils import definitions
 import src.functions.register as register
 import yaml
 import pandas as pd
@@ -62,12 +63,12 @@ class Config(object):
                                 if value not in self.__dict__[key]:
                                     self.__dict__[key].append(value)
                         else:
-                           
+
                             self.__dict__[key] = value
 
     def print(self):
         print(yaml.dump(self.__dict__))
-    
+
     def get_summary_as_string(self):
         return yaml.dump(self.__dict__)
 
@@ -224,10 +225,10 @@ def create_solver_argument_grid(grid_file_path, solver_list: list) -> list:
     with open(grid_file_path,'r') as config_file:
         if grid_file_path.endswith('yaml'):
             argument_grids = yaml.load(config_file, Loader=yaml.FullLoader)
-    
-   
+
+
     for solver, argument_configs in argument_grids.items():
-     
+
         arguments_list = argument_configs['arguments']
         argument_prefix = argument_configs['argument_prefix']
         argument_values_lists = []
@@ -241,13 +242,13 @@ def create_solver_argument_grid(grid_file_path, solver_list: list) -> list:
                 step = arg_values['step']
                 start = arg_values['range'][0]
                 end = arg_values['range'][1] + arg_values['step']
-                
+
                 argument_values = list(range(start,end,step))
                 argument_values_lists.append(argument_values)
         argument_combinations = list(itertools.product(*argument_values_lists))
         prompts = _construct_command_line_prompt(argument_combinations, arg_names, argument_prefix)
         print(prompts)
-        
+
 
 def _construct_command_line_prompt(argument_combination_list,argument_names,argument_prefix):
     # NOTE: argument_names and tuples in argument_values list must be the same order !
@@ -265,12 +266,12 @@ def _construct_command_line_prompt(argument_combination_list,argument_names,argu
     return all_prompts
 
     # TODO: Create solver with prompts
-    
-    
-    
-        
 
-            
+
+
+
+
+
 
 
 

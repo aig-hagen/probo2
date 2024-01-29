@@ -2,7 +2,7 @@ import pandas
 import src.functions.register as register
 import pandas as pd
 from src.utils import definitions
-import src.utils.config_handler as config_handler
+import src.handler.config_handler as config_handler
 import tabulate
 import os
 import yaml
@@ -94,7 +94,7 @@ def column_header_bold(df: pd.DataFrame) -> list:
             r.replace("_", " ").title())))
 
 def _save_as_pretty_latex(df:pd.DataFrame, save_to,table_config):
-    
+
     _df = df.copy()
     filter_set = set(['solver_id','tag','task','benchmark_id'])
     df_columns = [ x for x in df.columns if x not in filter_set]

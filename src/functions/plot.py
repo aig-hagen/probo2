@@ -1,5 +1,5 @@
 import src.functions.register as register
-from src.utils import config_handler
+from src.handler import config_handler
 import pandas as pd
 import numpy as np
 from src.plotting import CactusPlot, ScatterPlot

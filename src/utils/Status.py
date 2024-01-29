@@ -1,8 +1,8 @@
 import json
 import os
-from src.utils import benchmark_handler, definitions, solver_handler
-from src.utils import config_handler
-from src.utils import solver_handler
+from src.handler import benchmark_handler, config_handler , solver_handler
+from src.utils import definitions
+
 
 def init_status_file(cfg: config_handler.Config):
     name = cfg.name
@@ -28,7 +28,7 @@ def init_status_file(cfg: config_handler.Config):
         os.remove(str(definitions.STATUS_FILE_DIR))
     with open(str(definitions.STATUS_FILE_DIR), 'w') as outfile:
         json.dump(status_dict, outfile)
-    
+
 
     with open(cfg.status_file_path,'w') as f:
         json.dump(status_dict, f)
@@ -41,7 +41,7 @@ def print_status_summary(path=None):
     else:
         with open(path) as status_json_file:
             status_data = json.load(status_json_file)
-        
+
     print("========== Satus Summary ==========")
     print("Tag: ", status_data['name'])
     print("Tasks finished: {} / {}".format(status_data['finished_tasks'], status_data['total_tasks']))
@@ -77,7 +77,7 @@ def increment_instances_counter(config: config_handler.Config,task, solver_id):
     with open(config.status_file_path) as _status_json_file:
         _status_data = json.load(_status_json_file)
         _status_data['tasks'][task]['solvers'][str(solver_id)]['solved'] += 1
-    
+
     with open(str(definitions.STATUS_FILE_DIR), 'w') as outfile:
         json.dump(status_data, outfile)
     with open(config.status_file_path, 'w') as _outfile:
@@ -91,16 +91,16 @@ def get_total_number_instances_per_solver(path=None):
         with open(path) as status_json_file:
             status_data = json.load(status_json_file)
 
-    
+
     info = {}
     for task in status_data['tasks'].keys():
         info[task] = {}
         for solver_id, solver_info in status_data['tasks'][task]['solvers'].items():
 
-            info[task][f'{solver_info["name"]}_{solver_info["version"]}'] = {'solved': solver_info['solved'], 'total': solver_info['total'] }  
-        
+            info[task][f'{solver_info["name"]}_{solver_info["version"]}'] = {'solved': solver_info['solved'], 'total': solver_info['total'] }
+
     return info
-        
+
 
 
 if __name__ == '__main__':

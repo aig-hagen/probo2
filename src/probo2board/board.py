@@ -7,14 +7,14 @@ import hvplot
 from src.functions import register,statistics
 from functools import reduce
 from src.utils import Status
-from src.utils import config_handler
+from src.handler import config_handler
 from src.utils import definitions
 
 hv.extension('bokeh', 'plotly')
 
 pn.extension('tabulator', sizing_mode="stretch_width")
 import src.probo2board.pipelines as pipelines
-from src.utils import benchmark_handler
+from src.handler import benchmark_handler
 
 STATS = ['sum','mean','solved','errors','timeouts','coverage']
 
@@ -22,7 +22,7 @@ def launch(df: pd.DataFrame) -> None:
 
     df['solver_full_name'] = df.solver_name +'_'+ df.solver_version
     # Define Options
-   
+
     solver_options = sorted(list(df.solver_full_name.unique()))
     rep_options = sorted(list(df.repetition.unique()))
     tasks_options = sorted(list(df.task.unique()))
@@ -45,15 +45,15 @@ def launch(df: pd.DataFrame) -> None:
                                           options=benchmark_options,
                                           value=benchmark_options,
                                           sizing_mode='scale_width')
-    
+
     # ========== Tables ==========
     table_df_pipline = pipelines.get_pipeline_table(df,reps,tasks,benchmarks,solvers)
     table = table_df_pipline.pipe(pn.widgets.Tabulator, pagination='remote', page_size=20)
     stats_results = []
     for stat in STATS:
         _res = register.stat_dict[stat](df,avg_reps=False)
-        stats_results.append(_res[0]) # DataFrame is on position 0, 
-    
+        stats_results.append(_res[0]) # DataFrame is on position 0,
+
     df_stats_merged = reduce(lambda  left,right: pd.merge(left,right,how='inner'), stats_results)
     df_stats_merged['solver_full_name'] = df_stats_merged.solver_name +'_'+ df_stats_merged.solver_version
     df_stats_merged = df_stats_merged.drop(['tag','solver_name','solver_version'],axis=1)
@@ -95,14 +95,14 @@ def launch(df: pd.DataFrame) -> None:
     #========== BACKEND TOGGLES =========
     backend_toggle = pn.widgets.RadioButtonGroup(options=['bokeh', 'plotly'],value='bokeh') # matlibplot does not work
     watcher = backend_toggle.param.watch(callback, ['options', 'value'], onlychanged=False)
-    # TODO: load experimet satus file 
+    # TODO: load experimet satus file
 
     #========== PROGRESS BARS ==========
     experiment_index_df = pd.read_csv(definitions.EXPERIMENT_INDEX)
     cfg_path_experiment = experiment_index_df[experiment_index_df.name == df.tag.iloc[0]]['config_path'].iloc[0]
     cfg_experiment = config_handler.load_config_yaml(cfg_path_experiment,as_obj=True)
     progress_info = Status.get_total_number_instances_per_solver(path=cfg_experiment.status_file_path)
-    
+
    # test_bar = pn.Row(pn.panel("Pyglaf_iccma21:",width=130),pn.indicators.Progress(width=300, value=150,align='center',margin=0),f'213/350')
 
     progress_bars = []
@@ -112,19 +112,19 @@ def launch(df: pd.DataFrame) -> None:
             row = pn.Row(pn.pane.Str(f'{_solver}',style={'color': '#818589'},width=130),pn.indicators.Progress(name=f'Progress {_solver}', value=info['solved'], width=info['total'], bar_color='success',align='center'),f'{info["solved"]}/{info["total"]}')
             solver_progress_bars_per_task.append(row)
         progress_bars.append(pn.Column(f'### {task}',*solver_progress_bars_per_task))
-    
-    
+
+
     progress_bars_final = pn.Column(
     '# Progress',
     pn.Row(*progress_bars)
     )
- 
+
     #progress = pn.indicators.Progress(name='Progress', value=20, width=200)
-    
+
 
     main_components = progress_bars_final + [summary_html,summary_widget,pn.pane.Markdown('## Plots'),cactus_plot.panel(),count_plot.panel(),pn.pane.Markdown('## Statistics'),stats_table.panel(),pn.pane.Markdown('## Raw'),table.panel()]
     template = pn.template.FastListTemplate(
-    title=f'Probo2Board-{df.iloc[0].tag}', 
+    title=f'Probo2Board-{df.iloc[0].tag}',
     sidebar=[backend_toggle,settings_html,rep_html,reps,tasks_html,tasks,benchmarks_html,benchmarks,solver_html,solvers],
     main=main_components,
     accent_base_color="#7BA0C8",
@@ -142,40 +142,40 @@ def generate_summary(df):
     benchmark_id_map = df[['benchmark_id','benchmark_name']].drop_duplicates()
     benchmark_id_map = dict(zip(benchmark_id_map.benchmark_id, benchmark_id_map.benchmark_name))
     benchmarks_text =  ','.join([f'{n}(ID:{i})' for i,n in benchmark_id_map.items()])
-    
+
     solver_id_map = df[['solver_id','solver_full_name']].drop_duplicates()
     solver_id_map = dict(zip(solver_id_map.solver_id, solver_id_map.solver_full_name))
     solvers_text =  ','.join([f'{n}(ID:{i})' for i,n in solver_id_map.items()])
-    
+
     timeout = df.iloc[0].cut_off
     reps_text = ','.join(map(str,list(df.repetition.unique())))
-    
+
     summary_text=f'Expepriment: {tag}\n\nTasks: {tasks}\n\nBenchmarks: {benchmarks_text}\n\nSolvers: {solvers_text}\n\nTimeout: {timeout}\n\nRepetitions: {reps_text}'
-    
+
     return pn.pane.Str(summary_text,style={'color': '#818589'})
 
 def prep_data_count_plot(df):
     conds = [((df.timed_out == False) & (df.exit_with_error == False)),df.timed_out == True,df.exit_with_error == True]
     choices = ['Solved','Timed out','Aborted']
     df['Status'] = np.select(conds,choices)
-    
-  
+
+
     if len(df.Status.unique()) > 1:
         value_counts = df.groupby(['repetition','task','benchmark_id','solver_id'],group_keys=True).apply(lambda _df: _df.value_counts(['Status'])).unstack(level='Status').reset_index()
     else:
         value_counts = df.groupby(['repetition','task','benchmark_id','solver_id'],group_keys=False).apply(lambda _df: _df.value_counts(['Status'])).reset_index()
         value_counts.columns = value_counts.columns.get_level_values(0) # without this line solver_id is a dataframe not a series
- 
-      
+
+
     benchmarks = benchmark_handler.load_benchmark(list(df.benchmark_id.unique()))
-    
+
     benchmark_id_name_map = { b['id']:b['name'] for b in benchmarks}
-  
+
 
     df['benchmark_name'] = df['benchmark_id'].map(benchmark_id_name_map)
     solver_id_map = df[['solver_id','solver_full_name']].drop_duplicates()
     solver_id_map = dict(zip(solver_id_map.solver_id, solver_id_map.solver_full_name))
-    
+
 
     benchmark_id_map = df[['benchmark_id','benchmark_name']].drop_duplicates()
     benchmark_id_map = dict(zip(benchmark_id_map.benchmark_id, benchmark_id_map.benchmark_name))
@@ -191,10 +191,10 @@ def prep_data_count_plot(df):
         value_counts['Aborted'] = 0
 
     return value_counts.fillna(0)
-    
+
 
 def callback(*events):
-   
+
     for event in events:
         obj = event.obj
         hv.output(backend=obj.value)

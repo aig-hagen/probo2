@@ -4,7 +4,7 @@
 """
 
 import src.functions.register as register
-from src.utils import benchmark_handler
+from src.handler import benchmark_handler
 
 def get_instance_counts(benchmark: benchmark_handler.Benchmark) -> dict:
     """Get instance count per format.

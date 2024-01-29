@@ -34,7 +34,7 @@ def edit_benchmark(options: EditBenchmarkOptions ):
     if not benchmark_infos or benchmark_infos is None:
         print(f'No solver with id {options.id} found. Please run solvers command to get a list of solvers in database.')
         exit()
-    benchmark_infos = benchmark_infos[0] # load_solver returns a list,
+    benchmark_infos = benchmark_infos[0] # load_benchmarks returns a list,
     print('Changing values:')
     for attribute, value in options.__dict__.items():
         if attribute in benchmark_infos.keys() and value is not None:
@@ -44,7 +44,7 @@ def edit_benchmark(options: EditBenchmarkOptions ):
     confirm('Apply changes?',abort=True,default=True)
     update_benchmark(benchmark_infos)
     print(f'Updated benchmark!')
-    
+
 
 def get_unique_formats_from_path(path: str):
     existing_formats = set()
@@ -56,10 +56,10 @@ def get_unique_formats_from_path(path: str):
 
 
 def add_benchmark(options: AddBenchmarkOptions):
-    benchmark_info = {'name': options.name, 
+    benchmark_info = {'name': options.name,
                       'path': options.path,
                       'format': list(options.format),
-                      'ext_additional': options.additional_extension, 
+                      'ext_additional': options.additional_extension,
                       'references_path': options.references_path,
                       'extension_references': options.extension_references,
                       'has_references': options.has_references,
@@ -70,7 +70,6 @@ def add_benchmark(options: AddBenchmarkOptions):
     new_benchmark = Benchmark(**benchmark_info)
     if options.generate:
         generate_instances(new_benchmark, options.generate)
-        #new_benchmark.generate_instances(generate)
     if options.random_arguments:
         generate_argument_files(new_benchmark,extension=options.additional_extension)
     if not options.no_check:
@@ -100,7 +99,7 @@ def update_benchmark(benchmark_infos):
         if solver['id'] == benchmark_infos['id']:
             benchmarks[i] = benchmark_infos
             break
-    
+
     _update_benchmark_json(benchmarks)
 
 
@@ -147,7 +146,7 @@ def print_summary(benchmark: Benchmark):
     print()
     print("**********BENCHMARK SUMMARY**********")
     for key,value in benchmark.__dict__.items():
-        
+
         if key == 'format':
             print(f"Format: {json.dumps(benchmark.format,indent=4)}" )
         else:
@@ -275,7 +274,7 @@ def generate_instances(benchmark: Benchmark, generate_format, present_format='')
       None
     """
     if not present_format:
-        present_formats= benchmark.format # BUG: Falls benchmark.format keine Liste ist
+        present_formats=benchmark.format # BUG: Falls benchmark.format keine Liste ist
         for form in present_formats:
             if form != generate_format:
                 present_format = form
@@ -304,19 +303,10 @@ def generate_instances(benchmark: Benchmark, generate_format, present_format='')
 
 def gen_single_instance(present_instance_path, generate_instance_path, generate_format):
     present_file_extension = Path(present_instance_path).suffix[1:].upper()
-    
+
     with open(present_instance_path) as present_file:
         present_file_content = present_file.read()
     generate_file_content = parse_functions_dict[generate_format.upper()][present_file_extension](present_file_content)
-
-    
-    # if generate_format.upper() == 'APX':
-    #     generate_file_content = __parse_apx_from_tgf(present_file_content)
-    # elif generate_format.upper() == 'TGF':
-    #     generate_file_content = __parse_tgf_from_apx(present_file_content)
-    # elif generate_format.upper() == 'I23':
-    #     generate_file_content = __parse_i23_from_tgf(present_file_content)
-
     with open(generate_instance_path,'w') as generate_instance_file:
         generate_instance_file.write(generate_file_content)
     generate_instance_file.close()
@@ -334,7 +324,7 @@ def __parse_i23_from_tgf(file_content):
         splitted = att.split(" ")
         _mapped = (arg_to_id_map[splitted[0]],arg_to_id_map[splitted[1]] )
         mapped_attacks += f"{_mapped[0]} {_mapped[1]}\n"
-    
+
     return file_header + mapped_attacks
 
 
@@ -349,7 +339,7 @@ def __parse_apx_from_i23(file_content):
     for att in lines[1:]:
         if "#" in att:
             continue
-        
+
         splitted = att.split(" ")
         if len(splitted) == 2:
             attacks += f"att({splitted[0]},{splitted[1]}).\n"
@@ -368,14 +358,14 @@ def __parse_tgf_from_i23(file_content):
     for att in lines[1:]:
         if "#" in att:
             continue
-        
-        
+
+
         attacks += f"{att}\n"
-        
-        
+
+
     return f"{arguments}\n#\n{attacks}"
-        
-        
+
+
 
 
 def __parse_apx_from_tgf(file_content):
@@ -480,7 +470,8 @@ def generate_argument_files(benchmark: Benchmark, extension=None,to_generate=Non
 def _strip_extension_arg_files(benchmark: Benchmark,instances):
     suffix_length = len(benchmark.ext_additional) + 1 # +1 for dot
     return  [ instance[:-suffix_length] for instance in instances]
-    #return [ instance.removesuffix(f'.{self.extension_arg_files}') for instance in instances]
+
+
 def strip_extension(benchmark: Benchmark,instances):
     extensions_stripped = list()
     for instance in instances:
@@ -490,16 +481,37 @@ def strip_extension(benchmark: Benchmark,instances):
 def is_complete(benchmark: Benchmark):
     num_formats = len(benchmark.format)
     if num_formats > 1:
-        apx_instances = get_instances(benchmark.path,'apx')
-        tgf_instances = get_instances(benchmark.path,'tgf')
-        arg_instances = get_instances(benchmark.path,benchmark.ext_additional)
-        apx_instances_names = np.array(strip_extension(benchmark, apx_instances))
-        tgf_instances_names = np.array(strip_extension(benchmark, tgf_instances))
-        arg_instances_names = np.array(_strip_extension_arg_files(benchmark,arg_instances))
-        if apx_instances_names.size == tgf_instances_names.size == arg_instances_names.size:
-            return np.logical_and( (apx_instances_names==tgf_instances_names).all(), (tgf_instances_names==arg_instances_names).all() )
-        else:
-            return False
+        # apx_instances = get_instances(benchmark.path,'apx')
+        # tgf_instances = get_instances(benchmark.path,'tgf')
+        # arg_instances = get_instances(benchmark.path,benchmark.ext_additional)
+        # apx_instances_names = np.array(strip_extension(benchmark, apx_instances))
+        # tgf_instances_names = np.array(strip_extension(benchmark, tgf_instances))
+        # arg_instances_names = np.array(_strip_extension_arg_files(benchmark,arg_instances))
+        # if apx_instances_names.size == tgf_instances_names.size == arg_instances_names.size:
+        #     return np.logical_and( (apx_instances_names==tgf_instances_names).all(), (tgf_instances_names==arg_instances_names).all() )
+        # else:
+        #     return False
+
+         # Get a list of all files in the specified path
+        files_in_path = [f for f in os.listdir(benchmark.path) if os.path.isfile(os.path.join(benchmark.path, f))]
+
+        # Create a dictionary to store filenames for each extension
+        filenames_by_extension = {}
+
+        # Iterate over each file in the path
+        for file_name in files_in_path:
+            # Split the file name and extension
+            base_name, file_extension = os.path.splitext(file_name)
+
+            # If the extension is in the provided list
+            if file_extension[1:] in benchmark.format:
+                # Add the base name to the dictionary for the corresponding extension
+                if file_extension[1:] not in filenames_by_extension:
+                    filenames_by_extension[file_extension[1:]] = set()
+                filenames_by_extension[file_extension[1:]].add(base_name)
+
+        # Check if the same filenames are present for all extensions
+        return all(len(names) == 1 for names in filenames_by_extension.values())
     else:
         preset_format = benchmark.format[0]
         present_instances = get_instances(benchmark.path,preset_format)
@@ -610,7 +622,7 @@ def load_benchmark_by_identifier(identifier: list) -> list:
     benchmark_json = load_benchmark_json()
     benchmark_list = []
     for benchmark in benchmark_json:
-        if benchmark['name'] in identifier: 
+        if benchmark['name'] in identifier:
             benchmark_list.append(benchmark)
         elif benchmark['id'] in identifier or str(benchmark['id']) in identifier:
             benchmark_list.append(benchmark)

@@ -2,10 +2,10 @@ import pandas
 import src.functions.register as register
 import pandas as pd
 from src.utils import definitions
-import src.utils.config_handler as config_handler
+import src.handler.config_handler as config_handler
 import tabulate
 import os
-from src.utils.benchmark_handler import load_benchmark_by_identifier
+from src.handler.benchmark_handler import load_benchmark_by_identifier
 def _save_as_text(df: pd.DataFrame, save_to, test):
     tag = df.tag.iloc[0]
     task = df.task.iloc[0]
@@ -30,7 +30,7 @@ def text(df: pd.DataFrame,config: config_handler.Config,test):
 def _save_as_csv(df: pd.DataFrame, save_to,test):
 
     tag = df.tag.iloc[0]
-   
+
     task = df.task.iloc[0]
     rep = df.repetition.iloc[0]
     benchmark = load_benchmark_by_identifier([int(df.benchmark_id.iloc[0])])[0]['name']
@@ -52,7 +52,7 @@ def csv(df: pd.DataFrame,config: config_handler.Config,test):
 def _save_as_latex(df: pd.DataFrame, save_to, test):
 
     tag = df.tag.iloc[0]
-    
+
     task = df.task.iloc[0]
     rep = df.repetition.iloc[0]
     benchmark = load_benchmark_by_identifier([int(df.benchmark_id.iloc[0])])[0]['name']

@@ -1,7 +1,7 @@
 import src.functions.register as register
 import pandas as pd
 import numpy as np
-import src.utils.config_handler as config_handler
+import src.handler.config_handler as config_handler
 from scipy.stats import mannwhitneyu, kruskal
 
 
