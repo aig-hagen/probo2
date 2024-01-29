@@ -282,7 +282,7 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
         track (str): Comma-seperated list of tracks to solve.
 
     """
-    from src.utils import experiment_handler
+    from src.handler import experiment_handler
 
     cfg = config_handler.load_default_config()
 
@@ -477,7 +477,7 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
 @click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
 def calculate(
               name, statistics,score,raw,config,printing,table_export, save_to,last):
-    from src.utils import experiment_handler
+    from src.handler import experiment_handler
     if last:
         last_experiment = experiment_handler.get_last_experiment()
         if last_experiment is not None:
@@ -615,7 +615,7 @@ def plot(ctx, name,  save_to,kind,raw,config,last):
         send ([type]): [description]
         last ([type]): [description]
     """
-    from src.utils import experiment_handler
+    from src.handler import experiment_handler
     cfg = config_handler.load_default_config()
     if last:
         last_experiment = experiment_handler.get_last_experiment()
@@ -710,7 +710,7 @@ def status(tag):
     """Provides an overview of the progress of the currently running experiment.
 
     """
-    from src.utils import experiment_handler
+    from src.handler import experiment_handler
     from src.handler import config_handler
     experiment_df = pd.read_csv(definitions.EXPERIMENT_INDEX)
     selected_experiment = experiment_df[experiment_df.name == tag]
@@ -782,7 +782,7 @@ def validate(name,config,mode,reference,extension,
         update_db ([type]): [description]
         extension ([type]): [description]
     """
-    from src.utils import experiment_handler
+    from src.handler import experiment_handler
     if last:
         last_experiment = experiment_handler.get_last_experiment()
         if last_experiment is not None:
@@ -903,7 +903,7 @@ def significance(name, task, benchmark, solver, filter, combine, parametric,
         equal_sample_size ([type]): [description]
         last ([type]): [description]
     """
-    from src.utils import experiment_handler
+    from src.handler import experiment_handler
 
     if last:
         last_experiment = experiment_handler.get_last_experiment()
@@ -1026,7 +1026,7 @@ def last(verbose):
         Infos include experiment tag, benchmark names, solved tasks, executed solvers and and the time when the experiment was finished
 
     """
-    from src.utils import experiment_handler
+    from src.handler import experiment_handler
 
 
     last_experiment = experiment_handler.get_last_experiment()
@@ -1104,7 +1104,7 @@ cli.add_command(labels)
 @click.option('--raw','-r', type=click.Path(exists=True, resolve_path=True),help='Path of raw.csv')
 def board(name,raw):
     """Launch a dashboard to visualize results."""
-    from src.utils import experiment_handler
+    from src.handler import experiment_handler
     from src.probo2board import board
     if name:
         experiment_df = experiment_handler.load_results_via_name(name)
@@ -1134,7 +1134,7 @@ def experiments(list,name):
     Args:
         tag ([type]): [description]
     """
-    from src.utils import experiment_handler
+    from src.handler import experiment_handler
 
     if list:
         print("========== Experiments Overview ==========")

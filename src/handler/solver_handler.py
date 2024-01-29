@@ -42,10 +42,13 @@ def _parse_fetch_options(parameter: AddSolverOptions):
     try:
         if not parameter.tasks:
             _tasks = fetch_tasks(parameter.path)
+        else:
+            _tasks = parameter.tasks
         if not parameter.format:
             _format = fetch_format(parameter.path)
         else:
-            format = [format]
+            _format = parameter.format
+
     except ValueError as e:
             logger.error(f'Error while fetching solver tasks and formats: {e}')
             print(e)
@@ -56,13 +59,13 @@ def _parse_fetch_options(parameter: AddSolverOptions):
 def add_solver(options: AddSolverOptions):
 
     if options.fetch:
-        tasks,format = _parse_fetch_options(options)
+        options.tasks,options.format = _parse_fetch_options(options)
 
-    if not isinstance(format, list):
-        format = [format]
+    if not isinstance(options.format, list):
+        options.format = [options.format]
 
     solver_info = {'name': options.name,'version': options.version,
-                   'path': options.path,'tasks': tasks,'format': format, 'id': None}
+                   'path': options.path,'tasks': options.tasks,'format': options.format, 'id': None}
     new_solver = Solver(**solver_info)
     if not options.no_check:
         is_working = check_interface(new_solver)
@@ -412,7 +415,7 @@ class SolverParameters:
     format: list
     time_measurement: str
 
-def _set_solver_parameters(solver_info,instance,task,format,additional_arguments_lookup,dynamic_files_lookup,repetition,timeout,time_measurement='default') -> SolverParameters:
+def _set_solver_parameters(solver_info,instance,task,format,additional_arguments_lookup,dynamic_files_lookup,repetition,timeout,time_measurement='default',interface_mode=None) -> SolverParameters:
     cmd_params = []
     additional_argument = ""
     if time_measurement == 'default':
@@ -423,7 +426,13 @@ def _set_solver_parameters(solver_info,instance,task,format,additional_arguments
         cmd_params.append('python')
 
     instance_name = Path(instance).stem
-    params = [solver_info['path'],
+
+    if interface_mode == 'i23':
+        params = [solver_info['path'],
+          "-p", task,
+          "-f", instance]
+    else:
+        params = [solver_info['path'],
           "-p", task,
           "-f", instance,
           "-fo", format]
@@ -478,6 +487,8 @@ def _run_solver_write_results_to_file(output_file_dir,solver_parameters:SolverPa
             os.remove("temp.time")
             # out_str = out_time.stdout.decode("utf-8")
             time_list = out_str.split(" ")
+            if not 'user' in time_list[0] and not 'system' in time_list[1]:
+                raise subprocess.CalledProcessError(output='Time could not be measured')
             time_user = float(time_list[0].split('user')[0])
             time_system = float(time_list[1].split('system')[0])
             run_time = time_user + time_system
@@ -508,7 +519,12 @@ def run_solver(solver_info,task,timeout,instance,format,additional_arguments_loo
 
     results = _init_results_dict(solver_info)
 
-    solver_parameters = _set_solver_parameters(solver_info,instance,task,format,additional_arguments_lookup,dynamic_files_lookup,repetition,timeout)
+    if  format == 'i23' or '23' in format:
+        interface_mode = 'i23'
+    else:
+        interface_mode = None
+
+    solver_parameters = _set_solver_parameters(solver_info,instance,task,format,additional_arguments_lookup,dynamic_files_lookup,repetition,timeout,interface_mode=interface_mode)
 
 
     try:
