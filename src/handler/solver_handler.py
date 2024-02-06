@@ -488,7 +488,8 @@ def _run_solver_write_results_to_file(output_file_dir,solver_parameters:SolverPa
             # out_str = out_time.stdout.decode("utf-8")
             time_list = out_str.split(" ")
             if not 'user' in time_list[0] and not 'system' in time_list[1]:
-                raise subprocess.CalledProcessError(output='Time could not be measured')
+
+                raise subprocess.CalledProcessError(-1,None,"Time could not be measured.")
             time_user = float(time_list[0].split('user')[0])
             time_system = float(time_list[1].split('system')[0])
             run_time = time_user + time_system

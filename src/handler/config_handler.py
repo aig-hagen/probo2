@@ -129,7 +129,6 @@ class Config(object):
                  msg_errors +=f"- Invalid plot type: {','.join(_invalid)}. Please choose from following options: {','.join(register.plot_dict.keys())}\n"
 
         if self.statistics is not None:
-            print(self.statistics)
             _invalid = []
             stat_error = False
             if isinstance(self.statistics, list):
