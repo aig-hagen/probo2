@@ -177,6 +177,11 @@ MANIFEST
 *.spec
 *.png
 *.pid
+*.txt
+*.gz
+*.lzma
+*.zip
+*.tex
 !probo2_logo.png
 # Installer logs
 probo2_old.db
