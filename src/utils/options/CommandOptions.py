@@ -31,13 +31,13 @@ class EditSolverOptions(CommandOptionInterface):
 class AddSolverOptions(CommandOptionInterface):
 
     def __init__(self, name: str, path: str, version: str, fetch: bool,
-                 format: list, tasks: list, yes: bool, no_check: bool) -> None:
+                 format: tuple, tasks: list, yes: bool, no_check: bool) -> None:
         super().__init__()
         self.name = name
         self.path = path
         self.version = version
         self.fetch = fetch
-        self.format = format
+        self.format = list(format) # click returns multiple options as a tuple, so it needs to be parsed
         self.tasks = tasks
         self.yes = yes
         self.no_check = yes

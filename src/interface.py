@@ -66,7 +66,7 @@ def version():
               help="Path to solver executable")
 @click.option("--format",
               "-f",
-              type=click.Choice(definitions.DefaultInstanceFormats.as_list(), case_sensitive=False),
+              multiple=True,
               required=False,
               help="Supported format of solver.")
 @click.option('--tasks',
@@ -191,7 +191,20 @@ def add_benchmark(ctx,
        """
     from src.handler.benchmark_handler import add_benchmark
     from src.utils.options.CommandOptions import AddBenchmarkOptions
-    options = AddBenchmarkOptions(**ctx.params)
+
+    
+    options = AddBenchmarkOptions(name=name,
+                                  path=path,
+                                  format=format,
+                                  additional_extension=additional_extension,
+                                  dynamic_files=dynamic_files,
+                                  no_check=no_check,
+                                  generate=generate,
+                                  random_arguments=random_arguments,
+                                  function=function,
+                                  references_path=references_path,
+                                  extension_references=extension_references,
+                                  yes=yes)
     options.check()
     add_benchmark(options)
 
@@ -1192,8 +1205,8 @@ def logs():
         print(log_file.read())
 
 @click.command()
-@click.option('--benchmark','-b', type=click.Choice(['ICCMA15','ICCMA19','ICCMA21']),multiple=True, help='Name of benchmark to fetch')
-@click.option('--solver','-s', type=click.Choice(['ICCMA19','ICCMA21']),multiple=True, help='Name of solver to fetch' )
+@click.option('--benchmark','-b', type=click.Choice(['ICCMA15','ICCMA19','ICCMA21','ICCMA23']),multiple=True, help='Name of benchmark to fetch')
+@click.option('--solver','-s', type=click.Choice(['ICCMA19','ICCMA21','ICCMA23']),multiple=True, help='Name of solver to fetch' )
 @click.option('--install',is_flag=True,help='Install fetched solvers and add them to probo2.')
 
 @click.option(
@@ -1230,11 +1243,15 @@ def fetch(ctx,benchmark, save_to,solver,install):
                    format=tuple(current_benchmark_options['format']),
                    random_arguments=current_benchmark_options['random_arguments'],
                    additional_extension=current_benchmark_options['extension_arg_files'],
-                   generate=current_benchmark_options['generate']
-                   )
+                   generate=current_benchmark_options['generate'],
+                    )
+                   
     if solver:
         if not os.path.exists(os.path.join(save_to,"ICCMA-Solvers")):
             subprocess.call('git clone https://github.com/jklein94/ICCMA-Solvers.git', shell = True, cwd=save_to)
+        else:
+            subprocess.call('git pull', shell = True, cwd=os.path.join(save_to,"ICCMA-Solvers"))
+
         if install:
             for s in solver:
                 solver_dir = os.path.join(save_to,'ICCMA-Solvers',f'{s}_solvers')
