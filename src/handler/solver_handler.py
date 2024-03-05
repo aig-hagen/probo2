@@ -480,21 +480,25 @@ def _run_solver_write_results_to_file(output_file_dir,solver_parameters:SolverPa
                         timeout=solver_parameters.timeout, check=True,cwd=solver_parameters.solver_dir,stdout=output,stderr=out_time)
         end_time_current_run = time.perf_counter()
         out_time.close()
-        if solver_parameters.time_measurement == 'default':
-            out_time = open('temp.time','r')
-            out_str = out_time.read()
-            out_time.close()
-            os.remove("temp.time")
-            # out_str = out_time.stdout.decode("utf-8")
-            time_list = out_str.split(" ")
-            if not 'user' in time_list[0] and not 'system' in time_list[1]:
+        out_time = open('temp.time','r')
+        out_str = out_time.read()
+        out_time.close()
+        os.remove("temp.time")
+        # out_str = out_time.stdout.decode("utf-8")
+        time_list = out_str.split(" ")
+        if not 'user' in time_list[0] and not 'system' in time_list[1]:
+            raise subprocess.CalledProcessError(-1,None,"Time could not be measured.")
+        time_user = float(time_list[0].split('user')[0])
+        time_system = float(time_list[1].split('system')[0])
 
-                raise subprocess.CalledProcessError(-1,None,"Time could not be measured.")
-            time_user = float(time_list[0].split('user')[0])
-            time_system = float(time_list[1].split('system')[0])
-            run_time = time_user + time_system
-        else:
-            run_time = end_time_current_run - start_time_current_run
+        user_sys_time = time_user + time_system
+        perf_counter_time = end_time_current_run - start_time_current_run
+        if solver_parameters.time_measurement == 'default':
+            run_time = max(user_sys_time,perf_counter_time)
+        elif solver_parameters.time_measurement == 'perf_counter':
+            run_time = perf_counter_time
+        elif solver_parameters.time_measurement == 'user_sys':
+            run_time = user_sys_time
     return {'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.additional_argument, 'runtime': run_time, 'result': out_file_path, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout}
 
 def _run_solver(solver_parameters: SolverParameters):
@@ -506,6 +510,7 @@ def _run_solver(solver_parameters: SolverParameters):
     out = utils.run_process(solver_parameters.final_params,
                     capture_output=True, timeout=solver_parameters.timeout, check=True,cwd=solver_parameters.solver_dir)
     end_time_current_run = time.perf_counter()
+    perf_counter_time = end_time_current_run - start_time_current_run
     if solver_parameters.time_measurement == 'default':
         time_list = out.stderr.decode("utf-8").split(" ")
         time_user = float(time_list[0].split('user')[0])
@@ -513,7 +518,9 @@ def _run_solver(solver_parameters: SolverParameters):
         run_time = time_user + time_system
     else:
         run_time = end_time_current_run - start_time_current_run
-    return {'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.additional_argument, 'runtime': run_time, 'result': None, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout}
+
+    
+    return {'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.additional_argument, 'runtime': run_time,'result': None, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout}
 
 
 def run_solver(solver_info,task,timeout,instance,format,additional_arguments_lookup=None,dynamic_files_lookup=None,output_file_dir=None,additional_solver_arguments=None, repetition=None):

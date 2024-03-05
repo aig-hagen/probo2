@@ -54,6 +54,9 @@ def cli():
 
 @click.command()
 def version():
+    """
+    Prints the version of probo2.
+    """
     print(f"probo2 {_version}")
 
 
@@ -137,7 +140,7 @@ def add_solver(ctx, name, path, format, tasks, version, fetch,yes, no_check):
               help="Checks if the benchmark is complete.")
 @click.option("--generate",
               "-g",
-              type=click.types.Choice(['apx', 'tgf']),
+              type=click.types.Choice(['apx', 'tgf','i23']),
               help="Generate instances in specified format")
 @click.option("--random_arguments",
               "-rnd",
@@ -490,6 +493,7 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
 @click.option("--save_to", "-st",type=click.Path(resolve_path=True,exists=True), help="Directory to store tables")
 def calculate(
               name, statistics,score,raw,config,printing,table_export, save_to,last):
+    """Calculate statistics and scores for experiment results."""
     from src.handler import experiment_handler
     if last:
         last_experiment = experiment_handler.get_last_experiment()
@@ -699,12 +703,12 @@ def benchmarks(verbose,id):
 @click.option("--verbose", "-v", is_flag=True, default=False, required=False)
 @click.option("--id",type=click.INT,help="Print information of solver")
 def solvers(verbose,id):
-    from src.handler import solver_handler
     """Prints solvers in database to console.
 
     Args:
         verbose ([type]): [description]
     """
+    from src.handler import solver_handler
     if verbose:
         solver_handler.print_solvers(extra_columns=['tasks'])
     else:
@@ -1096,6 +1100,7 @@ cli.add_command(features)
 @click.option("--timeout",type=click.INT,help='Timeout for accaptance tasks')
 @click.option("--task","-t",multiple=True, help='Accaptance task to create labels')
 def labels(benchmark,solver,save_to,task,timeout):
+    """Calculates accaptance labels for solvers on benchmarks and tasks."""
     from src.handler import benchmark_handler
     from src.handler import solver_handler
     from src.functions.ml import labels
@@ -1201,6 +1206,9 @@ def get_help(cmd,ctx):
 
 @click.command()
 def logs():
+    """
+    Prints the contents of the log file.
+    """
     with open(str(definitions.LOG_FILE_PATH),"r") as log_file:
         print(log_file.read())
 
@@ -1483,7 +1491,15 @@ def grounded_generator(ctx,num, name, save_to, num_args, generate_solutions, gen
 @click.command()
 @click.option("--start",'-s',is_flag=True)
 @click.option("--close",'-c',is_flag=True)
-def web(start,close):
+def web(start, close):
+    """
+    Starts or closes the web interface.
+
+    Args:
+        start (bool): If True, starts the web interface.
+        close (bool): If True, closes the web interface.
+    """
+    
     # from daemonize import Daemonize
     # pid = "/tmp/probo2_web.pid"
     # from src.webinterface import deamon_test
@@ -1491,7 +1507,7 @@ def web(start,close):
     if start:
         from src.webinterface import web_interface
         web_interface.start()
-        #subprocess.run(['python',definitions.WEB_INTERFACE_FILE])
+        # subprocess.run(['python',definitions.WEB_INTERFACE_FILE])
     if close:
         subprocess.run(['python','/home/jklein/dev/probo2/src/webinterface/web_interface_shutdown.py'])
 
@@ -1729,6 +1745,32 @@ cli.add_command(edit_benchmark)
 
 
 
+@click.command()
+@click.pass_context
+@click.option("--id",type=click.INT,required=True, help='ID of benchmark to convert')
+@click.option('--name','-n',type=click.STRING,help='Name of new generated benchmark. If not specified format suffix is added to old name.')
+@click.option('--formats','-f',multiple=True,required=True,default=None,help='Formats to convert selected benchmark to. For each format a sperate benchmark is created.')
+@click.option('--save_to','-st',type=click.Path(exists=True, resolve_path=True),help='Directory to store converted benchmark in. Default is the current working directory.')
+@click.option('--ext_additional','-ext',help='Extension of query arguments files.',default='arg')
+@click.option('--add','-a',help='Add generated benchmark to database.')
+@click.option('--include_query','-i',help='Add generated benchmark to database.')
+def convert_benchmark(ctx,id, name,formats,save_to,ext_additional, add, include_query):
+    """Edit a benchmark in the database.
+    """
+    from src.utils.options.CommandOptions import ConvertBenchmarkOptions
+    from src.handler import benchmark_handler
+    from os import getcwd
+    if not save_to:
+        save_to = getcwd()
+    
+    options = ConvertBenchmarkOptions(id=id,benchmark_name=name,formats=formats,save_to=save_to,extension_query_argument=ext_additional,add=add,convert_query_files=include_query)
+    benchmark_handler.convert_benchmark(options)
+
+cli.add_command(convert_benchmark)
+
+
+
+
 cli.add_command(kwt_gen)
 cli.add_command(quick)
 cli.add_command(web)
@@ -1737,7 +1779,7 @@ cli.add_command(grounded_generator)
 # cli.add_command(stable_generator)
 cli.add_command(fetch)
 cli.add_command(logs)
-cli.add_command(dumphelp_markdown)
+#cli.add_command(dumphelp_markdown)
 cli.add_command(experiments)
 cli.add_command(last)
 cli.add_command(delete_benchmark)

@@ -67,6 +67,47 @@ class AddSolverOptions(CommandOptionInterface):
         print(yaml.dump(self.__dict__))
 
 
+class ConvertBenchmarkOptions(CommandOptionInterface):
+    """
+    Represents options for converting a benchmark.
+    """
+
+    def __init__(self, id:str, benchmark_name: str, save_to: str, formats: list, extension_query_argument: str, add:bool,convert_query_files) -> None:
+        """
+        Initialize a CommandOptions object.
+
+        Args:
+            id (int): The ID of the benchmark to convert.
+            benchmark_name (str): The name of the new generated benchmark.
+            save_to: The location to save the new generated benchmark.
+            formats: Formats to convert benchmark to
+            extension_query_argument: The extension of the query argument files.
+            add: Add benchmark to database.
+
+        Returns:
+            None
+        """
+        super().__init__()
+        self.id = id
+        self.benchmark_name = benchmark_name
+        self.save_to = save_to
+        self.formats = formats
+        self.extension_query_argument = extension_query_argument
+        self.add = add
+        self.convert_query_files = convert_query_files
+
+    def check(self):
+        """
+        Placeholder method for checking the options.
+        """
+        pass
+
+    def print(self):
+        """
+        Prints the options as YAML.
+        """
+        print(yaml.dump(self.__dict__))
+
 
 class EditBenchmarkOptions(CommandOptionInterface):
     def __init__(self,id, name, format, path, ext_additional,dynamic_files) -> None:
