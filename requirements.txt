@@ -15,4 +15,6 @@ pyyaml
 tqdm
 nicegui
 karateclub
+panel
+hvplot
 

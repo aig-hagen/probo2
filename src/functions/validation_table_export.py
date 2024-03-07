@@ -1,15 +1,15 @@
 import src.functions.register as register
 import pandas as pd
 from src.utils import definitions
-import src.utils.config_handler as config_handler
+import src.handler.config_handler as config_handler
 import tabulate
 import os
-from src.utils.benchmark_handler import load_benchmark_by_identifier
+from src.handler.benchmark_handler import load_benchmark_by_identifier
 
 def _save_as_text(df: pd.DataFrame, save_to):
     tag = df.tag.iloc[0]
     task = df.task.iloc[0]
-    
+
     benchmark = df.benchmark_name.iloc[0]
 
     for description in ['same_results','solved_pairwise','accordance']:
@@ -30,9 +30,9 @@ def text(df: pd.DataFrame,config: config_handler.Config):
 def _save_as_csv(df: pd.DataFrame, save_to):
 
     tag = df.tag.iloc[0]
-   
+
     task = df.task.iloc[0]
-    
+
     benchmark = df.benchmark_name.iloc[0]
 
     for description in ['same_results','solved_pairwise','accordance']:
@@ -52,9 +52,9 @@ def csv(df: pd.DataFrame,config: config_handler.Config):
 def _save_as_latex(df: pd.DataFrame, save_to):
 
     tag = df.tag.iloc[0]
-    
+
     task = df.task.iloc[0]
-    
+
     benchmark = df.benchmark_name.iloc[0]
 
     for description in ['same_results','solved_pairwise','accordance']:

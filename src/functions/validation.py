@@ -2,7 +2,7 @@
 import src.functions.register as register
 import pandas as pd
 import numpy as np
-import src.utils.config_handler as config_handler
+import src.handler.config_handler as config_handler
 import matplotlib.pyplot as plt
 
 def validate(df: pd.DataFrame,config: config_handler.Config):
@@ -14,10 +14,10 @@ def validate(df: pd.DataFrame,config: config_handler.Config):
         if m in register.validation_functions_dict.keys():
             _res = register.validation_functions_dict[m](df, config)
             results[m] = _res
-    
+
     return results
 
-    
+
 
 def _map_index_names(df:pd.DataFrame, map):
     pass

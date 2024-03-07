@@ -1,11 +1,11 @@
 
 from distutils.command.config import config
 import src.functions.register as register
-from src.utils import config_handler
+from src.handler import config_handler
 import pandas as pd
 import os
 import seaborn as sns
-from src.utils.benchmark_handler import load_benchmark_by_identifier
+from src.handler.benchmark_handler import load_benchmark_by_identifier
 import matplotlib.pyplot as plt
 
 def create_plots(result_df: pd.DataFrame, cfg: config_handler.Config,test):
@@ -24,7 +24,7 @@ def _heat_map(df:pd.DataFrame, cfg:config_handler.Config,plot_directory,test):
     task = df.task.iloc[0]
     rep = df.repetition.iloc[0]
     benchmark = load_benchmark_by_identifier([int(df.benchmark_id.iloc[0])])[0]['name']
-    
+
     heatmap_args = {
         'linewidths': 0.25,
         'linecolor': '0.5',
@@ -59,7 +59,7 @@ def _heat_map(df:pd.DataFrame, cfg:config_handler.Config,plot_directory,test):
                    transparent=True)
     plt.clf()
     return save_path_full
-    
+
 def heat_map(df: pd.DataFrame, cfg:config_handler.Config,test):
     plot_directory = os.path.join(cfg.save_to,'post_hoc_plots')
     os.makedirs(plot_directory,exist_ok=True)

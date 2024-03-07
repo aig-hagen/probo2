@@ -3,7 +3,7 @@ import pandas as pd
 import seaborn as sns
 import os
 import math
-from src.utils import config_handler
+from src.handler import config_handler
 
 import matplotlib.pyplot as plt
 
@@ -26,7 +26,7 @@ def _plot_accordance_heatmap(df: pd.DataFrame, cfg: config_handler.Config, plot_
     tag = df.tag.iloc[0]
     task = df.task.iloc[0]
     benchmark = df.benchmark_name.iloc[0]
-    
+
     heatmap_args = {
         'linewidths': 0.25,
         'linecolor': '0.5',
@@ -35,7 +35,7 @@ def _plot_accordance_heatmap(df: pd.DataFrame, cfg: config_handler.Config, plot_
     }
     cmap = sns.mpl.cm.get_cmap(color_map).copy()
     cmap.set_over(set_over)
-    
+
     ax = sns.heatmap(df['accordance'].iloc[0],
                         cmap=cmap,
                         cbar_kws=cbar_kws,

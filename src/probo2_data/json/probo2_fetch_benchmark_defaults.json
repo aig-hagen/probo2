@@ -24,6 +24,15 @@
         "generate": null,
         "url": "http://argumentationcompetition.org/2021/instances.tar.gz",
         "archive_type": "tar.gz"
+    },
+
+    "ICCMA23":{
+        "format": ["i23"],
+        "extension_arg_files": "af.arg",
+        "random_arguments": false,
+        "generate": null,
+        "url": "https://zenodo.org/records/8348039/files/iccma2023_benchmarks.zip",
+        "archive_type": "zip"
 
     }
 

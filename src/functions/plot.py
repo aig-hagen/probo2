@@ -1,5 +1,5 @@
 import src.functions.register as register
-from src.utils import config_handler
+from src.handler import config_handler
 import pandas as pd
 import numpy as np
 from src.plotting import CactusPlot, ScatterPlot
@@ -145,6 +145,7 @@ def cactus_plot(df: pd.DataFrame,config: config_handler.Config, plot_options):
     only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
     grouping = config.grouping
     rep_avg_df = df[only_solved_mask].groupby(['tag', 'task', 'benchmark_id', 'solver_id','instance'],as_index=False).apply(lambda _df: _get_avg_reps(_df))
+    rep_avg_df = rep_avg_df.reset_index(drop=True)
     ranked = (rep_avg_df.groupby(grouping,as_index=False)
                      .apply(lambda df: df.assign(rank=df['runtime'].rank(method='dense',ascending=True))))
     plot_grouping = grouping.copy()

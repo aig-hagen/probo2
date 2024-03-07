@@ -1,4 +1,5 @@
 import json
+import shutil
 
 import tabulate
 import src.utils.definitions as definitions
@@ -10,6 +11,9 @@ import click
 import numpy as np
 import random
 from pathlib import Path
+from src.utils.options.CommandOptions import AddBenchmarkOptions, EditBenchmarkOptions, ConvertBenchmarkOptions
+from tqdm import tqdm
+from click import confirm
 
 from dataclasses import dataclass
 
@@ -21,70 +25,89 @@ class Benchmark:
     path: str
     dynamic_files: bool
     id: int
+    has_references: bool
+    references_path: str
+    extension_references: str
     meta_data: dict
 
-
-
-@dataclass
-class AddBenchmarkOptions:
-    name: str
-    path: str
-    format: list
-    additional_extension: list
-    no_check: bool
-    generate: list
-    random_arguments: bool
-    dynamic_files: bool
-    function: list
-    yes: bool
-
-
-
-def parse_cli_input(parameter: AddBenchmarkOptions):
-    
-    if isinstance(parameter.additional_extension, tuple):
-        if not parameter.additional_extension:
-            parameter.additional_extension = ['arg']
-        if len(parameter.additional_extension) > 1:
-            parameter.additional_extension = list(parameter.additional_extension)
-        else:
-            parameter.additional_extension = parameter.additional_extension[0]
-    elif not isinstance(parameter.additional_extension, str):
-        print(f"Type {type(parameter.additional_extension)} of additional extension is not valid.")
+def edit_benchmark(options: EditBenchmarkOptions ):
+    benchmark_infos = load_benchmark_by_identifier(options.id)
+    if not benchmark_infos or benchmark_infos is None:
+        print(f'No solver with id {options.id} found. Please run solvers command to get a list of solvers in database.')
         exit()
+    benchmark_infos = benchmark_infos[0] # load_benchmarks returns a list,
+    print('Changing values:')
+    for attribute, value in options.__dict__.items():
+        if attribute in benchmark_infos.keys() and value is not None:
+            if attribute != 'id':
+                print(f'+ {attribute}: {benchmark_infos[attribute]} -> {value} ')
+            benchmark_infos[attribute] = value
+    confirm('Apply changes?',abort=True,default=True)
+    update_benchmark(benchmark_infos)
+    print(f'Updated benchmark!')
+
+
+def get_unique_formats_from_path(path: str):
+    existing_formats = set()
+    for instance in tqdm(os.listdir(path),desc='Scanning instance formats'):
+        extension = Path(instance).suffix[1:]
+        existing_formats.add(extension)
+    return existing_formats
 
 
 
-    benchmark_info = {'name': parameter.name, 'path': parameter.path,'format': list(parameter.format),'ext_additional': parameter.additional_extension, 'dynamic_files': parameter.dynamic_files,'meta_data': {},'id': None}
+def add_benchmark(options: AddBenchmarkOptions):
+    benchmark_info = {'name': options.name,
+                      'path': options.path,
+                      'format': list(options.format),
+                      'ext_additional': options.additional_extension,
+                      'references_path': options.references_path,
+                      'extension_references': options.extension_references,
+                      'has_references': options.has_references,
+                      'dynamic_files': options.dynamic_files,
+                      'meta_data': {},
+                      'id': None,
+                      }
     new_benchmark = Benchmark(**benchmark_info)
-
-    if parameter.generate:
-        generate_instances(new_benchmark, new_benchmark.generate)
-        #new_benchmark.generate_instances(generate)
-    if parameter.random_arguments:
-        generate_argument_files(new_benchmark,extension=parameter.additional_extension)
-    if not parameter.no_check:
+    if options.generate:
+        generate_instances(new_benchmark, options.generate)
+    if options.random_arguments:
+        generate_argument_files(new_benchmark,extension=options.additional_extension)
+    if not options.no_check:
         check(new_benchmark)
 
-    if parameter.dynamic_files:
+    if options.dynamic_files:
         check_dynamic(new_benchmark)
 
-    if parameter.function:
+    if options.function:
         from src.functions import register
         from src.functions import benchmark
-        for fun in parameter.function:
+        for fun in options.function:
             new_benchmark.meta_data.update(register.benchmark_functions_dict[fun](new_benchmark))
 
     print_summary(new_benchmark)
-    if not parameter.yes:
+    if not options.yes:
         click.confirm(
             "Are you sure you want to add this benchmark to the database?",
             abort=True,default=True)
-    add_benchmark(new_benchmark)
+    new_benchmark.id = _add_benchmark_to_database(new_benchmark)
     print(f"Benchmark {new_benchmark.name} added to database with ID: {new_benchmark.id}.")
     #logging.info(f"Benchmark {new_benchmark['name']} added to database with ID: {new_benchmark.id}.")
 
-    pass
+def update_benchmark(benchmark_infos):
+    benchmarks = load_benchmark('all')
+    for i,solver in enumerate(benchmarks):
+        if solver['id'] == benchmark_infos['id']:
+            benchmarks[i] = benchmark_infos
+            break
+
+    _update_benchmark_json(benchmarks)
+
+
+def _update_benchmark_json(benchmarks: list):
+    json_str = json.dumps(benchmarks, indent=2)
+    with open(definitions.BENCHMARK_FILE_PATH, "w") as f:
+        f.write(json_str)
 
 
 
@@ -99,7 +122,7 @@ def get_file_size(file, unit='MB'):
     if unit == 'MB':
         return  round(total_size  / float(1<<20))
 
-def add_benchmark(benchmark: Benchmark):
+def _add_benchmark_to_database(benchmark: Benchmark):
     if not os.path.exists(definitions.BENCHMARK_FILE_PATH) or (os.stat(definitions.BENCHMARK_FILE_PATH).st_size == 0):
         with open(definitions.BENCHMARK_FILE_PATH,'w') as benchmark_file:
             id = 1
@@ -124,11 +147,13 @@ def print_summary(benchmark: Benchmark):
     print()
     print("**********BENCHMARK SUMMARY**********")
     for key,value in benchmark.__dict__.items():
-        
+
         if key == 'format':
             print(f"Format: {json.dumps(benchmark.format,indent=4)}" )
         else:
             print(f'{str(key).capitalize()}: {value}')
+
+    print(f'#Instances: {get_instances_count(benchmark.path,benchmark.format[0])}')
     print()
 
 def print_benchmarks(extra_columns=None, tablefmt=None):
@@ -243,7 +268,7 @@ def generate_additional_argument_lookup(benchmark_info, solver_supported_format=
         lookup[instance_name] = argument_param
     return lookup
 
-def generate_instances(benchmark: Benchmark, generate_format, present_format=''):
+def generate_instances(benchmark: Benchmark, generate_format, present_format='',save_to=None):
     """Generate files in specified format
     Args:
       generate_format: Format of files to generate
@@ -252,7 +277,7 @@ def generate_instances(benchmark: Benchmark, generate_format, present_format='')
       None
     """
     if not present_format:
-        present_formats= benchmark.format # BUG: Falls benchmark.format keine Liste ist
+        present_formats=benchmark.format # BUG: Falls benchmark.format keine Liste ist
         for form in present_formats:
             if form != generate_format:
                 present_format = form
@@ -262,43 +287,84 @@ def generate_instances(benchmark: Benchmark, generate_format, present_format='')
         exit()
     if present_format not in benchmark.format:
         raise ValueError(f"Format {present_format} not supported!")
-    if generate_format.upper() not in ['APX', 'TGF','I23']:
+    if generate_format.lower() not in definitions.DefaultInstanceFormats.as_list():
         raise ValueError(f"Can not generate {generate_format} instances")
     _present_instances = get_instances(benchmark.path,present_format)
     num_generated = 0
     with click.progressbar(_present_instances,
                            label=f"Generating {generate_format} files:") as present_instances:
         for present_instance in present_instances:
-            file_name, file_extension = os.path.splitext(present_instance)
-            generate_instance_path = f"{file_name}.{generate_format}"
+            if save_to is not None:
+                # get filename from path without file extension
+                base_name = os.path.basename(present_instance)
+                file_name, _ = os.path.splitext(base_name)  # Split the base name into name and extension
+                generate_instance_path = os.path.join(save_to,f'{file_name}.{generate_format}')
+            else:
+                file_path, file_extension = os.path.splitext(present_instance)
+                generate_instance_path = f"{file_path}.{generate_format}"
+            
+            #print(generate_instance_path)
             if not os.path.isfile(generate_instance_path):
                 gen_single_instance(present_instance, generate_instance_path, generate_format)
                 num_generated += 1
     print(f'{num_generated} .{generate_format} instances generated.')
-    print(generate_instance_path)
     benchmark.format.append(generate_format)
 
 
 
 def gen_single_instance(present_instance_path, generate_instance_path, generate_format):
     present_file_extension = Path(present_instance_path).suffix[1:].upper()
-    
+
     with open(present_instance_path) as present_file:
         present_file_content = present_file.read()
     generate_file_content = parse_functions_dict[generate_format.upper()][present_file_extension](present_file_content)
-
-    
-    # if generate_format.upper() == 'APX':
-    #     generate_file_content = __parse_apx_from_tgf(present_file_content)
-    # elif generate_format.upper() == 'TGF':
-    #     generate_file_content = __parse_tgf_from_apx(present_file_content)
-    # elif generate_format.upper() == 'I23':
-    #     generate_file_content = __parse_i23_from_tgf(present_file_content)
-
     with open(generate_instance_path,'w') as generate_instance_file:
         generate_instance_file.write(generate_file_content)
     generate_instance_file.close()
+    return generate_file_content
 
+
+def generate_mappings_argument_to_integer_mapping(benchmark: Benchmark, save_to=None):
+    """Generate integer mappings for all instance in the benchmark"""
+
+    if save_to is None:
+        save_to = benchmark.path
+    
+    # Select tgf format when present in benchmark.format, if not use apx
+    if 'tgf' in benchmark.format:
+        present_format = 'tgf'
+    elif 'apx' in benchmark.format:
+        present_format = 'apx'
+    
+
+    # Get all instances in the benchmark and iterate over them
+    instances = get_instances(benchmark.path, present_format)
+    
+    for instance in instances:
+        # Get the file name and extension
+        file_name, file_extension = os.path.splitext(instance)
+
+        # Read file content
+        with open(instance, 'r') as f:
+            file_content = f.read()
+        
+        if present_format == 'tgf':
+            arg_attacks = file_content.split("#\n")
+            arguments = arg_attacks[0].rstrip().split('\n')
+            attacks = arg_attacks[1].rstrip().split('\n')
+            arg_to_id_map = {arg:str(i) for i,arg in enumerate(arguments,start=1)}
+            # Save dictionary arg_to_id_map to file
+            with open(os.path.join(save_to, f'{file_name}.argmap'), 'w') as f:
+                json.dump(arg_to_id_map, f)
+        elif present_format == 'apx':
+            lines = file_content.rstrip().split('\n')
+            num_arguments = int(lines[0].split(" ")[2])
+            arg_to_id_map = {str(i): arg for i, arg in enumerate(lines[1:num_arguments+1], start=1)}
+            # Save dictionary arg_to_id_map to file
+            with open(os.path.join(save_to, f'{file_name}.argmap'), 'w') as f:
+                json.dump(arg_to_id_map, f)
+            
+            
 def __parse_i23_from_tgf(file_content):
     """Parse .tgf to .i23 format
     """
@@ -312,7 +378,7 @@ def __parse_i23_from_tgf(file_content):
         splitted = att.split(" ")
         _mapped = (arg_to_id_map[splitted[0]],arg_to_id_map[splitted[1]] )
         mapped_attacks += f"{_mapped[0]} {_mapped[1]}\n"
-    
+
     return file_header + mapped_attacks
 
 
@@ -327,7 +393,7 @@ def __parse_apx_from_i23(file_content):
     for att in lines[1:]:
         if "#" in att:
             continue
-        
+
         splitted = att.split(" ")
         if len(splitted) == 2:
             attacks += f"att({splitted[0]},{splitted[1]}).\n"
@@ -346,14 +412,14 @@ def __parse_tgf_from_i23(file_content):
     for att in lines[1:]:
         if "#" in att:
             continue
-        
-        
+
+
         attacks += f"{att}\n"
-        
-        
+
+
     return f"{arguments}\n#\n{attacks}"
-        
-        
+
+
 
 
 def __parse_apx_from_tgf(file_content):
@@ -458,7 +524,8 @@ def generate_argument_files(benchmark: Benchmark, extension=None,to_generate=Non
 def _strip_extension_arg_files(benchmark: Benchmark,instances):
     suffix_length = len(benchmark.ext_additional) + 1 # +1 for dot
     return  [ instance[:-suffix_length] for instance in instances]
-    #return [ instance.removesuffix(f'.{self.extension_arg_files}') for instance in instances]
+
+
 def strip_extension(benchmark: Benchmark,instances):
     extensions_stripped = list()
     for instance in instances:
@@ -468,16 +535,37 @@ def strip_extension(benchmark: Benchmark,instances):
 def is_complete(benchmark: Benchmark):
     num_formats = len(benchmark.format)
     if num_formats > 1:
-        apx_instances = get_instances(benchmark.path,'apx')
-        tgf_instances = get_instances(benchmark.path,'tgf')
-        arg_instances = get_instances(benchmark.path,benchmark.ext_additional)
-        apx_instances_names = np.array(strip_extension(benchmark, apx_instances))
-        tgf_instances_names = np.array(strip_extension(benchmark, tgf_instances))
-        arg_instances_names = np.array(_strip_extension_arg_files(benchmark,arg_instances))
-        if apx_instances_names.size == tgf_instances_names.size == arg_instances_names.size:
-            return np.logical_and( (apx_instances_names==tgf_instances_names).all(), (tgf_instances_names==arg_instances_names).all() )
-        else:
-            return False
+        # apx_instances = get_instances(benchmark.path,'apx')
+        # tgf_instances = get_instances(benchmark.path,'tgf')
+        # arg_instances = get_instances(benchmark.path,benchmark.ext_additional)
+        # apx_instances_names = np.array(strip_extension(benchmark, apx_instances))
+        # tgf_instances_names = np.array(strip_extension(benchmark, tgf_instances))
+        # arg_instances_names = np.array(_strip_extension_arg_files(benchmark,arg_instances))
+        # if apx_instances_names.size == tgf_instances_names.size == arg_instances_names.size:
+        #     return np.logical_and( (apx_instances_names==tgf_instances_names).all(), (tgf_instances_names==arg_instances_names).all() )
+        # else:
+        #     return False
+
+         # Get a list of all files in the specified path
+        files_in_path = [f for f in os.listdir(benchmark.path) if os.path.isfile(os.path.join(benchmark.path, f))]
+
+        # Create a dictionary to store filenames for each extension
+        filenames_by_extension = {}
+
+        # Iterate over each file in the path
+        for file_name in files_in_path:
+            # Split the file name and extension
+            base_name, file_extension = os.path.splitext(file_name)
+
+            # If the extension is in the provided list
+            if file_extension[1:] in benchmark.format:
+                # Add the base name to the dictionary for the corresponding extension
+                if file_extension[1:] not in filenames_by_extension:
+                    filenames_by_extension[file_extension[1:]] = set()
+                filenames_by_extension[file_extension[1:]].add(base_name)
+
+        # Check if the same filenames are present for all extensions
+        return all(len(names) == 1 for names in filenames_by_extension.values())
     else:
         preset_format = benchmark.format[0]
         present_instances = get_instances(benchmark.path,preset_format)
@@ -588,7 +676,7 @@ def load_benchmark_by_identifier(identifier: list) -> list:
     benchmark_json = load_benchmark_json()
     benchmark_list = []
     for benchmark in benchmark_json:
-        if benchmark['name'] in identifier: 
+        if benchmark['name'] in identifier:
             benchmark_list.append(benchmark)
         elif benchmark['id'] in identifier or str(benchmark['id']) in identifier:
             benchmark_list.append(benchmark)
@@ -624,8 +712,47 @@ def delete_all_benchmarks():
         f.write("")
 
 
-parse_functions_dict =  { "APX":{"TGF": __parse_apx_from_tgf, "I23": __parse_apx_from_i23},"I23": {"TGF": __parse_i23_from_tgf},"TGF": {'APX': __parse_tgf_from_apx ,'I23': __parse_tgf_from_i23} }
+def convert_benchmark(options: ConvertBenchmarkOptions):
 
-if __name__ == '__main__':
-    file_path = "/home/jklein/dev/benchmarks/testset5_st_medium/120071__400__1_2_3__68.tgf"
-    gen_single_instance("/home/jklein/dev/benchmarks/i23_parse_test/test.i23","/home/jklein/dev/benchmarks/i23_parse_test/test.tgf",'tgf')
+    present_benchmark = Benchmark(**load_benchmark_by_identifier(options.id)[0])
+    options.print()
+    # Check if present benchmark is not empty
+    if not present_benchmark:
+        print(f'No benchmark with id {options.id} found. Please run benchmarks command to get a list of benchmarks in database.')
+        exit()
+    for format in options.formats:
+    # Check if format is in the default formats
+        if format not in definitions.DefaultInstanceFormats.as_list():
+            print(f"Format {format} not supported!")
+            continue
+        
+    # Check if a name in the options is set for the new benchmark, if not set the name to the old name + _{format}
+        if not options.benchmark_name:
+            options.benchmark_name = f"{present_benchmark.name}_{format}"
+    # Generate a directory at options.save_to for the new benchmark to save the new instances
+        converted_benchmark_path = os.path.join(options.save_to,options.benchmark_name)
+        os.makedirs(converted_benchmark_path,exist_ok=True)
+    
+    # Generated new instances with specified format and save them to the new directory
+        generate_instances(present_benchmark, format,save_to=converted_benchmark_path)
+
+    # Convert arg files
+    if options.include_arg_files:
+        if format == 'i23':
+            list_of_mapping_files = generate_mappings_argument_to_integer_mapping(present_benchmark, save_to=converted_benchmark_path)
+       
+    
+        
+            
+    
+    
+    #     if options.to_format not in benchmark.format:
+    #         if options.to_format.lower() in definitions.DefaultInstanceFormats.as_list():
+    #             generate_instances(present_benchmark, options.to_format)
+    #         else:
+    #             print(f"Format {options.to_format} not supported!")
+    #     else:
+    #         print(f"Benchmark already in {options.to_format} format.")
+    # pass
+
+parse_functions_dict =  { "APX":{"TGF": __parse_apx_from_tgf, "I23": __parse_apx_from_i23},"I23": {"TGF": __parse_i23_from_tgf},"TGF": {'APX': __parse_tgf_from_apx ,'I23': __parse_tgf_from_i23} }

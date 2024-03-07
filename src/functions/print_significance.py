@@ -1,7 +1,7 @@
 import src.functions.register as register
 import pandas as pd
 import tabulate
-from src.utils.benchmark_handler import load_benchmark_by_identifier
+from src.handler.benchmark_handler import load_benchmark_by_identifier
 
 
 def _print_results(df: pd.DataFrame, test):

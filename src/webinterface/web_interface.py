@@ -1,7 +1,7 @@
 
 from nicegui import ui
 import src.functions.register as register
-from src.utils import solver_handler,benchmark_handler,config_handler,experiment_handler
+from src.handler import solver_handler,benchmark_handler,config_handler,experiment_handler
 from os import getcwd
 
 from src.functions import plot,statistics,score,table_export
@@ -44,7 +44,7 @@ selected_solvers = set()
 selected_benchmarks = set()
 
 def handle_solver_selection_click(sender, msg):
-    
+
     selected_solver_id = msg.data['id']
     if msg.selected:
         selected_solvers.add(selected_solver_id)
@@ -52,7 +52,7 @@ def handle_solver_selection_click(sender, msg):
         selected_solvers.remove(selected_solver_id)
 
 def handle_benchmark_selection_click(sender, msg):
-    
+
     selected_benchmark_id = msg.data['id']
     if msg.selected:
         selected_benchmarks.add(selected_benchmark_id)
@@ -61,7 +61,7 @@ def handle_benchmark_selection_click(sender, msg):
 
 
 
-    
+
 
 
 
@@ -98,11 +98,11 @@ def show_side_menu():
         ui.button('Solvers',on_click=lambda e:ui.open(solvers_page,e.socket)).props('icon="functions"').props('flat')
         ui.button('Benchmarks',on_click=lambda e:ui.open(benchmarks_page,e.socket)).props('icon="description"').props('flat')
 
-       
-        
 
 
-def show_settings():    
+
+
+def show_settings():
     with ui.card():
         #ui.badge('Test')
         with ui.card_section().classes('bg-grey-3'):
@@ -110,32 +110,32 @@ def show_settings():
                 ui.label('Experiment Configuration').classes('text-subtitle2')
         with ui.expansion(text='General',icon='settings').classes('w-full').props('expand-separator'):
             #ui.label('General Settings').classes('font-bold').style('color: #6E93D6; font-size: 200%; font-weight: 300').props('header')
-            
+
             name = ui.input('Experiment Name',on_change=lambda e: set_parameter('name',e.value))
-            
+
             timeout = ui.number(label='Timeout in seconds', value=600,on_change=lambda e:set_parameter('timeout',e.value))
             set_parameter('timeout',timeout.value)
-            
+
             repetitions = ui.number(label='Repeat Runs', value=1,on_change=lambda e:set_parameter('repetitions',e.value))
             set_parameter('repetitions',repetitions.value)
-            
+
             task = ui.input('Tasks to run', placeholder='e.g. EE-PR, DC-PR or "supported"',on_change=lambda e:set_parameter('task',e.value.split(','))).props('autogrow clearable')
-            
+
             exclude_task = ui.input('Exclude Tasks', placeholder='e.g. EE-,-PR',on_change=lambda e:set_parameter('exclude_task',e.value))
             set_parameter('task',task.value)
             set_parameter('exclude_task',exclude_task.value)
-            
+
             with ui.expansion(text='Advanced').classes('w-full').props('expand-separator icon=settings'):
                 with ui.row():
                     save_output = ui.checkbox('Save Output',value=False,on_change=lambda e:set_parameter('save_output',e.value))
                     copy_raws = ui.checkbox('Copy Raws',value=False,on_change=lambda e:set_parameter('copy_raws',e.value))
-                
+
                 archive = ui.select(['zip','None'],label='Archive Output',on_change=lambda e:set_parameter('archive',e.value)).classes('w-full')
                 save_to = ui.input('Save Directory', placeholder=f'Current:{getcwd()}',on_change=lambda e:set_parameter('save_to',e.value))
                 set_parameter('save_to', getcwd())
         with ui.expansion(text='Solver',icon='functions').classes('w-full').props('expand-separator caption="Input or select solvers"'):
             show_solver_card()
-        
+
         with ui.expansion(text='Benchmarks',icon='description').classes('w-full').props('expand-separator caption="Input or select benchmarks"'):
             show_benchmark_card()
         with ui.expansion(text='Analysis',icon='equalizer').classes('w-full').props('expand-separator caption="Plots, Statistics, Validation"'):
@@ -144,14 +144,14 @@ def show_settings():
             statistics =  ui.select([p.capitalize() for p in register.stat_dict.keys()] + ['all'],label='Statistics').props('multiple')
             score =  ui.select([p.capitalize() for p in register.score_functions_dict.keys()] + ['all'],label='Scores').props('multiple')
             table_export = ui.select(list(register.table_export_functions_dict.keys())+['all'],label='Tabel Export').props('multiple')
-            
+
             with ui.expansion(text='Validation',icon='compare').classes('w-full').props('expand-separator caption="Mode, Plots, Tables"'):
                 validation = {'mode': None, 'plot': None,'table_export':None,'references': None}
                 val_mode =  ui.select([p.capitalize() for p in register.validation_functions_dict.keys()] + ['all'],label='Validation Mode').props('multiple')
                 vaL_reference = ui.input('Reference Files', placeholder=f'Current:{getcwd()}',on_change=lambda e:set_value(validation,'references',e.value))
                 val_plot =  ui.select([p.capitalize() for p in register.plot_validation_functions_dict.keys()] + ['all'],label='Validation Plot').props('multiple')
                 val_table =  ui.select([p for p in register.validation_table_export_functions_dict.keys()] + ['all'],label='Validation Tables').props('multiple')
-                
+
 
             with ui.expansion(text='Significance Tests',icon='exposure').classes('w-full').props('expand-separator caption="(Non-)Parametric, Post-Hoc,Plots"'):
                 significance = {'parametric_test': None,
@@ -168,12 +168,12 @@ def show_settings():
                 p_adhust = ui.select(['holm'],label='P-Adjust',on_change=lambda e:set_value(significance,'p_adjust',e.value))
                 post_hoc_plot =  ui.select(list(register.plot_post_hoc_functions_dict.keys()) + ['all'],label='Post-Hoc Plots').props('multiple')
                 post_hoc_table_export =  ui.select(list(register.post_hoc_table_export_functions_dict.keys()) + ['all'],label='Post-Hoc Tables').props('multiple')
-                
 
-            
+
+
 
         def _update_multiple_selection():
-            
+
             plot_selections = _extract_values_from_view(plot.view)
             set_parameter('plot',plot_selections)
 
@@ -185,7 +185,7 @@ def show_settings():
 
             table_export_selection = _extract_values_from_view(table_export.view)
             set_parameter('table_exprt',table_export_selection)
-            
+
 
             val_mode_selection = _extract_values_from_view(val_mode.view)
             val_plot_selection = _extract_values_from_view(val_plot.view)
@@ -193,7 +193,7 @@ def show_settings():
             validation['mode'] = val_mode_selection
             validation['plot'] = val_plot_selection
             validation['table_export'] = val_table_selection
-            set_parameter('validation',validation) 
+            set_parameter('validation',validation)
 
             parametric_test_selection = _extract_values_from_view(parametric_test.view)
             non_parametric_test_selection = _extract_values_from_view(non_parametric_test.view)
@@ -210,7 +210,7 @@ def show_settings():
             significance['table_export'] = post_hoc_table_export_selection
 
             set_parameter('significance',significance)
-            
+
         with ui.row().classes('flex justify-center w-full'):
             cfg = config_handler.load_default_config()
             def prepare_run():
@@ -222,13 +222,13 @@ def show_settings():
                 else:
                     show_invalid_cfg_dialog()
 
-            
+
             def start_experiment():
                 summary_dialog.close()
                 experiment_handler.run_pipeline(cfg)
 
-             
-            
+
+
             ui.button("Run Experiment",on_click=lambda: prepare_run()).props('icon=play_arrow color=positive')
 
             with ui.dialog() as summary_dialog, ui.card():
@@ -236,45 +236,45 @@ def show_settings():
                 with ui.row().classes('flex justify-center w-full'):
                     ui.button(on_click=lambda: start_experiment()).props('round icon=play_arrow color=positive')
                     ui.button(on_click=lambda: summary_dialog.close()).props('round icon=close color=negative')
-            
+
 
 def show_invalid_cfg_dialog():
-    
+
     ui.notify('Bad Config found!')
-    
+
 
 def show_experiment_summary(cfg: config_handler.Config):
     ui.label('Experiment Summary').classes('text-h6')
     with ui.row():
-        
+
         ui.label('Name: ')
         ui.label('').bind_text_from(cfg,'name')
     with ui.row():
-        
+
         ui.label('Task: ')
         ui.label('').bind_text_from(cfg,'task')
     with ui.row():
-        
+
         ui.label('Timeout: ')
         ui.label('').bind_text_from(cfg,'timeout')
     with ui.row():
-        
+
         ui.label('Solver: ')
         ui.label('').bind_text_from(cfg,'solver')
     with ui.row():
-        
+
         ui.label('Benchmark: ')
         ui.label('').bind_text_from(cfg,'benchmark')
     with ui.row():
-        
+
         ui.label('Reps: ')
         ui.label('').bind_text_from(cfg,'repetitions')
 
-        
-    
 
 
-    
+
+
+
 def _extract_values_from_view(view):
     if view.value is not None:
         return [ v['label'].lower() for v in view.value ]
@@ -284,10 +284,10 @@ def _extract_values_from_view(view):
 
 def set_value(_dict,key,value):
     if key in _dict.keys():
-         _dict[key] = value       
+         _dict[key] = value
 
 
- 
+
 
 
 
@@ -301,17 +301,17 @@ def show_solver_card():
                     ui.notify(f'Solver {",".join(map(str,selected_solvers))} selected')
                     set_parameter('solver', list(selected_solvers))
                     solver_list.set_text(",".join(map(str,selected_solvers)))
-    
+
     def remove_solvers():
         selected_solvers.clear()
         set_parameter('solver',selected_solvers)
         solver_list.set_text("")
-                    
+
     table_options = _build_solver_table_options()
-   
-   
+
+
     #ui.label('Solver Settings').classes('font-bold').style('color: #6E93D6; font-size: 200%; font-weight: 300')
-        
+
     with ui.column():#.classes('flex justify-center w-full'):
         with ui.row().classes('flex justify-center w-full'):
             solver = ui.input('Solvers to run ', placeholder='Name or ID of solver',on_change=lambda e:set_parameter('solver',e.value.split(','))).props('autogrow')
@@ -342,22 +342,22 @@ def show_benchmark_card():
                     ui.notify(f'Benchmark {",".join(map(str,selected_benchmarks))} selected')
                     set_parameter('benchmark', list(selected_benchmarks))
                     benchmark_list.set_text(",".join(map(str,selected_benchmarks)))
-    
+
     def remove_benchmarks():
         selected_benchmarks.clear()
         set_parameter('benchmark',selected_benchmarks)
         benchmark_list.set_text("")
-                    
+
     table_options = _build_benchmark_table_options()
-  
-    
+
+
     #ui.label('Benchmark Settings').classes('font-bold').style('color: #6E93D6; font-size: 200%; font-weight: 300')
-    
+
     with ui.column().classes('flex justify-center w-full'):
         with ui.row().classes('flex justify-center w-full'):
             solver = ui.input('Benchmarks to run ', placeholder='Name or ID of benchmark',on_change=lambda e:set_parameter('benchmark',e.value.split(',')))
-        
-       
+
+
         with ui.row().classes('flex justify-center w-full'):
             ui.button('Select', on_click=show_benchmark_selection)
             ui.button('Clear',on_click=remove_benchmarks)
@@ -396,7 +396,7 @@ def show_benchmark_card():
 def build_interface():
     with ui.row().classes('flex justify-center w-full mt-20'):
         show_settings()
-        
+
 
 @ui.page('/')
 def main_page() -> None:
@@ -430,10 +430,10 @@ def status_page() -> None:
 
 @ui.page('/solvers/add')
 def add_solver_page():
-    from src.utils import solver_handler
+    from src.handler import solver_handler
     add_solver_options = solver_handler.AddSolverOptions('','','',True,None,None,True,False)
     show_solvers_side_menu()
-    
+
     with ui.row().classes('flex justify-center w-full'):
         with ui.card():
             #ui.badge('Test')
@@ -443,7 +443,7 @@ def add_solver_page():
             name = ui.input('Name',placeholder='MyAwesomeSolver').bind_value(add_solver_options,'name')
             path = ui.input('Path',placeholder='path/to/solver').bind_value(add_solver_options,'path')
             version = ui.input('Version',placeholder='3.141').bind_value(add_solver_options,'version')
-      
+
             fetch = ui.checkbox('Fetch Task, Format').bind_value(add_solver_options,'fetch')
             no_check = ui.checkbox('No Check',value=False).bind_value(add_solver_options,'no_check')
             with ui.row().classes('flex justify-center w-full'):
@@ -452,7 +452,7 @@ def add_solver_page():
 import yaml
 def _add_solver(options: solver_handler.AddSolverOptions):
     new_solver = solver_handler._create_solver_obj(options)
-    
+
     with ui.dialog() as dialog, ui.card():
         ui.label(yaml.safe_dump(new_solver.__dict__))
         with ui.row():
@@ -461,17 +461,17 @@ def _add_solver(options: solver_handler.AddSolverOptions):
         dialog.open()
 
 def _check_solver_interface(d:ui.dialog,options: solver_handler.AddSolverOptions,new_solver):
-    
+
     if not options.no_check:
         is_working = solver_handler.check_interface(new_solver)
     else:
         is_working = True
-    
+
     if not is_working:
         ui.notify('Something went wrong when testing the interface!')
         d.close()
         return
-    id = solver_handler.add_solver(new_solver)
+    id = solver_handler._add_solver_to_database(new_solver)
     ui.notify(f'Solver added with id: {id}')
     d.close()
 
@@ -495,14 +495,14 @@ def delete_solver_page():
         table.options = table_options
         table.update()
     with ui.row().classes('flex justify-center w-full'):
-      
+
         with ui.card().classes('flex justify-center w-1/4').style('overflow: hidden'):
             table = ui.table(table_options).classes('max-h-80')
             table.view.on('cellClicked', handle_solver_to_delete_selection)
             ui.button('Delete',on_click=delete_solvers)
 
-    
-            
+
+
 
 @ui.page('/solvers/database')
 def database_solver_page():
@@ -511,7 +511,7 @@ def database_solver_page():
     with ui.row().classes('flex justify-center w-full'):
         with ui.card().classes('flex justify-center w-1/3').style('overflow: hidden'):
             ui.table(table_options)
-        
+
 
 
 
@@ -522,7 +522,7 @@ def show_solvers_side_menu()-> None:
             ui.button('Delete',on_click=lambda e:ui.open(delete_solver_page,e.socket)).props('icon="delete"').props('flat')
             ui.button('Show',on_click=lambda e:ui.open(database_solver_page,e.socket)).props('icon="description"').props('flat')
 
-        
+
 
 
 @ui.page('/solvers')
@@ -533,16 +533,16 @@ def solvers_page() -> None:
     show_solvers_side_menu()
     with ui.row().classes('flex justify-center w-full'):
         ui.markdown(f'''{md_content}''')
-    
+
 
 @ui.page('/benchmarks')
 def benchmarks_page() -> None:
     ui.label('Welcome')
 
-              
+
 ui.run(title='probo2')
 
 
 
-    
+
 

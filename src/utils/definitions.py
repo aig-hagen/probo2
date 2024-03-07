@@ -1,5 +1,5 @@
-import os
 import src.probo2_data
+import os
 import src.probo2_data.json
 import src.probo2_data.solver_test_data
 
@@ -24,6 +24,8 @@ WEB_INTERFACE_FILE = str(files(src.webinterface).joinpath("web_interface.py"))
 # Solver interface test files
 TEST_INSTANCES_REF_PATH = str(files(src.probo2_data.solver_test_data).joinpath("reference"))
 TEST_INSTANCE_ARG = str(files(src.probo2_data.solver_test_data).joinpath("a.arg"))
+
+TEST_INSTANCE_ARG_I23 = str(files(src.probo2_data.solver_test_data).joinpath("a.i23.arg"))
 TEST_INSTANCE_APX = str(files(src.probo2_data.solver_test_data).joinpath("a.apx"))
 TEST_INSTANCE_TGF = str(files(src.probo2_data.solver_test_data).joinpath("a.tgf"))
 TEST_INSTANCE_I23 = str(files(src.probo2_data.solver_test_data).joinpath("a.i23"))
@@ -75,3 +77,29 @@ SUPPORTED_TRACKS = {'CO': ['EE-CO', 'SE-CO', 'DC-CO', 'DS-CO',"CE-CO",'EC-CO','E
                     'STG': ["EE-STG","SE-STG","DC-STG","DS-STG","CE-STG",'EC-STG','ES-STG'],
                     'ID':["SE-ID","DS-ID" ]
                     }
+
+from enum import Enum
+
+class DefaultInstanceFormats(Enum):
+  APX = 'apx'
+  TGF = 'tgf'
+  I23 = 'i23'
+
+  def as_list():
+    return [f.value for f in DefaultInstanceFormats]
+
+class DefaultQueryFormats(Enum):
+  ARG = 'arg'
+
+  def as_list():
+    return [f.value for f in DefaultQueryFormats]
+
+class DefaultReferenceExtensions(Enum):
+  REF = 'ref'
+  OUT = 'out'
+  RES = 'res'
+
+  def as_list():
+    return [f.value for f in DefaultReferenceExtensions]
+
+

@@ -2,11 +2,11 @@
 import csv
 import json
 from csv import DictWriter, DictReader
-from src.utils import config_handler
+from src.handler import config_handler
 import os
 import pandas as pd
 
-from src.utils import solver_handler,benchmark_handler
+from src.handler import solver_handler,benchmark_handler
 from src.utils import definitions
 from tqdm import tqdm
 import shutil
@@ -33,7 +33,7 @@ def run_pipeline(cfg: config_handler.Config):
 
     result_df = load_results_via_name(cfg.name)
 
-   
+
 
     saved_file_paths = []
     if cfg.plot is not None:
@@ -76,7 +76,7 @@ def run_pipeline(cfg: config_handler.Config):
                 cfg.table_export = register.table_export_functions_dict.keys()
             for format in cfg.table_export:
                 register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
-    
+
     if cfg.validation['mode']:
         validation_results = validation.validate(result_df, cfg)
         print_validation.print_results(validation_results)
@@ -88,7 +88,7 @@ def run_pipeline(cfg: config_handler.Config):
                     cfg.validation['table_export'] = register.validation_table_export_functions_dict.keys()
                 for f in cfg.validation['table_export']:
                     register.validation_table_export_functions_dict[f](validation_results['pairwise'],cfg)
-    
+
     test_results = {}
     post_hoc_results = {}
 
@@ -100,17 +100,17 @@ def run_pipeline(cfg: config_handler.Config):
         post_hoc_results.update(parametric_post_hoc.test(result_df,cfg))
     if cfg.significance['non_parametric_post_hoc']:
         post_hoc_results.update(non_parametric_post_hoc.test(result_df,cfg))
-    
+
     if test_results:
         print("========== Significance Analysis Summary ==========")
         for test in test_results.keys():
             print_significance.print_results(test_results[test],test)
-    
+
     if post_hoc_results:
         print("========== Post-hoc Analysis Summary ==========")
         for test in post_hoc_results.keys():
             print_significance.print_results_post_hoc(post_hoc_results[test],test)
-        
+
         if cfg.significance['plot']:
             for post_hoc_test in post_hoc_results.keys():
                 plot_post_hoc.create_plots(post_hoc_results[post_hoc_test],cfg,post_hoc_test)
@@ -382,6 +382,6 @@ def print_experiment_index(tablefmt=None):
     if os.path.exists(definitions.EXPERIMENT_INDEX):
         experiment_index = pd.read_csv(definitions.EXPERIMENT_INDEX)
         print(tabulate.tabulate(experiment_index,headers='keys', tablefmt=tablefmt, showindex=False))
-            
+
     else:
         print("No experiments found.")
