@@ -4,7 +4,7 @@
 
 A python tool that bundles all functionalities needed to collect, validate, analyze, and represent data in the context of benchmarking argumentation solvers.
 # Getting Started
-This section will guide you through the initial steps of installing BenchmarkTool and running your first benchmarking experiment. By the end of this guide, you'll have a solid understanding of the probo2 workflow and can start experimenting.
+This section will guide you through the initial steps of installing probo2 and running your first benchmarking experiment. By the end of this guide, you'll have a solid understanding of the probo2 workflow and can start experimenting.
 ## Set up 
 
 1. Clone repository
