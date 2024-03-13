@@ -6,6 +6,7 @@
 
 A python tool that bundles all functionalities needed to collect, validate, analyze, and represent data in the context of benchmarking argumentation solvers.
 
+Click [here](https://aig-hagen.github.io/probo2/) for detailed documentation.
 ## Changelog
 
 ### v1.1 - 22.03.2023
