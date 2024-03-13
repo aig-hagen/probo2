@@ -5,7 +5,7 @@
 > Benchmarking argumentation solvers
 - Easy-to-use
 - Flexible
-- Powerfull
+- Powerful
 
 [GitHub](https://github.com/aig-hagen/probo2)
 [Get Started](#getting-started)

@@ -3,59 +3,73 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A python tool that bundles all functionalities needed to collect, validate, analyze, and represent data in the context of benchmarking argumentation solvers.
-# Getting Started
-This section will guide you through the initial steps of installing probo2 and running your first benchmarking experiment. By the end of this guide, you'll have a solid understanding of the probo2 workflow and can start experimenting.
-## Set up 
 
-1. Clone repository
+# Getting Started
+
+This section will guide you through the initial steps of installing probo2 and running your first benchmarking experiment. By the end of this guide, you'll have a solid understanding of the probo2 workflow and can start experimenting.
+
+## Set up
+
+- Clone repository
+
 ```
 git clone https://github.com/aig-hagen/probo2.git
 ```
-2. Navigate to project folder and create a virtual enviroment
-```
+
+- Navigate to project folder and create a virtual enviroment
+
+```bash
 python3 -m venv probo2_env
 ```
+
 or if use Anaconda:
 
-```
+```bash
 conda create -n probo2_env pip
 ```
-3. Activate enviroment
- ```
+
+- Activate enviroment
+
+ ```bash
 source probo2_env/bin/activate
 ```
 
-3. Install
-```
+- Install
+
+```bash
 pip install
 ```
 
 By installing your package in editable mode in your environment, you can ensure that any changes you make to Probo2 are immediately available.
-```
+
+```bash
 pip install -e .
 ```
 
 ## Run your first experiment
+
 In this section, we describe the general workflow of probo2 and how experiments are managed.
 As you will see, with probo2, it is easy to set up an experiment. We only need three things:
-> 1. The argumentation solvers 
+>
+> 1. The argumentation solvers
 > 2. The benchmark instances
-> 3. A configuration file 
+> 3. A configuration file
 
-
-You can manually add solvers and benchmarks with the [add-solver](#add-solver) or [add-benchmark](#add-benchmark) command. 
+You can manually add solvers and benchmarks with the [add-solver](#add-solver) or [add-benchmark](#add-benchmark) command.
 For our first experiment, however, we will use a very convenient functionality, the [fetch](#fetch) command.
 With this command, we can automatically download and install the [ICCMA](http://argumentationcompetition.org/). solvers and benchmarks and add them to probo2. We have to specify which solvers we want to install, which benchmarks we want to load, and where they should be saved. For example, if we want to have the __ICCMA23__ solvers and benchmarks, just run:
-```
+
+```bash
 probo2 fetch --benchmark ICCMA23 --solver ICCMA23 --install --save_to /path/to/save
 ```
 
-
 ## Experiments
+
 In this section we describe the general workflow of probo2 and how experiments are managed.
 In probo2, a configuration file fully describes experiments. It contains information about which solvers to run, which benchmark to use, how the results should be validated, what statistics should be calculated, and the graphical representation of the results. This standardized pipeline allows easy and scaleable experiment management and reliably reproducing results.  All configuration options and their default values can be found in the [default_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/default_config.yaml) file. The file format of the configuration files is YAML. For further information on YAML files see the offical [specification](https://yaml.org/spec/1.2.2/). Next, we will take a closer look at the [default_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/default_config.yaml) file and how probo2 handles configuration files in general.
 
 ## Configuration Files
+
 As mentioned before the [default_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/default_config.yaml) file contains all default configurations. User specifications (via command line or custom configuration files) overwrite the corresponding default configurations. To avoid conflicts between specifications from the command line and those in a (custom) configuration file, the specifications made by the user via the command line have priority.
 If the user does not specify any other options, the experiment will be performed with the default configurations. However, we recommend creating a separate configuration file for each experiment. In general, options are specified as *key:value* pairs in YAML files. The following options can be specified :
 
@@ -75,13 +89,11 @@ If the user does not specify any other options, the experiment will be performed
 
    Comma-separated list of ids or names of benchmarks to run solvers on.
 
-
 + *timeout*
 
    Instance cut-off value in seconds. If cut-off is exceeded instance is marked as timed out. (Default: 600)
 
 + *repetitions*
-
 
    Specifies how often an instance should be repeated. (Default: 1)
 
@@ -97,9 +109,7 @@ If the user does not specify any other options, the experiment will be performed
 
    Comma-separated list of statistics to be calculated.
 
-
 + *printing*
-
 
    Formatting of the command line output. (Default: 'default')
 
@@ -116,11 +126,10 @@ If the user does not specify any other options, the experiment will be performed
    Comma-separated list of export format for tables.
 
 For a list of choices for an option, run the following command:
- 
+
  ```
 probo2 run --help
 ```
- 
 
 **Note**: The list is incomplete and constantly being expanded as probo2 is still under development.
 
@@ -157,18 +166,18 @@ If you want to change the configuration on the fly without changing the file aga
 probo2 run --config /path/to/my_config.yaml --statistics sum
 ```
 
-
 Another example can be found in the [example_config.yaml](https://github.com/aig-hagen/probo2/blob/working/src/configs_experiment/example_config.yaml)
- 
 
 # Commands
 
 ## add-solver
+
 Usage: *probo2 add-solver [OPTIONS]*
 
   Add a solver to the database.
 
 **Options**:
+
 + *-n, --name*
 
     Name of the solver  [required]
@@ -197,29 +206,34 @@ Usage: *probo2 add-solver [OPTIONS]*
     Show this message and exit.
 
 **Example**
+
 ```
 probo2 add-solver --name MyAwesomeSolver --version 1.23 --path ./path/to/MyAwesomeSolver --guess
 ```
+
 ### fetch
 
 ### solvers
+
 Prints solvers in database to console.
 
 **Options**
-  + *-v, --verbose*
-  + *--id*
+
++ *-v, --verbose*
++ *--id*
 
     Print summary of solver with specified id
-  + *--help*
++ *--help*
 
     Show this message and exit.
 
-
 ### delete-solver
+
 Usage: *probo2 delete-solver [OPTIONS]*
 
   Deletes a solver from the database. Deleting has to be confirmed by user.
 **Options**:
+
 + *--id*
 
     ID of solver to delete.
@@ -230,8 +244,8 @@ Usage: *probo2 delete-solver [OPTIONS]*
 
     Show this message and exit.
 
-
 ### add-benchmark
+
 Usage: *probo2 add-benchmark [OPTIONS]*
 
   Adds a benchmark to the database. Before a benchmark is added to the
@@ -240,17 +254,17 @@ Usage: *probo2 add-benchmark [OPTIONS]*
   (user has to confirm generation) or beforehand via the --generate/-g
   option. It is also possilbe to generate random argument files for the
   DC/DS problems with the --random_arguments/-rnd option. By default, the following attributes are saved for a benchmark: name, path, format, and the extension of query argument files. However, it is possible to specify additional attributes using your functions. See section "custom function" for further information.
-  If no benchmark name via the --name option is provided, the name is derived from the benchmark path. Instance formats and the file extension of the query arguments (used for DS and DC tasks) are automatically set if not specified. For this the file extensions of all files in the given path are compared with the default file formats\extensions (see src/utils/definitions.DefaultInstanceFormats and src/utils/definitions.DefaultQueryFormats). Formats are set to the intesection between found formats and default formats. 
+  If no benchmark name via the --name option is provided, the name is derived from the benchmark path. Instance formats and the file extension of the query arguments (used for DS and DC tasks) are automatically set if not specified. For this the file extensions of all files in the given path are compared with the default file formats\extensions (see src/utils/definitions.DefaultInstanceFormats and src/utils/definitions.DefaultQueryFormats). Formats are set to the intesection between found formats and default formats.
 
 **Options**:
-+ *-n, --name *
+
++ *-n, --name*
 
     Name of benchmark/fileset  [required]
 + *-p, --path*
 
     Directory of instances [required]
     Subdirectories are recursively searched for instances.
-
 
 + *-f, --format [apx|tgf]*
 
@@ -275,36 +289,35 @@ Usage: *probo2 add-benchmark [OPTIONS]*
 + *--help*
 
     Show this message and exit.
- 
 
 **Example**
+
 ```
 probo2 add-benchmark --name MyTrickyBenchmark --path ./path/to/MyTrickyBenchmark --format tgf --generate apx -rnd
 ```
-
 
 ### benchmarks
 
   Prints benchmarks in database to console.
 
-
 **Options**
 
-  + *-v, --verbose*
++ *-v, --verbose*
 
     Prints additional information on benchmark
-  + *--help*
++ *--help*
 
     Show this message and exit.
 
-
 ### delete-benchmark
+
 Usage: *probo2 delete-benchmark [OPTIONS]*
 
   Deletes a benchmark from the database. Deleting has to be confirmed by
   user.
 
 **Options**:
+
 + *--id*
 
     ID of benchmark to delete.
@@ -315,84 +328,85 @@ Usage: *probo2 delete-benchmark [OPTIONS]*
 
     Show this message and exit.
 
-
 ### run
 
   Run solver.
 
 **Options**
-  + *-a, --all*
+
++ *-a, --all*
 
     Execute all solvers supporting the specified tasks on specified instances.
 
-  + *-slct, --select*
++ *-slct, --select*
 
     Execute (via solver option) selected solver supporting the specified tasks.
 
-  + *-s, --solver*
++ *-s, --solver*
 
     Comma-seperated list of ids or names of solvers (in database) to run.
 
-  + *-b, --benchmark*
++ *-b, --benchmark*
 
     Comma-seperated list of ids or names of benchmarks (in database) to run solvers on.
 
-  + *--task*
++ *--task*
 
     Comma-seperated list of tasks to solve.
-  + *-t, --timeout*
++ *-t, --timeout*
 
     Instance cut-off value in seconds. If cut-off is exceeded instance is marked as timed out.
 
-  + *--dry*
++ *--dry*
 
     Print results to command-line without saving to the database.
 
-  + *--track*
++ *--track*
 
     Comma-seperated list of tracks to solve.
-  + *--tag*
++ *--tag*
 
     Tag for individual experiments.This tag is used to identify the experiment.  [required]
 
-  + *--notify*
++ *--notify*
 
     Send a notification to the email address provided as soon as the experiments are finished.
 
-  + *-n, --n_times*
++ *-n, --n_times*
 
     Number of repetitions per instance. Run time is the avg of the n runs.
 
-  + *-sub, --subset*
++ *-sub, --subset*
 
     Run only the first n instances of a benchmark.
 
-  + *--multi*
++ *--multi*
 
     Run experiment on mutiple CPU cores. The number of cores to use is #physical cores - 1 or 1. This is a heuristic to avoid locking up the system.
 
-
-  + *--help*
++ *--help*
 
     Show this message and exit.
 **Example**
+
 ```
 probo2 run --all --benchmark my_benchmark --task EE-CO,EE-PR --tag MyExperiment --timeout 600 --notify my@mail.de
 ```
 
-
 ### status
+
 Usage: *probo2 status*
 
   Provides an overview of the progress of the currently running experiment.
 
 **Options**:
+
 + *--help*
 
     Show this message and exit.
 
-
 ### last
+
 Usage: *probo2 last*
 
   Shows basic information about the last finished experiment.
@@ -401,18 +415,20 @@ Usage: *probo2 last*
   solvers and and the time when the experiment was finished
 
 **Options**:
+
 + *--help*
 
     Show this message and exit.
 
-
 ### experiment-info
+
 Usage: *probo2 experiment-info [OPTIONS]*
 
   Prints some basic information about the experiment speficied with "--tag"
   option.
 
 **Options**:
+
 + *-t, --tag*
 
     Experiment tag.  [required]
@@ -420,8 +436,8 @@ Usage: *probo2 experiment-info [OPTIONS]*
 
     Show this message and exit.
 
-
 ### plot
+
 Usage: *probo2 plot[OPTIONS]*
 
   Create plots of experiment results.
@@ -435,6 +451,7 @@ Usage: *probo2 plot[OPTIONS]*
   and tasks with the --combine option.
 
 **Options**:
+
 + *-t, --tag*
 
      Comma-separated list of experiment tags to be selected.
@@ -481,17 +498,19 @@ Usage: *probo2 plot[OPTIONS]*
     Show this message and exit.
 
 **Example**
+
 ```
 probo2 plot --kind cactus --tag MyExperiment --compress zip --send my@mail.de
 ```
 
-
 ### calculate
+
 Calculte different statistical measurements.
 Usage: probo2 calculate [OPTIONS]
 
 **Options**
- + *-t, --tag*
+
++ *-t, --tag*
 
      Comma-separated list of experiment tags to be selected.
 + *--task*
@@ -556,12 +575,13 @@ Usage: probo2 calculate [OPTIONS]
   Show this message and exit.
 
 **Example**
+
 ```
 probo2 calculate --tag MyExperiment -s timeouts -s errors -s solved --par 10 --compress zip --send my@mail.de
 ```
 
-
 ### validate
+
 Usage: *probo2 validate [OPTIONS]*
 
   Validate experiments results.
@@ -587,6 +607,7 @@ Usage: *probo2 validate [OPTIONS]*
   option.
 
 **Options**:
+
 + *--tag*
 
     Experiment tag to be validated
@@ -645,21 +666,25 @@ Usage: *probo2 validate [OPTIONS]*
 **Example**
 
 Validation with references:
+
 ```
 probo2 validate --tag MyExperiment --benchmark MyBenchmark --references /path/to/references --export latex --plot count --compress zip --send my@mail.de --save_to .
 ```
 
 Pairwise validation:
+
 ```
 probo2 validate --tag MyExperiment --benchmark MyBenchmark --pairwise --plot heatmap --save_to .
 ```
 
 ### significance
+
 Usage: *probo2 significance [OPTIONS]*
 
   Parmatric and non-parametric significance and post-hoc tests.
 
 **Options**:
+
 + *--tag*
 
     Experiment tag to be tested.
@@ -708,7 +733,9 @@ Usage: *probo2 significance [OPTIONS]*
 ```
 probo2 significance --tag MyExperiment --parametric ANOVA --php scheffe
 ```
+
 ### board
+
 Probo2 provides an interactive dashboard to visualize results of experiments. The dashboard contains plots and tables which can be filtered using checkboxes in the sidebar.
 ![](src/probo2_data/ressources/probo2Board.gif)
 
@@ -725,4 +752,4 @@ Usage: *probo2 board [OPTIONS]*
   
   Full path to a raw results file  (raw.csv).
 
-  **Note**: Only needed when no tag is specified.
+  __Note__: Only needed when no tag is specified.
