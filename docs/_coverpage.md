@@ -9,3 +9,7 @@
 
 [GitHub](https://github.com/aig-hagen/probo2)
 [Get Started](#getting-started)
+
+<!-- background color -->
+
+![color](#f0f0f0)
