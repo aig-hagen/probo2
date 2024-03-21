@@ -72,7 +72,7 @@ class ConvertBenchmarkOptions(CommandOptionInterface):
     Represents options for converting a benchmark.
     """
 
-    def __init__(self, id:str, benchmark_name: str, save_to: str, formats: list, extension_query_argument: str, add:bool,convert_query_files) -> None:
+    def __init__(self, id:str, benchmark_name: str, save_to: str, formats: list, add:bool,skip_args: bool) -> None:
         """
         Initialize a CommandOptions object.
 
@@ -92,9 +92,8 @@ class ConvertBenchmarkOptions(CommandOptionInterface):
         self.benchmark_name = benchmark_name
         self.save_to = save_to
         self.formats = formats
-        self.extension_query_argument = extension_query_argument
         self.add = add
-        self.convert_query_files = convert_query_files
+        self.skip_args = skip_args
 
     def check(self):
         """

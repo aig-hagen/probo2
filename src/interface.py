@@ -561,14 +561,6 @@ def calculate(
             table_export = register.table_export_functions_dict.keys()
         for format in table_export:
             register.table_export_functions_dict[format](df_merged,cfg,['tag','task','benchmark_name'])
-
-
-    # if cfg.archive is not None:
-    #     for _format in cfg.archive:
-    #         register.archive_functions_dict[_format](cfg.save_to)
-    # configs = config_handler.load_all_configs(definitions.CONFIGS_DIRECTORY)
-    # for c in configs:
-    #     c.print()
 @click.command()
 @click.pass_context
 @click.option("--name", "-n",cls=CustomClickOptions.StringAsOption, default=[])
@@ -1749,13 +1741,12 @@ cli.add_command(edit_benchmark)
 @click.pass_context
 @click.option("--id",type=click.INT,required=True, help='ID of benchmark to convert')
 @click.option('--name','-n',type=click.STRING,help='Name of new generated benchmark. If not specified format suffix is added to old name.')
-@click.option('--formats','-f',multiple=True,required=True,default=None,help='Formats to convert selected benchmark to. For each format a sperate benchmark is created.')
+@click.option('--formats','-f',type=click.STRING,multiple=True,required=True,default=None,help='Formats to convert selected benchmark to. For each format a sperate benchmark is created.')
 @click.option('--save_to','-st',type=click.Path(exists=True, resolve_path=True),help='Directory to store converted benchmark in. Default is the current working directory.')
-@click.option('--ext_additional','-ext',help='Extension of query arguments files.',default='arg')
-@click.option('--add','-a',help='Add generated benchmark to database.')
-@click.option('--include_query','-i',help='Add generated benchmark to database.')
+@click.option('--add','-a',type=click.BOOL,is_flag=True,help='Add generated benchmark to database.')
+@click.option('--skip_args','-s',type=click.BOOL, is_flag=True,help='Skip the creation of argument files.')
 def convert_benchmark(ctx,id, name,formats,save_to,ext_additional, add, include_query):
-    """Edit a benchmark in the database.
+    """Convert benchmarks to different formats including the query argument files.
     """
     from src.utils.options.CommandOptions import ConvertBenchmarkOptions
     from src.handler import benchmark_handler

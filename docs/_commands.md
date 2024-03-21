@@ -1,3 +1,104 @@
+## add-Solver
+
+The `add-solver` command is used for adding solvers to the database.
+.Below is a detailed documentation and tutorial on how to use the `add-solver` command effectively.
+
+### Command Syntax
+
+```shell
+probo2 add_solver [OPTIONS]
+```
+
+### Options
+
+### `--name`, `-n`
+
+- **Description**: Specifies the name of the solver.
+- **Required**: No
+- **Example**: `-n "MySolver"`
+
+### `--path`, `-p`
+
+- **Description**: Path to the solver executable.
+Relative paths are automatically resolved. The executable can be a compiled binary, bash script or a python file. As long as the executable implements the ICCMA interface it should work.
+More information on the [ICCMA interface](http://argumentationcompetition.org/).
+- **Required**: Yes
+- **Type**: `click.Path`
+- **Constraints**: The path must exist and be resolvable.
+- **Examples**:
+  - `-p /usr/local/bin/mysolver`
+  - `--path ./mysolver`
+  
+### `--format`, `-f`
+
+- **Description**: Defines the supported file formats of the solver. This option can be specified multiple times if the solver supports more than one format.
+- **Required**: No
+- **Multiple**: Yes
+- **Example**: `-f "tgf" -f "apx"`
+
+### `--tasks`, `-t`
+
+- **Description**: Lists the supported computational problems/tasks. This is checked against predefined tasks to ensure compatibility.
+- **Required**: No
+- **Default**: `[]`
+- **Callback**: `CustomClickOptions.check_problems`
+- **Example**: `-t "Optimization" -t "Satisfaction"`
+
+### `--version`, `-v`
+
+- **Description**: Indicates the version of the solver.
+- **Required**: No
+- **Type**: `String`
+- **Example**: `-v "1.0.3"`
+
+### `--fetch`, `-ft`
+
+- **Description**: When set, Probo2 will attempt to pull the supported file format and computational problems directly from the solver. This is a flag option.
+- **Required**: No
+- **Type**: `Flag`
+- **Example**: `--fetch`
+
+### `--yes`
+
+- **Description**: Skips the confirmation prompt when adding a solver to the database. This is a convenience flag for automation or scripting.
+- **Required**: No
+- **Type**: `Flag`
+- **Example**: `--yes`
+
+### `--no_check`
+
+- **Description**: Disables the validation check of solver's properties. Use with caution.
+- **Required**: No
+- **Type**: `Flag`
+- **Example**: `--no_check`
+
+### Example Calls
+
+#### Adding a Solver with Minimum Required Information
+
+```shell
+probo2 add_solver -p "/usr/local/bin/mysolver"
+```
+
+#### Adding a Solver with Full Information
+
+```shell
+probo2 add_solver -n "MySolver" -p "/usr/local/bin/mysolver" -f "XML" -f "JSON" -t "Optimization" -v "1.0.3" --yes
+```
+
+#### Fetching Supported Formats and Tasks Automatically
+
+```shell
+probo2 add_solver -n "AutoSolver" -p "/opt/solvers/autosolver" --fetch --yes
+```
+
+### Notes
+
+- When specifying multiple formats or tasks, repeat the option for each value.
+- Use the `--fetch` option to automatically retrieve solver capabilities, if the solver supports this feature.
+- The `--yes` option is particularly useful for scripting or when running in environments where user interaction is not possible.
+- Ensure the path to the solver executable is correct to avoid errors during the addition process.
+
 ## add-solver
 
 Usage: *probo2 add-solver [OPTIONS]*
@@ -6,30 +107,30 @@ Usage: *probo2 add-solver [OPTIONS]*
 
 **Options**:
 
-+ *-n, --name*
+- *-n, --name*
 
     Name of the solver  [required]
-+ *-p, --path PATH*
+- *-p, --path PATH*
 
     Path to solver executable  [required].
 
     Relative paths are automatically resolved. The executable can be a compiled binary, bash script or a python file. As long as the executable implements the ICCMA interface it should work.
     More information on the [ICCMA interface](http://argumentationcompetition.org/).
-+ *-f, --format [apx|tgf]*
+- *-f, --format [apx|tgf]*
 
     Supported format of solver.
-+ *-t, --tasks*
+- *-t, --tasks*
 
     Supported computational problems
-+ *-v, --version*
+- *-v, --version*
 
     Version of solver [required].
 
     This option has to be specified to make sure the same solver with different versions can be added to the database.
-+ *-g, --guess*
+- *-g, --guess*
 
     Pull supported file format and computational problems from solver.
-+ *--help*
+- *--help*
 
     Show this message and exit.
 
@@ -47,11 +148,11 @@ Prints solvers in database to console.
 
 **Options**
 
-+ *-v, --verbose*
-+ *--id*
+- *-v, --verbose*
+- *--id*
 
     Print summary of solver with specified id
-+ *--help*
+- *--help*
 
     Show this message and exit.
 
@@ -62,13 +163,13 @@ Usage: *probo2 delete-solver [OPTIONS]*
   Deletes a solver from the database. Deleting has to be confirmed by user.
 **Options**:
 
-+ *--id*
+- *--id*
 
     ID of solver to delete.
-+ *--all*
+- *--all*
 
     Delete all solvers in database.
-+ *--help*
+- *--help*
 
     Show this message and exit.
 
@@ -86,35 +187,35 @@ Usage: *probo2 add-benchmark [OPTIONS]*
 
 **Options**:
 
-+ *-n, --name*
+- *-n, --name*
 
     Name of benchmark/fileset  [required]
-+ *-p, --path*
+- *-p, --path*
 
     Directory of instances [required]
     Subdirectories are recursively searched for instances.
 
-+ *-f, --format [apx|tgf]*
+- *-f, --format [apx|tgf]*
 
     Supported formats of benchmark/fileset  [required]
 
-+ *-ext, --extension_arg_files*
+- *-ext, --extension_arg_files*
 
     Extension of additional argument parameter for DC/DS problems.
     Default is "arg"
-+ *--no_check*
+- *--no_check*
 
     Checks if the benchmark is complete.
-+ *-g, --generate [apx|tgf]*
+- *-g, --generate [apx|tgf]*
 
     Generate instances in specified format
-+ *-rnd, --random_arguments*
+- *-rnd, --random_arguments*
 
     Generate additional argument files with a random argument.
-+ *-fun, --function*
+- *-fun, --function*
 
     Custom functions to add additional attributes to benchmark.
-+ *--help*
+- *--help*
 
     Show this message and exit.
 
@@ -130,10 +231,10 @@ probo2 add-benchmark --name MyTrickyBenchmark --path ./path/to/MyTrickyBenchmark
 
 **Options**
 
-+ *-v, --verbose*
+- *-v, --verbose*
 
     Prints additional information on benchmark
-+ *--help*
+- *--help*
 
     Show this message and exit.
 
@@ -146,15 +247,104 @@ Usage: *probo2 delete-benchmark [OPTIONS]*
 
 **Options**:
 
-+ *--id*
+- *--id*
 
     ID of benchmark to delete.
-+ *--all*
+- *--all*
 
     Delete all benchmarks in database
-+ *--help*
+- *--help*
 
     Show this message and exit.
+
+
+## convert-benchmark
+
+The `convert-benchmark` is used for the conversion of benchmarks into different formats, potentially including query argument files. This documentation details how to use the `convert-benchmark` command.
+
+### Command Syntax
+
+```shell
+probo2 convert-benchmark [OPTIONS]
+```
+
+### Options
+
+### `--id`
+- **Description**: The unique identifier of the benchmark to be converted.
+- **Type**: Integer
+- **Required**: Yes
+- **Example**: `--id 3`
+
+### `--name`, `-n`
+- **Description**: The name for the newly generated benchmark. If not specified, a format suffix is added to the original name.
+- **Type**: String
+- **Required**: No
+- **Example**: `-n "NewBenchmarkName"`
+
+### `--formats`, `-f`
+- **Description**: Specifies the formats to which the selected benchmark will be converted. A separate benchmark is created for each specified format.
+- **Type**: String
+- **Required**: Yes
+- **Multiple**: Yes
+- **Example**: `-f i23 -f apx`
+
+### `--save_to`, `-st`
+- **Description**: The directory where the converted benchmark will be stored. By default, this is the current working directory.
+- **Type**: Path
+- **Required**: No
+- **Example**: `-st "/path/to/directory"`
+
+### `--add`, `-a`
+- **Description**: If set, the generated benchmark will be added to the database.
+- **Type**: Boolean
+- **Required**: No
+- **Is Flag**: True
+- **Example**: `-a`
+
+### `--skip_args`, `-s`
+- **Description**: Skip the creation of argument files for the converted benchmarks.
+- **Type**: Boolean
+- **Required**: No
+- **Is Flag**: True
+- **Example**: `-s`
+
+### Example Calls
+
+### Convert a Benchmark with Minimal Requirements
+
+```shell
+probo2 convert-benchmark --id 12 -f i23
+```
+
+### Convert and Name the Benchmark, Skipping Argument File Creation
+
+```shell
+probo2 convert-benchmark --id 12 -n "CustomBenchmark" -f i23 -s
+```
+
+### Convert a Benchmark and Save to a Specified Directory
+
+```shell
+probo2 convert-benchmark --id 23 -f apx -f i23 -st "/path/to/save"
+```
+
+### Convert a Benchmark, Add to Database, and Skip Argument Files
+
+```shell
+probo2 convert-benchmark --id 10 -f i23 -a -s
+```
+
+### Additional Notes
+
+- The `--formats` option must be specified at least once but can be repeated to specify multiple formats.
+- If the `--save_to` option is not specified, the current working directory is used by default.
+- The `--add` flag, if used, indicates that the converted benchmarks should be automatically added to the database.
+- The `--skip_args` flag allows users to skip the generation of argument files for benchmarks, useful when these files are not needed or already exist.
+
+
+
+
 
 ## run
 
@@ -162,57 +352,57 @@ Usage: *probo2 delete-benchmark [OPTIONS]*
 
 **Options**
 
-+ *-a, --all*
+- *-a, --all*
 
     Execute all solvers supporting the specified tasks on specified instances.
 
-+ *-slct, --select*
+- *-slct, --select*
 
     Execute (via solver option) selected solver supporting the specified tasks.
 
-+ *-s, --solver*
+- *-s, --solver*
 
     Comma-seperated list of ids or names of solvers (in database) to run.
 
-+ *-b, --benchmark*
+- *-b, --benchmark*
 
     Comma-seperated list of ids or names of benchmarks (in database) to run solvers on.
 
-+ *--task*
+- *--task*
 
     Comma-seperated list of tasks to solve.
-+ *-t, --timeout*
+- *-t, --timeout*
 
     Instance cut-off value in seconds. If cut-off is exceeded instance is marked as timed out.
 
-+ *--dry*
+- *--dry*
 
     Print results to command-line without saving to the database.
 
-+ *--track*
+- *--track*
 
     Comma-seperated list of tracks to solve.
-+ *--tag*
+- *--tag*
 
     Tag for individual experiments.This tag is used to identify the experiment.  [required]
 
-+ *--notify*
+- *--notify*
 
     Send a notification to the email address provided as soon as the experiments are finished.
 
-+ *-n, --n_times*
+- *-n, --n_times*
 
     Number of repetitions per instance. Run time is the avg of the n runs.
 
-+ *-sub, --subset*
+- *-sub, --subset*
 
     Run only the first n instances of a benchmark.
 
-+ *--multi*
+- *--multi*
 
     Run experiment on mutiple CPU cores. The number of cores to use is #physical cores - 1 or 1. This is a heuristic to avoid locking up the system.
 
-+ *--help*
+- *--help*
 
     Show this message and exit.
 **Example**
@@ -229,7 +419,7 @@ Usage: *probo2 status*
 
 **Options**:
 
-+ *--help*
+- *--help*
 
     Show this message and exit.
 
@@ -244,7 +434,7 @@ Usage: *probo2 last*
 
 **Options**:
 
-+ *--help*
+- *--help*
 
     Show this message and exit.
 
@@ -257,10 +447,10 @@ Usage: *probo2 experiment-info [OPTIONS]*
 
 **Options**:
 
-+ *-t, --tag*
+- *-t, --tag*
 
     Experiment tag.  [required]
-+ *--help*
+- *--help*
 
     Show this message and exit.
 
@@ -280,48 +470,48 @@ Usage: *probo2 plot[OPTIONS]*
 
 **Options**:
 
-+ *-t, --tag*
+- *-t, --tag*
 
      Comma-separated list of experiment tags to be selected.
-+ *--task*
+- *--task*
 
     Comma-separated list of task IDs or symbols to be selected.
-+ *--benchmark*
+- *--benchmark*
 
     Comma-separated list of benchmark IDs or names to be selected.
-+ *-s, --solver*
+- *-s, --solver*
 
     Comma-separated list of solver IDs or names to be selected.
-+ *-st, --save_to*
+- *-st, --save_to*
 
     Directory to store plots in. Filenames will be generated automatically.
-+ *--vbs*
+- *--vbs*
 
     Create virtual best solver from experiment data.
-+ *-b, --backend*
+- *-b, --backend*
 
     Backend to use.
     Choices: [pdf|pgf|png|ps|svg]
-+ *-c, --combine*
+- *-c, --combine*
 
     Combine results on specified key
     Choices: [tag|task_id|benchmark_id]
-+ *-k, --kind*
+- *-k, --kind*
 
     Kind of plot to create:
     Choices: [cactus|count|dist|pie|box|all]
 
-+ *--compress*
+- *--compress*
 
     Compress saved files.
     Choices: [tar|zip]
-+ *-s, --send*
+- *-s, --send*
 
     Send plots via E-Mail
-+ *-l, --last*
+- *-l, --last*
 
     Plot results for the last finished experiment.
-+ *--help*
+- *--help*
 
     Show this message and exit.
 
@@ -338,67 +528,67 @@ Usage: probo2 calculate [OPTIONS]
 
 **Options**
 
-+ *-t, --tag*
+- *-t, --tag*
 
      Comma-separated list of experiment tags to be selected.
-+ *--task*
+- *--task*
 
     Comma-separated list of task IDs or symbols to be selected.
-+ *--benchmark*
+- *--benchmark*
 
     Comma-separated list of benchmark IDs or names to be selected.
-+ *-s, --solver*
+- *-s, --solver*
 
     Comma-separated list of solver IDs or names to be selected.
 
-+ *-p, --par*
+- *-p, --par*
 
     Penalty multiplier for PAR score
-+ *-s, --solver*
+- *-s, --solver*
     Comma-separated list of solver ids or names.
 
-+ *-pfmt, --print_format*
+- *-pfmt, --print_format*
 
     Table format for printing to console.
 
     Choices: [plain|simple|github|grid|fancy_grid|pipe|orgtbl|jira|presto|pretty|psql|rst|mediawiki|moinmoin|youtrack|html|unsafehtmllatex|latex_raw|latex_booktabs|textile]
 
-+ *-c, --combine*
+- *-c, --combine*
 
     Combine results on key.
 
     Choices: [task_id|benchmark_id|solver_id]
-+ *--vbs*
+- *--vbs*
 
     Create virtual best solver
 
-+ *-st, --save_to*
+- *-st, --save_to*
 
     Directory to store tables.
 
-+ *-e, --export*
+- *-e, --export*
 
     Export results in specified format.
 
     Choices: [latex|json|csv]
-+ *-s, --statistics*
+- *-s, --statistics*
 
     Stats to calculate.
 
     Choices:[mean|sum|min|max|median|var|std|coverage|timeouts|solved|errors|all]
-+ *-l, --last*
+- *-l, --last*
 
     Calculate stats for the last finished experiment.
 
-+ *--compress*
+- *--compress*
 
     Compress saved files.
     Choices: [tar|zip]
-+ *-s, --send*
+- *-s, --send*
 
     Send files via E-Mail
 
-+ *--help*
+- *--help*
 
   Show this message and exit.
 
@@ -436,58 +626,58 @@ Usage: *probo2 validate [OPTIONS]*
 
 **Options**:
 
-+ *--tag*
+- *--tag*
 
     Experiment tag to be validated
-+ *-t, --task*
+- *-t, --task*
 
     Comma-separated list of task IDs or symbols to be validated.
-+ *-b, --benchmark*
+- *-b, --benchmark*
 
     Benchmark name or id to be validated.  [required]
-+ *-s, --solver*
+- *-s, --solver*
 
     Comma-separated list of solver IDs or names to be validated.  [required]
-+ *-f, --filter*
+- *-f, --filter*
 
     Filter results in database. Format: [column:value]
-+ *-r, --reference PATH*
+- *-r, --reference PATH*
 
     Path to reference files.
-+ *--update_db*
+- *--update_db*
 
     Update instances status (correct, incorrect, no reference) in database.
-+ *-pw, --pairwise*
+- *-pw, --pairwise*
 
     Pairwise comparision of results. Not supported for the SE task.
-+ *-e, --export*
+- *-e, --export*
 
     Export results in specified format.
     Choices:  [json|latex|csv]
-+ *--raw*
+- *--raw*
 
     Export raw validation results in csv format.
-+ *-p, --plot*
+- *-p, --plot*
 
     Create a heatmap for pairwise comparision results and a count plot for validation with references.
     Choices:  [heatmap|count]
-+ *-st, --save_to*
+- *-st, --save_to*
 
     Directory to store plots and data in. Filenames will be generated automatically.
-+ *-ext, --extension*
+- *-ext, --extension*
 
     Reference file extension
-+ *--compress*
+- *--compress*
 
     Compress saved files.
     Choices:  [tar|zip]
-+ *--send*
+- *--send*
 
     Send plots and data via E-Mail.
-+ *-v, --verbose*
+- *-v, --verbose*
 
     Verbose output for validation with reference. For each solver the instance names of not validated and incorrect instances is printed to the console.
-+ *--help*
+- *--help*
 
     Show this message and exit.
 
@@ -513,46 +703,46 @@ Usage: *probo2 significance [OPTIONS]*
 
 **Options**:
 
-+ *--tag*
+- *--tag*
 
     Experiment tag to be tested.
-+ *-t, --task*
+- *-t, --task*
 
     Comma-separated list of task IDs or symbols to be tested.
-+ *--benchmark*
+- *--benchmark*
 
     Benchmark name or id to be tested.
-+ *-s, --solver*
+- *-s, --solver*
 
     Comma-separated list of solver id.s  [required]
 
-+ *-p, --parametric*
+- *-p, --parametric*
 
     Parametric significance test. ANOVA for mutiple solvers and t-test for two solvers.
     Choices: [ANOVA|t-test]
-+ *-np, --non_parametric*
+- *-np, --non_parametric*
 
     Non-parametric significance test. kruksal for mutiple solvers and mann-whitney-u for two solvers
     Choices:  [kruskal|mann-whitney-u]
 
-+ *-php, --post_hoc_parametric*
+- *-php, --post_hoc_parametric*
 
     Parametric post-hoc tests.
     Choices:  [scheffe|tamhane|ttest|tukey|tukey_hsd]
 
-+ *-phn, --post_hoc_non_parametric*
+- *-phn, --post_hoc_non_parametric*
 
     Non-parametric post-hoc tests.
     Choices:  [conover|dscf|mannwhitney|nemenyi|dunn|npm_test|vanwaerden|wilcoxon]
 
-+ *-a, --alpha FLOAT*
+- *-a, --alpha FLOAT*
 
     Significance level.
 
-+ *-l, --last*
+- *-l, --last*
 
     Test the last finished experiment.
-+ *--help*
+- *--help*
 
     Show this message and exit.
 
@@ -573,11 +763,11 @@ Usage: *probo2 board [OPTIONS]*
 
 **Options**:
 
-+ *--tag, -t*
+- *--tag, -t*
 
     Experiment tag
-+ *--raw, -r*
+- *--raw, -r*
   
   Full path to a raw results file  (raw.csv).
 
-  __Note__: Only needed when no tag is specified.
+  **Note**: Only needed when no tag is specified.

@@ -1,3 +1,4 @@
+
 import json
 import shutil
 
@@ -317,6 +318,9 @@ def gen_single_instance(present_instance_path, generate_instance_path, generate_
 
     with open(present_instance_path) as present_file:
         present_file_content = present_file.read()
+        if not present_file_extension in parse_functions_dict[generate_format.upper()].keys():
+            print(f'Parsing from {present_file_extension} to {generate_format} not supported')
+            exit()
     generate_file_content = parse_functions_dict[generate_format.upper()][present_file_extension](present_file_content)
     with open(generate_instance_path,'w') as generate_instance_file:
         generate_instance_file.write(generate_file_content)
@@ -330,6 +334,8 @@ def generate_mappings_argument_to_integer_mapping(benchmark: Benchmark, save_to=
     if save_to is None:
         save_to = benchmark.path
     
+    
+    
     # Select tgf format when present in benchmark.format, if not use apx
     if 'tgf' in benchmark.format:
         present_format = 'tgf'
@@ -339,10 +345,13 @@ def generate_mappings_argument_to_integer_mapping(benchmark: Benchmark, save_to=
 
     # Get all instances in the benchmark and iterate over them
     instances = get_instances(benchmark.path, present_format)
+
+    generated_mappings = dict()
     
     for instance in instances:
-        # Get the file name and extension
-        file_name, file_extension = os.path.splitext(instance)
+   
+        # Extracting the filename
+        file_name = os.path.splitext(os.path.basename(instance))[0]
 
         # Read file content
         with open(instance, 'r') as f:
@@ -353,16 +362,19 @@ def generate_mappings_argument_to_integer_mapping(benchmark: Benchmark, save_to=
             arguments = arg_attacks[0].rstrip().split('\n')
             attacks = arg_attacks[1].rstrip().split('\n')
             arg_to_id_map = {arg:str(i) for i,arg in enumerate(arguments,start=1)}
-            # Save dictionary arg_to_id_map to file
-            with open(os.path.join(save_to, f'{file_name}.argmap'), 'w') as f:
-                json.dump(arg_to_id_map, f)
+            
         elif present_format == 'apx':
             lines = file_content.rstrip().split('\n')
             num_arguments = int(lines[0].split(" ")[2])
             arg_to_id_map = {str(i): arg for i, arg in enumerate(lines[1:num_arguments+1], start=1)}
             # Save dictionary arg_to_id_map to file
-            with open(os.path.join(save_to, f'{file_name}.argmap'), 'w') as f:
-                json.dump(arg_to_id_map, f)
+
+        mapping_save_path = os.path.join(save_to, f'{file_name}.argmap')
+        with open(os.path.join(save_to, f'{file_name}.argmap'), 'w') as f:
+            json.dump(arg_to_id_map, f)
+        generated_mappings[file_name] = mapping_save_path
+    return generated_mappings
+            
             
             
 def __parse_i23_from_tgf(file_content):
@@ -713,13 +725,20 @@ def delete_all_benchmarks():
 
 
 def convert_benchmark(options: ConvertBenchmarkOptions):
+    """
+    Converts benchmark instances to specified formats and optionally converts argument files.
+
+    Parameters:
+    options: An instance of ConvertBenchmarkOptions containing user-specified options including
+    benchmark identifier, target formats, and save locations.
+    """
 
     present_benchmark = Benchmark(**load_benchmark_by_identifier(options.id)[0])
-    options.print()
-    # Check if present benchmark is not empty
+
     if not present_benchmark:
-        print(f'No benchmark with id {options.id} found. Please run benchmarks command to get a list of benchmarks in database.')
-        exit()
+        raise ValueError(f'No benchmark with id {options.id} found. Please run benchmarks command to get a list of benchmarks in the database.')
+    # Check if present benchmark is not empty
+    
     for format in options.formats:
     # Check if format is in the default formats
         if format not in definitions.DefaultInstanceFormats.as_list():
@@ -727,8 +746,7 @@ def convert_benchmark(options: ConvertBenchmarkOptions):
             continue
         
     # Check if a name in the options is set for the new benchmark, if not set the name to the old name + _{format}
-        if not options.benchmark_name:
-            options.benchmark_name = f"{present_benchmark.name}_{format}"
+        options.benchmark_name = options.benchmark_name or f"{present_benchmark.name}_{format}"
     # Generate a directory at options.save_to for the new benchmark to save the new instances
         converted_benchmark_path = os.path.join(options.save_to,options.benchmark_name)
         os.makedirs(converted_benchmark_path,exist_ok=True)
@@ -736,10 +754,55 @@ def convert_benchmark(options: ConvertBenchmarkOptions):
     # Generated new instances with specified format and save them to the new directory
         generate_instances(present_benchmark, format,save_to=converted_benchmark_path)
 
-    # Convert arg files
-    if options.include_arg_files:
+    # Convert arg file
+    if not options.skip_args:
         if format == 'i23':
             list_of_mapping_files = generate_mappings_argument_to_integer_mapping(present_benchmark, save_to=converted_benchmark_path)
+            convert_arg_files(list_of_mapping_files,present_benchmark.path,present_benchmark.ext_additional,converted_benchmark_path,new_extension='i23.arg')
+            
+
+def convert_arg_files(arg_id_map_paths, benchmark_path, argument_file_extension, save_to, new_extension):
+    # Ensure the save_to directory exists
+    os.makedirs(save_to, exist_ok=True)
+
+    generated_files = []
+    
+    # List all files in the benchmark_path with the specified extension
+    for filename in os.listdir(benchmark_path):
+        if filename.endswith(f".{argument_file_extension}"):
+            
+            raw_file_name = os.path.splitext(filename)[0]
+            if raw_file_name in arg_id_map_paths:
+             # Load the mapping from the specified mapping file
+                mapping_file_path = arg_id_map_paths[raw_file_name]
+                with open(mapping_file_path, 'r') as map_file:
+                    # Assuming the mapping file is in JSON format
+                    mapping = json.load(map_file)
+            # Construct full file path
+                file_path = os.path.join(benchmark_path, filename)
+            
+            # Read the file contents
+                with open(file_path, 'r') as file:
+                    lines = file.readlines()
+                
+                if argument_file_extension == 'i23' and (new_extension =='tgf' or new_extension =='apx'):
+                    mapping = {value: key for key, value in mapping.items()}
+                
+            # Process each line to replace argument names with IDs
+                processed_lines = [str(mapping[line.strip()]) + '\n' for line in lines if line.strip() in mapping]
+                
+                # Construct the new filename with extension
+                new_filename = f'{os.path.splitext(filename)[0]}.{new_extension}'
+                new_file_path = os.path.join(save_to, new_filename)
+                
+                # Write the processed lines to the new file
+                with open(new_file_path, 'w') as new_file:
+                    new_file.writelines(processed_lines)
+                
+                generated_files.append(new_file_path)
+    return generated_files
+
+
        
     
         
