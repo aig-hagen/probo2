@@ -409,15 +409,16 @@ class SolverParameters:
     repetition: int
     solver_dir: str
     task: str
-    additional_argument: str
+    query_argument: str
     timeout: str
     final_params: list
     format: list
     time_measurement: str
+    solver_options: list
 
-def _set_solver_parameters(solver_info,instance,task,format,additional_arguments_lookup,dynamic_files_lookup,repetition,timeout,time_measurement='default',interface_mode=None) -> SolverParameters:
+def _set_solver_parameters(solver_info,instance,task,format,query_argument_lookup,dynamic_files_lookup,repetition,timeout,solver_options=None,time_measurement='default',interface_mode=None) -> SolverParameters:
     cmd_params = []
-    additional_argument = ""
+    query_argument = ""
     if time_measurement == 'default':
         cmd_params.append('time')
     if solver_info['path'].endswith('.sh'):
@@ -436,9 +437,11 @@ def _set_solver_parameters(solver_info,instance,task,format,additional_arguments
           "-p", task,
           "-f", instance,
           "-fo", format]
-    if additional_arguments_lookup:
-        additional_argument = additional_arguments_lookup[instance_name]
-        params.extend(["-a",additional_argument])
+    if solver_options:
+        params.extend(solver_options)
+    if query_argument_lookup:
+        query_argument = query_argument_lookup[instance_name]
+        params.extend(["-a",query_argument])
     if dynamic_files_lookup:
         dynamic_file = dynamic_files_lookup[format][instance]
         params.extend([ "-m", dynamic_file])
@@ -450,11 +453,14 @@ def _set_solver_parameters(solver_info,instance,task,format,additional_arguments
                                         repetition=repetition,
                                         solver_dir=solver_dir,
                                         task=task,
-                                        additional_argument=additional_argument,
+                                        query_argument=query_argument,
                                         timeout=timeout,
                                         final_params=final_params,
                                         format=format,
-                                        time_measurement=time_measurement)
+                                        time_measurement=time_measurement,
+                                        solver_options=solver_options)
+    
+    print(f'Solver run parameters: {solver_parameter}')
 
     return solver_parameter
 
@@ -499,7 +505,7 @@ def _run_solver_write_results_to_file(output_file_dir,solver_parameters:SolverPa
             run_time = perf_counter_time
         elif solver_parameters.time_measurement == 'user_sys':
             run_time = user_sys_time
-    return {'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.additional_argument, 'runtime': run_time, 'result': out_file_path, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout}
+    return {'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.query_argument, 'runtime': run_time, 'result': out_file_path, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout}
 
 def _run_solver(solver_parameters: SolverParameters):
     if not os.path.exists(solver_parameters.solver_dir):
@@ -520,10 +526,10 @@ def _run_solver(solver_parameters: SolverParameters):
         run_time = end_time_current_run - start_time_current_run
 
     
-    return {'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.additional_argument, 'runtime': run_time,'result': None, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout}
+    return {'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.query_argument, 'runtime': run_time,'result': None, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout}
 
 
-def run_solver(solver_info,task,timeout,instance,format,additional_arguments_lookup=None,dynamic_files_lookup=None,output_file_dir=None,additional_solver_arguments=None, repetition=None):
+def run_solver(solver_info,task,timeout,instance,format,additional_arguments_lookup=None,dynamic_files_lookup=None,output_file_dir=None,solver_options=None, repetition=None):
 
     results = _init_results_dict(solver_info)
 
@@ -532,9 +538,7 @@ def run_solver(solver_info,task,timeout,instance,format,additional_arguments_loo
     else:
         interface_mode = None
 
-    solver_parameters = _set_solver_parameters(solver_info,instance,task,format,additional_arguments_lookup,dynamic_files_lookup,repetition,timeout,interface_mode=interface_mode)
-
-
+    solver_parameters = _set_solver_parameters(solver_info,instance,task,format,additional_arguments_lookup,dynamic_files_lookup,repetition,timeout,interface_mode=interface_mode,solver_options=solver_options)
     try:
         if output_file_dir is not None:
            results.update(_run_solver_write_results_to_file(output_file_dir,solver_parameters))
@@ -543,12 +547,12 @@ def run_solver(solver_info,task,timeout,instance,format,additional_arguments_loo
         return results
     except subprocess.TimeoutExpired as e:
         logger.error(f'Solver {solver_info.get("solver_name")} timed out on instance {solver_parameters.instance_name}')
-        results.update({'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':True,'additional_argument': solver_parameters.additional_argument, 'runtime': solver_parameters.timeout, 'result': None, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout})
+        results.update({'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':True,'additional_argument': solver_parameters.query_argument, 'runtime': solver_parameters.timeout, 'result': None, 'exit_with_error': False, 'error_code': None,'error': None,'cut_off':solver_parameters.timeout})
         return results
     except subprocess.CalledProcessError as err:
         logger.error(f'Something went wrong running solver {solver_info.get("solver_name")}: {err}')
         print("\nError occured:",err)
-        results.update({'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.additional_argument, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode,'error': err,'cut_off':solver_parameters.timeout})
+        results.update({'instance': solver_parameters.instance_name,'format':solver_parameters.format,'task': solver_parameters.task,'timed_out':False,'additional_argument': solver_parameters.query_argument, 'runtime': None, 'result': None, 'exit_with_error': True, 'error_code': err.returncode,'error': err,'cut_off':solver_parameters.timeout})
         return results
 
 

@@ -17,4 +17,4 @@ nicegui
 karateclub
 panel
 hvplot
-
+colorama

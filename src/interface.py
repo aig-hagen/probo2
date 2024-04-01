@@ -326,11 +326,11 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
 
 
     is_valid = cfg.check()
-    cfg.print()
-
+    
     if not is_valid:
         exit()
 
+    cfg.print()
     experiment_handler.run_experiment(cfg)
 
     result_df = experiment_handler.load_results_via_name(cfg.name)

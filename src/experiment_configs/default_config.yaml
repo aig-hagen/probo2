@@ -19,6 +19,7 @@ save_output: True
 archive_output: null
 status_file_path: null
 time_measurement: default
+solver_options: null
 validation:
   mode: null
   plot: null
