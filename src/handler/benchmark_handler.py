@@ -755,13 +755,26 @@ def convert_benchmark(options: ConvertBenchmarkOptions):
         generate_instances(present_benchmark, format,save_to=converted_benchmark_path)
 
     # Convert arg file
+    new_extension = None
     if not options.skip_args:
         if format == 'i23':
+            new_extension='i23.arg'
             print(f'Generating query argument files...',end='')
             list_of_mapping_files = generate_mappings_argument_to_integer_mapping(present_benchmark, save_to=converted_benchmark_path)
-            convert_arg_files(list_of_mapping_files,present_benchmark.path,present_benchmark.ext_additional,save_to=converted_benchmark_path,new_extension='i23.arg')
+            convert_arg_files(list_of_mapping_files,present_benchmark.path,present_benchmark.ext_additional,save_to=converted_benchmark_path,new_extension=new_extension)
             print('Done!')
-    return converted_benchmark_path
+    
+    converted_benchmark = Benchmark(name=options.benchmark_name,
+                                    format=['i23'],
+                                    ext_additional=new_extension,
+                                    path=converted_benchmark_path,
+                                    dynamic_files=present_benchmark.dynamic_files,
+                                    id=None,
+                                    has_references=False,
+                                    references_path=None,
+                                    extension_references=None,
+                                    meta_data={'info': f'This benchmark was converted from {present_benchmark.name} with id {present_benchmark.id}'})
+    return converted_benchmark
             
 
 def convert_arg_files(arg_id_map_paths, benchmark_path, argument_file_extension, save_to, new_extension):
