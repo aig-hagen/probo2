@@ -1745,7 +1745,7 @@ cli.add_command(edit_benchmark)
 @click.option('--save_to','-st',type=click.Path(exists=True, resolve_path=True),help='Directory to store converted benchmark in. Default is the current working directory.')
 @click.option('--add','-a',type=click.BOOL,is_flag=True,help='Add generated benchmark to database.')
 @click.option('--skip_args','-s',type=click.BOOL, is_flag=True,help='Skip the creation of argument files.')
-def convert_benchmark(ctx,id, name,formats,save_to,ext_additional, add, include_query):
+def convert_benchmark(ctx,id, name,formats,save_to, add, skip_args):
     """Convert benchmarks to different formats including the query argument files.
     """
     from src.utils.options.CommandOptions import ConvertBenchmarkOptions
@@ -1754,7 +1754,7 @@ def convert_benchmark(ctx,id, name,formats,save_to,ext_additional, add, include_
     if not save_to:
         save_to = getcwd()
     
-    options = ConvertBenchmarkOptions(id=id,benchmark_name=name,formats=formats,save_to=save_to,extension_query_argument=ext_additional,add=add,convert_query_files=include_query)
+    options = ConvertBenchmarkOptions(id=id,benchmark_name=name,formats=formats,save_to=save_to,add=add,skip_args=skip_args)
     benchmark_handler.convert_benchmark(options)
 
 cli.add_command(convert_benchmark)
