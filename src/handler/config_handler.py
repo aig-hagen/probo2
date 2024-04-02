@@ -10,8 +10,9 @@ from src.utils import definitions
 import src.functions.register as register
 import yaml
 import pandas as pd
+import colorama
 class Config(object):
-    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,status_file_path=None,save_output=None,archive_output=None,archive=None,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,score=None,validation=None,significance=None,raw_results_path=None,exclude_task=None,solver_arguments=None,time_measurement=None):
+    def __init__(self,name, task, benchmark, solver, timeout, repetitions, result_format,save_to,yaml_file_name,status_file_path=None,save_output=None,archive_output=None,archive=None,table_export=None,copy_raws=None,printing=None,plot=None,grouping=None,statistics=None,score=None,validation=None,significance=None,raw_results_path=None,exclude_task=None,solver_options=None,time_measurement=None):
         self.task = task
         self.exclude_task = exclude_task
         self.benchmark = benchmark
@@ -35,7 +36,7 @@ class Config(object):
         self.archive_output = archive_output
         self.validation = validation
         self.significance = significance
-        self.solver_arguments = solver_arguments
+        self.solver_options = solver_options
         self.status_file_path = status_file_path
         self.time_measurement = time_measurement
 
@@ -82,6 +83,7 @@ class Config(object):
         Returns:
             _type_: _description_
         """
+        colorama.init(autoreset=True)
         error = False
         msg_errors = ''
         if self.task is None:
@@ -95,7 +97,7 @@ class Config(object):
             for b in benchmarks:
                 if not os.path.exists(b["path"]):
                     error = True
-                    msg_errors += f"- Path for benchmark {b['name']} not found."
+                    msg_errors += f"- Path for benchmark { colorama.Fore.YELLOW + b['name'] + colorama.Style.RESET_ALL } not found."
                 else:
                     if len(os.listdir(b['path'])) == 0:
                         error = True
@@ -133,7 +135,6 @@ class Config(object):
             stat_error = False
             if isinstance(self.statistics, list):
                 for stat in self.statistics:
-                    print(stat)
                     if stat not in register.stat_dict.keys() and stat != 'all':
                         _invalid.append(stat)
                         error=True
@@ -165,13 +166,10 @@ class Config(object):
                  msg_errors +=f"- Invalid archive format : {','.join(_invalid)}. Please choose from following options: {','.join(register.archive_functions_dict.keys())}\n"
 
         if error:
-            print('Bad configuration found:')
+            #print(Fore.RED + 'This is red text')
+            print(colorama.Style.BRIGHT + colorama.Fore.RED + 'Bad configuration found:')
             print(msg_errors)
             print('Please refer to the documentation for additional pieces of information.\n')
-
-            print('========== Experiment Summary ==========')
-            self.print()
-
             return False
         return True
 

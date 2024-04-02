@@ -291,12 +291,11 @@ def run_experiment(config: config_handler.Config):
     if config.exclude_task is not None:
         exclude_task(config)
 
-    solver_arguments = None
     additional_arguments_lookup= None
     dynamic_files_lookup = None
 
-    if config.solver_arguments:
-        config_handler.create_solver_argument_grid(config.solver_arguments, solver_list)
+    #if config.solver_arguments:
+     #  config_handler.create_solver_argument_grid(config.solver_arguments, solver_list)
 
     experiment_result_directory = os.path.join(definitions.RESULT_DIRECTORY, config.name)
     result_path = init_result_path(config,experiment_result_directory)
@@ -328,6 +327,9 @@ def run_experiment(config: config_handler.Config):
                 _check_dynamic_files_lookup(dynamic_files_lookup)
             print(f"  +Solver:")
             for solver in solver_list:
+                
+                solver_options = config.solver_options.get(solver['id']) if config.solver_options else None
+             
                 format = get_accepted_format(solver['format'], benchmark['format'])
                 if format is not None:
                     if need_additional_arguments(task) and len(benchmark_info['benchmark_ext_additional']) > 1:
@@ -343,7 +345,7 @@ def run_experiment(config: config_handler.Config):
                         for rep in range(1, config.repetitions + 1):
                             desc = f"    {solver['name']}|REP#{rep}"
                             for instance in tqdm(instances,desc=desc):
-                                result = solver_handler.run_solver(solver, task, config.timeout, instance, format, additional_arguments_lookup,dynamic_files_lookup,output_file_dir=solver_output_dir,repetition=rep)
+                                result = solver_handler.run_solver(solver, task, config.timeout, instance, format, additional_arguments_lookup,dynamic_files_lookup,output_file_dir=solver_output_dir,repetition=rep,solver_options=solver_options)
                                 result.update(benchmark_info)
                                 result['repetition'] = rep
                                 result['tag'] = config.name
