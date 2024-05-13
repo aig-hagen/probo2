@@ -1,3 +1,5 @@
+import colorama
+from tqdm import tqdm
 import src.functions.register as register
 from src.handler import config_handler
 import pandas as pd
@@ -12,12 +14,12 @@ import matplotlib.pyplot as plt
 
 def create_plots(result_df: pd.DataFrame, cfg: config_handler.Config):
     saved_files = []
-    print("========== PLOTTING ==========")
     if cfg.plot =='all' or 'all' in cfg.plot:
         cfg.plot = register.plot_dict.keys()
     saved_plots = []
     default_plt_options = pl_util.read_default_options(str(definitions.PLOT_JSON_DEFAULTS))
-    for plt in cfg.plot:
+    for plt in tqdm(cfg.plot, desc="Creating plots", 
+                 bar_format="{l_bar}%s{bar}%s{r_bar}" % (colorama.Fore.LIGHTGREEN_EX, colorama.Fore.RESET)):
         saved = register.plot_dict[plt](result_df,cfg,default_plt_options)
         saved_plots.append(saved)
     saved_files = pd.concat(saved_plots).to_frame().rename(columns={0:'saved_files'})
@@ -116,7 +118,6 @@ def _create_pairwise_scatter_plot(df, config: config_handler.Config, options):
     return saved_files_list
 
 def scatter_plot(df: pd.DataFrame,config: config_handler.Config, plot_options):
-    print("Creating scatter plots...",end="")
     plot_directory = os.path.join(config.save_to,'plots')
     os.makedirs(plot_directory,exist_ok=True)
     plot_options['settings']['save_to'] = plot_directory
@@ -131,13 +132,11 @@ def scatter_plot(df: pd.DataFrame,config: config_handler.Config, plot_options):
     rep_avg_df = df[mask].groupby(['tag', 'task', 'benchmark_id', 'solver_id','instance'],as_index=False).apply(lambda _df: _get_avg_reps(_df))
 
     saved_files = rep_avg_df.groupby(scatter_grouping).apply(lambda _df: _create_pairwise_scatter_plot(_df,config,plot_options))
-    print("done!")
     return saved_files
 
 
 
 def cactus_plot(df: pd.DataFrame,config: config_handler.Config, plot_options):
-    print("Creating cactus plots...",end="")
 
     plot_directory = os.path.join(config.save_to,'plots')
     os.makedirs(plot_directory,exist_ok=True)
@@ -152,7 +151,6 @@ def cactus_plot(df: pd.DataFrame,config: config_handler.Config, plot_options):
     if 'solver_id' in plot_grouping:
         plot_grouping.remove('solver_id')
     saved_files = ranked.groupby(plot_grouping).apply(lambda df: _create_cactus_plot(df,config,plot_options))
-    print("done!")
     return saved_files
 
 

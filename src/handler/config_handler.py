@@ -67,8 +67,8 @@ class Config(object):
 
                             self.__dict__[key] = value
 
-    def print(self):
-        print(yaml.dump(self.__dict__))
+    def print(self, colorama_color = colorama.Fore.WHITE):
+        print(colorama_color + yaml.dump(self.__dict__))
 
     def get_summary_as_string(self):
         return yaml.dump(self.__dict__)

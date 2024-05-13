@@ -2,6 +2,13 @@
 import src.functions.register as register
 import pandas as pd
 
+# preprocessing step implemntieren in dem folgende dinge gemacht werden:
+# - Instanzen die mit error beendet wurden entfernen
+# - Instanzen die nicht mit error beendet wurden und keine laufzeit besitzten, werden mit dem  cutoff bewertet
+# - Instanzen die den cutoff überschritten haben werden mit dem cutoff bewertet
+# - Instanzen die kein timeout, kein error aber keine laufzeit haben werden mit error bewertet
+
+
 def _get_avg_reps(df: pd.DataFrame):
     result_dict = {}
     for col in df.columns:
@@ -207,18 +214,60 @@ register.register_stat("errors",errors)
 register.register_stat("timeouts",timeouts)
 register.register_stat("coverage",coverage)
 
-if __name__ == '__main__':
-    df = pd.read_csv('/home/jklein/dev/probo2/src/results/probo2_demo/raw.csv')
-    sum_df  = sum(df,avg_reps=False)
-    mean_df = mean(df,avg_reps=False)
-    solved_df = solved(df,avg_reps=False)
-    errors_df = errors(df,avg_reps=False)
-    timeouts_df = timeouts(df,avg_reps=False)
-    coverage_df = coverage(df,avg_reps=False)
 
-    print(sum_df)
-    print(mean_df)
-    print(solved_df)
-    print(errors_df)
-    print(timeouts_df)
-    print(coverage_df)
+def calculate_average_runtime(filepath):
+    """
+    Calculate the average runtime for each task, benchmark, solver, and repetition from a CSV file.
+
+    Parameters:
+    - filepath (str): Path to the CSV file containing the experiment results.
+
+    Returns:
+    - DataFrame: A DataFrame with the average runtime for each task, benchmark, solver, and repetition.
+    """
+    # Load the CSV file
+    data = pd.read_csv(filepath)
+
+    # Group by the relevant columns and calculate the mean runtime
+    grouped_data = data.groupby(['task', 'benchmark_id', 'solver_id', 'repetition'],as_index=False).agg({
+        'runtime': 'mean'
+    })
+    pivoted_df = average_runs(grouped_data,'runtime')
+
+    return pivoted_df
+
+def average_runs(grouped_data, value):
+    pivoted_df = grouped_data.pivot_table(index=['task', 'benchmark_id', 'solver_id'], 
+                                columns='repetition', 
+                                values=value, 
+                                aggfunc='first').reset_index()
+
+    # Rename columns to match the requested format
+    pivoted_df.columns = [f"{col}" if isinstance(col, str) else f"{value}_{col}" for col in pivoted_df.columns]
+
+    # Calculate the average runtime across all repetitions for each row
+    value_cols = [col for col in pivoted_df if col.startswith(f'{value}_') and not col.endswith('avg')]
+    pivoted_df[f'{value}_avg'] = pivoted_df[value_cols].mean(axis=1)
+
+    return pivoted_df
+if __name__ == '__main__':
+    # df = pd.read_csv('/home/jklein/dev/probo2/src/results/probo2_demo/raw.csv')
+    # sum_df  = sum(df,avg_reps=False)
+    # mean_df = mean(df,avg_reps=False)
+    # solved_df = solved(df,avg_reps=False)
+    # errors_df = errors(df,avg_reps=False)
+    # timeouts_df = timeouts(df,avg_reps=False)
+    # coverage_df = coverage(df,avg_reps=False)
+
+    # print(sum_df)
+    # print(mean_df)
+    # print(solved_df)
+    # print(errors_df)
+    # print(timeouts_df)
+    # print(coverage_df)
+    # Define the file path
+    file_path = '/home/jklein/dev/probo2/src/results/Test_Run_46/raw.csv'
+
+    # Attempt to read the CSV file into a pandas DataFrame
+    average_runtimes = calculate_average_runtime(file_path)
+    print(average_runtimes)

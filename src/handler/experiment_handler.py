@@ -21,6 +21,15 @@ from src.functions import non_parametric_significance,non_parametric_post_hoc
 from src.functions import plot_significance,post_hoc_table_export,plot_post_hoc,print_significance
 import src.functions.register as register
 from functools import reduce
+import colorama
+from datetime import datetime
+from enum import Enum
+
+class ExperimentStatus(Enum):
+    ABORTED = "Aborted"
+    RUNNING = "Running"
+    FINISHED = "Finished"
+    NONE = "None"  # Represents the initial status
 
 
 def run_pipeline(cfg: config_handler.Config):
@@ -232,6 +241,42 @@ def _read(format,file):
 
 
 def write_result(result, result_path, result_format):
+    """
+    Writes a new experiment entry to the experiment index file with an automatically generated ID and current timestamp.
+
+    This function appends a new record to an existing CSV file (or creates one if it does not exist) that 
+    stores experiment data. It automatically generates a unique ID for each new experiment, appends the 
+    current timestamp, and sets the initial status to 'None'.
+
+    Parameters:
+    - config (config_handler.Config): An object containing configuration details of the experiment. This 
+      object must have attributes 'name', 'raw_results_path', and 'yaml_file_name'.
+    - result_directory_path (str): The directory path where the experiment results are stored.
+
+    Returns:
+    - int: The ID assigned to the new experiment entry.
+
+    Notes:
+    - This function assumes there is a globally accessible 'definitions.EXPERIMENT_INDEX' which contains the path 
+      to the index file.
+    - The 'ExperimentStatus' enum is used to set the initial status of the experiment to 'None'.
+    - The ID for the new entry is determined by counting the existing entries in the file using the `get_next_id`
+      function.
+    - The CSV file structure includes the columns: id, name, raw_path, config_path, timestamp and status.
+    - If the CSV file is empty or not found, the function will write a header first and start IDs from 1.
+
+    Example usage:
+    ```python
+    from config_handler import Config
+
+    # Create a configuration instance
+    config = Config(name="Test Experiment", raw_results_path="/path/to/raw/data", yaml_file_name="config.yaml")
+    result_directory_path = "/path/to/results"
+
+    # Write experiment data and get the new experiment ID
+    new_experiment_id = write_experiment_index(config, result_directory_path)
+    ```
+    """
 
     if not os.path.exists(result_path):
         with open(result_path,'w') as result_file:
@@ -244,16 +289,117 @@ def write_result(result, result_path, result_format):
             _write(result_format,result_file, result)
 
 def write_experiment_index(config: config_handler.Config, result_directory_path):
+    header = ['id', 'name', 'raw_path', 'config_path', 'timestamp','status']
 
-
-    header = ['name','raw_path','config_path']
-    with open(definitions.EXPERIMENT_INDEX,'a') as fd:
-
+    next_id = get_next_id()
+    # Current timestamp
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    initial_status = ExperimentStatus.NONE.value
+    # Write to file
+    with open(definitions.EXPERIMENT_INDEX, 'a', newline='') as fd:
         writer = csv.writer(fd)
-        if os.stat(definitions.EXPERIMENT_INDEX).st_size == 0:
+        if next_id == 1 or next_id == 0:  # File was empty or not found, write header
             writer.writerow(header)
-        writer.writerow([config.name, config.raw_results_path,os.path.join(result_directory_path, config.yaml_file_name)])
+            next_id = 1
+        # Write the new experiment entry
+        writer.writerow([
+            next_id, 
+            config.name, 
+            config.raw_results_path,
+            os.path.join(result_directory_path, config.yaml_file_name),
+            current_time,
+            initial_status
+        ])
+    return next_id
 
+def get_next_id():
+    """
+    Determines the next unique ID for an experiment by counting the existing entries in the index file.
+
+    This function reads the experiment index file specified in the 'definitions.EXPERIMENT_INDEX' path,
+    counts the number of entries including the header, and returns an integer representing the next
+    available ID. The first row of the CSV file is assumed to be a header, so the count starts from the
+    second row onward.
+
+    Returns:
+    - int: The next available ID based on the number of entries in the file.
+
+    Raises:
+    - FileNotFoundError: If the index file does not exist, indicating that no entries have been recorded
+      yet and the function will return 1, signifying that the first ID should be 1.
+
+    Notes:
+    - This function assumes that the file is well-formed (i.e., contains a header and follows a consistent
+      row structure). It also assumes that no IDs are skipped in the file, meaning the next ID should
+      always be `number of rows` since the header is not an experiment entry.
+
+    Example usage:
+    ```python
+    next_experiment_id = get_next_id()
+    ```
+    """
+        # Determine the next ID based on the number of existing entries
+    try:
+        with open(definitions.EXPERIMENT_INDEX, 'r') as file:
+            reader = csv.reader(file)
+            existing_rows = list(reader)
+            next_id = len(existing_rows)  # Assumes the first row is the header
+        
+        return next_id
+    except FileNotFoundError:
+        next_id = 1
+        return next_id  # File does not exist yet, start with ID 1
+
+
+def set_experiment_status(index_file_path: str, experiment_id: int, new_status: ExperimentStatus):
+    """
+    Updates the status of a specific experiment in an index file.
+
+    This function reads an index file that lists experiments, searches for the experiment with
+    the given ID, and updates its status if the experiment is found and the new status is valid.
+    The entire file is read into memory, modified, and then written back to ensure the update is
+    saved.
+
+    Parameters:
+    - index_file_path (str): The path to the CSV file containing the experiment records.
+    - experiment_id (int): The unique identifier of the experiment whose status is to be updated.
+    - new_status (ExperimentStatus): The new status to set for the experiment, which must be one
+      of the values defined in the ExperimentStatus enum.
+
+    Notes:
+    - The CSV file should have a header, and the experiment records should be structured as follows:
+      ID, name, raw_path, config_path, timestamp, status.
+    - The function checks if the new_status is valid based on the ExperimentStatus enum values before
+      updating. If the new_status is not valid or the specified ID does not exist, no changes will be made.
+    - The status of the experiment is updated in-place if found. All rows, including unchanged ones,
+      are written back to the file.
+
+    Raises:
+    - FileNotFoundError: If the index_file_path does not exist.
+    - IOError: If there is an error reading from or writing to the file.
+    - ValueError: If the new_status is not a valid ExperimentStatus.
+
+    Example usage:
+    ```python
+    set_experiment_status('/path/to/experiment/index.csv', 1, ExperimentStatus.RUNNING)
+    ```
+    """
+    updated_rows = []
+    status_updated = False
+    valid_status = [status.value for status in ExperimentStatus]  # List of valid statuses
+
+    with open(index_file_path, 'r', newline='') as fd:
+        reader = csv.reader(fd)
+        for row in reader:
+            if row[0] == str(experiment_id) and new_status.value in valid_status:
+                row[5] = new_status.value
+                status_updated = True
+            updated_rows.append(row)
+
+    if status_updated:
+        with open(index_file_path, 'w', newline='') as fd:
+            writer = csv.writer(fd)
+            writer.writerows(updated_rows)  
 
 
 def load_experiments_results(config: config_handler.Config)->pd.DataFrame:
@@ -309,10 +455,13 @@ def run_experiment(config: config_handler.Config):
     config.status_file_path = status_file_path
     Status.init_status_file(config)
     config.dump(cfg_experiment_result_directory)
-    write_experiment_index(config, cfg_experiment_result_directory)
-    print('========== Experiment Summary ==========')
+    experiment_id = write_experiment_index(config, cfg_experiment_result_directory)
+
+    print(colorama.Fore.GREEN + '========== Experiment Summary ==========')
     config.print()
-    print('========== RUNNING EXPERIMENT ==========')
+    print(colorama.Fore.GREEN +'========== RUNNING EXPERIMENT ==========')
+    print(f'Start running experiment {colorama.Fore.YELLOW + config.name + colorama.Style.RESET_ALL} with ID: {colorama.Fore.YELLOW  + str(experiment_id) + colorama.Style.RESET_ALL}')
+    set_experiment_status(definitions.EXPERIMENT_INDEX,experiment_id,ExperimentStatus.RUNNING)
     for task in config.task:
         print(f'+TASK: {task}')
         for benchmark in benchmark_list:
@@ -356,6 +505,7 @@ def run_experiment(config: config_handler.Config):
                     print(f"    {solver['name']} SKIPPED! No files in supported solver format: {','.join(solver['format'])}")
         Status.increment_task_counter()
     print('')
+    set_experiment_status(definitions.EXPERIMENT_INDEX,experiment_id,ExperimentStatus.FINISHED)
 
 def _check_dynamic_files_lookup(dynamic_files_lookup):
     missing = []
@@ -387,3 +537,13 @@ def print_experiment_index(tablefmt=None):
 
     else:
         print("No experiments found.")
+
+
+def set_config_of_last_experiment(cfg: config_handler.Config):
+    last_experiment = get_last_experiment()
+    if last_experiment is None:
+        print("No experiment found.")
+        exit()
+    else:
+        user_cfg_yaml = config_handler.load_config_yaml(last_experiment['config_path'])
+        cfg.merge_user_input(user_cfg_yaml)

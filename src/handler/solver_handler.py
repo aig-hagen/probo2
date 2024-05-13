@@ -460,7 +460,7 @@ def _set_solver_parameters(solver_info,instance,task,format,query_argument_looku
                                         time_measurement=time_measurement,
                                         solver_options=solver_options)
     
-    print(f'Solver run parameters: {solver_parameter}')
+    #print(f'Solver run parameters: {solver_parameter}')
 
     return solver_parameter
 

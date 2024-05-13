@@ -24,7 +24,7 @@ def _calculate_par_score(df: pd.DataFrame, penalty_factor, cutoff):
     - The PAR score as a float.
     """
     # Apply penalty for timed-out runs
-    df['penalized_runtime'] = df.apply(lambda row: row['runtime'] if not row['timed_out'] else penalty_factor * cutoff, axis=1)
+    df['penalized_runtime'] = np.where(df['timed_out'], penalty_factor * cutoff, df['runtime'])
     
     # Calculate the average of the penalized runtimes
     par_score = df['penalized_runtime'].mean()
@@ -54,7 +54,7 @@ def par2(df: pd.DataFrame):
 
 
 def _calculate_ipc(df):
-
+    
     cut_off = df.cut_off.iloc[0]
     runtimes = df.runtime.values
     runtime_conditions = [ runtimes <= 1.0,runtimes >=cut_off, (runtimes > 1.0) & (runtimes < cut_off)]
@@ -68,8 +68,8 @@ def _calculate_ipc(df):
 
 
 def ipc(df: pd.DataFrame):
-
-    df.runtime = df.runtime.fillna(df.cut_off.iloc[0])
+    df_clean = df[df.exit_with_error == False]
+    df_clean.runtime = df_clean.runtime.fillna(df.cut_off.iloc[0])
     rep_avg_df = df.groupby(['tag', 'task', 'benchmark_id', 'solver_id','instance'],as_index=False).apply(lambda _df: _get_avg_reps(_df))
     grouping = ['tag', 'task', 'benchmark_id','solver_id']
     groups = rep_avg_df.groupby(grouping,as_index=False).apply(lambda _df: _calculate_ipc(_df))

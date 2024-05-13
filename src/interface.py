@@ -10,6 +10,7 @@ import sys
 from functools import reduce
 
 import click
+import colorama
 import pandas as pd
 import yaml
 from tabulate import tabulate
@@ -36,7 +37,6 @@ csv.field_size_limit(sys.maxsize)
 
 
 
-#TODO: Dont save files when save_to not speficied and send is specified, Ausgabe für command benchmarks und solvers überarbeiten, Logging system,
 logging.basicConfig(filename=str(definitions.LOG_FILE_PATH),format='[%(asctime)s] - [%(levelname)s] : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.INFO)
 
 def init():
@@ -161,7 +161,8 @@ def add_benchmark(ctx,
                   name,
                   path,
                   format,
-                  additional_extension,dynamic_files,
+                  additional_extension,
+                  dynamic_files,
                   no_check,
                   generate,
                   random_arguments,
@@ -302,46 +303,56 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
 
     cfg = config_handler.load_default_config()
 
-
-
-
-
     if config:
         user_cfg_yaml = config_handler.load_config_yaml(config)
 
         cfg.merge_user_input(user_cfg_yaml)
     if rerun:
-        last_experiment = experiment_handler.get_last_experiment()
-
-        if last_experiment is None:
-            print("No experiment found.")
-            exit()
-        else:
-            user_cfg_yaml = config_handler.load_config_yaml(last_experiment['config_path'])
-            cfg.merge_user_input(user_cfg_yaml)
-
-
-
+        experiment_handler.set_config_of_last_experiment(cfg)
+    
     cfg.merge_user_input(ctx.params)
-
 
     is_valid = cfg.check()
     
     if not is_valid:
         exit()
-
-    cfg.print()
-    experiment_handler.run_experiment(cfg)
+    
+    try:
+        experiment_handler.run_experiment(cfg)
+    except Exception:
+        experiment_id = experiment_handler.get_last_experiment()['id']
+        experiment_handler.set_experiment_status(definitions.EXPERIMENT_INDEX,
+                                                 experiment_id,
+                                                 experiment_handler.ExperimentStatus.ABORTED)
 
     result_df = experiment_handler.load_results_via_name(cfg.name)
 
-    if name_map is not None:
-        name_map = { x.split(':')[0] : x.split(':')[1] for x in name_map}
-        result_df.solver_name.replace(name_map,inplace=True)
-
     saved_file_paths = []
+    from src.handler import statistics_handler,scores_handler
+    
+    print(colorama.Fore.GREEN + "========== EVALUATION ==========")
+    if cfg.statistics is not None:
+        save_stats_to = os.path.join(cfg.save_to,'statistics')
+        try:
+            statistics_handler.calculate(cfg.statistics,cfg.raw_results_path,save_to=save_stats_to)
+        except Exception as e:
+            print(colorama.Fore.RED + f"An unexpected error occurred while calculating the stats: {e}")
+            logging.error(f"An unexpected error occurred while calculating the stats: {e}")
+
+    if cfg.score is not None:
+        save_scores_to = os.path.join(cfg.save_to,'scores')
+        try:
+            scores_handler.calculate(cfg.score,cfg.raw_results_path,save_to=save_scores_to)
+        except Exception as e:
+            print(colorama.Fore.RED + f"An unexpected error occurred while calculating the scores: {e}")
+            logging.error(f"An unexpected error occurred while calculating the scores: {e}")
+
     if cfg.plot is not None:
-        saved_plots = plotter.create_plots(result_df,cfg)
+        try:
+            saved_plots = plotter.create_plots(result_df,cfg)
+        except Exception as e:
+            print(colorama.Fore.RED + f"An unexpected error occurred while creating the plots: {e}")
+            logging.error(f"An unexpected error occurred while creating the plots: {e}")
 
     to_merge = []
     others =  []
@@ -353,8 +364,8 @@ def run(ctx, all,benchmark, task, solver, timeout, dry, name,
         print("========== STATISTICS ==========")
         for stat in cfg.statistics:
             _res = register.stat_dict[stat](result_df)
-            stats_results.append(_res)
 
+            stats_results.append(_res)
         for res in stats_results:
             if res[1]:
                 to_merge.append(res[0])
@@ -1242,7 +1253,7 @@ def fetch(ctx,benchmark, save_to,solver,install):
                    path=path_benchmark,
                    format=tuple(current_benchmark_options['format']),
                    random_arguments=current_benchmark_options['random_arguments'],
-                   additional_extension=current_benchmark_options['extension_arg_files'],
+                   query_extension=current_benchmark_options['extension_arg_files'],
                    generate=current_benchmark_options['generate'],
                     )
                    
