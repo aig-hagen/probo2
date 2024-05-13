@@ -130,11 +130,11 @@ def add_solver(ctx, name, path, format, tasks, version, fetch,yes, no_check):
               type=click.Choice(definitions.DefaultInstanceFormats.as_list()),
               help="Supported formats of benchmark/fileset")
 @click.option(
-    "--additional_extension",
+    "--query_extension",
     "-ext",
     multiple=True,
     default=None,
-    help="Extension of additional argument parameter for DC/DS problems.")
+    help="Extension of additional query argument parameter for DC/DS problems.")
 @click.option("--no_check",
               is_flag=True,
               help="Checks if the benchmark is complete.")
@@ -200,7 +200,7 @@ def add_benchmark(ctx,
     options = AddBenchmarkOptions(name=name,
                                   path=path,
                                   format=format,
-                                  additional_extension=additional_extension,
+                                  additional_extension=query_extension,
                                   dynamic_files=dynamic_files,
                                   no_check=no_check,
                                   generate=generate,
@@ -1756,17 +1756,34 @@ cli.add_command(edit_benchmark)
 @click.option('--save_to','-st',type=click.Path(exists=True, resolve_path=True),help='Directory to store converted benchmark in. Default is the current working directory.')
 @click.option('--add','-a',type=click.BOOL,is_flag=True,help='Add generated benchmark to database.')
 @click.option('--skip_args','-s',type=click.BOOL, is_flag=True,help='Skip the creation of argument files.')
-def convert_benchmark(ctx,id, name,formats,save_to,ext_additional, add, include_query):
+def convert_benchmark(ctx,id, name,formats,save_to, add, skip_args):
     """Convert benchmarks to different formats including the query argument files.
     """
-    from src.utils.options.CommandOptions import ConvertBenchmarkOptions
+    from src.utils.options.CommandOptions import ConvertBenchmarkOptions,AddBenchmarkOptions
     from src.handler import benchmark_handler
     from os import getcwd
     if not save_to:
         save_to = getcwd()
     
-    options = ConvertBenchmarkOptions(id=id,benchmark_name=name,formats=formats,save_to=save_to,extension_query_argument=ext_additional,add=add,convert_query_files=include_query)
-    benchmark_handler.convert_benchmark(options)
+    options = ConvertBenchmarkOptions(id=id,benchmark_name=name,formats=formats,save_to=save_to,add=add,skip_args=skip_args)
+    converted_benchmark = benchmark_handler.convert_benchmark(options)
+
+    if add:
+        add_options = AddBenchmarkOptions(name=converted_benchmark.name,
+                                      path=converted_benchmark.path,
+                                      format=converted_benchmark.format,
+                                      additional_extension=converted_benchmark.ext_additional,
+                                      no_check=False,
+                                      generate=None,
+                                      random_arguments=False,
+                                      dynamic_files=False,
+                                      function=None,
+                                      yes=False,
+                                      references_path=None,
+                                      extension_references=None,
+                                      has_references=False)
+        add_options.check()
+        benchmark_handler.add_benchmark(options=add_options)
 
 cli.add_command(convert_benchmark)
 

@@ -755,10 +755,26 @@ def convert_benchmark(options: ConvertBenchmarkOptions):
         generate_instances(present_benchmark, format,save_to=converted_benchmark_path)
 
     # Convert arg file
+    new_extension = None
     if not options.skip_args:
         if format == 'i23':
+            new_extension='i23.arg'
+            print(f'Generating query argument files...',end='')
             list_of_mapping_files = generate_mappings_argument_to_integer_mapping(present_benchmark, save_to=converted_benchmark_path)
-            convert_arg_files(list_of_mapping_files,present_benchmark.path,present_benchmark.ext_additional,converted_benchmark_path,new_extension='i23.arg')
+            convert_arg_files(list_of_mapping_files,present_benchmark.path,present_benchmark.ext_additional,save_to=converted_benchmark_path,new_extension=new_extension)
+            print('Done!')
+    
+    converted_benchmark = Benchmark(name=options.benchmark_name,
+                                    format=['i23'],
+                                    ext_additional=new_extension,
+                                    path=converted_benchmark_path,
+                                    dynamic_files=present_benchmark.dynamic_files,
+                                    id=None,
+                                    has_references=False,
+                                    references_path=None,
+                                    extension_references=None,
+                                    meta_data={'info': f'This benchmark was converted from {present_benchmark.name} with id {present_benchmark.id}'})
+    return converted_benchmark
             
 
 def convert_arg_files(arg_id_map_paths, benchmark_path, argument_file_extension, save_to, new_extension):
@@ -766,13 +782,20 @@ def convert_arg_files(arg_id_map_paths, benchmark_path, argument_file_extension,
     os.makedirs(save_to, exist_ok=True)
 
     generated_files = []
+
+    benchmark_files = get_instances(benchmark_path=benchmark_path,extension=argument_file_extension)
     
     # List all files in the benchmark_path with the specified extension
-    for filename in os.listdir(benchmark_path):
+    for filename in benchmark_files:
+        
+        print(f'{filename=}')
+        print(f'{argument_file_extension=}')
         if filename.endswith(f".{argument_file_extension}"):
+
             
-            raw_file_name = os.path.splitext(filename)[0]
-            if raw_file_name in arg_id_map_paths:
+            raw_file_name = extract_filename(filename,argument_file_extension)
+            print(f'{raw_file_name=}')
+            if raw_file_name in arg_id_map_paths.keys():
              # Load the mapping from the specified mapping file
                 mapping_file_path = arg_id_map_paths[raw_file_name]
                 with open(mapping_file_path, 'r') as map_file:
@@ -792,9 +815,9 @@ def convert_arg_files(arg_id_map_paths, benchmark_path, argument_file_extension,
                 processed_lines = [str(mapping[line.strip()]) + '\n' for line in lines if line.strip() in mapping]
                 
                 # Construct the new filename with extension
-                new_filename = f'{os.path.splitext(filename)[0]}.{new_extension}'
+                new_filename = f'{raw_file_name}.{new_extension}'
                 new_file_path = os.path.join(save_to, new_filename)
-                
+                print(f'{new_file_path=}')
                 # Write the processed lines to the new file
                 with open(new_file_path, 'w') as new_file:
                     new_file.writelines(processed_lines)
@@ -819,3 +842,14 @@ def convert_arg_files(arg_id_map_paths, benchmark_path, argument_file_extension,
     # pass
 
 parse_functions_dict =  { "APX":{"TGF": __parse_apx_from_tgf, "I23": __parse_apx_from_i23},"I23": {"TGF": __parse_i23_from_tgf},"TGF": {'APX': __parse_tgf_from_apx ,'I23': __parse_tgf_from_i23} }
+
+def extract_filename(path, extension):
+    import os
+    base_name = os.path.basename(path)
+    extension_with_dot = '.' + extension if not extension.startswith('.') else extension
+    if base_name.endswith(extension_with_dot):
+        extension_start_index = base_name.rfind(extension_with_dot)
+        raw_filename = base_name[:extension_start_index]
+    else:
+        raw_filename = base_name
+    return raw_filename
