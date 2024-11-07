@@ -1785,11 +1785,10 @@ def convert_benchmark(ctx,id, name,formats,save_to, add, skip_args):
         add_options.check()
         benchmark_handler.add_benchmark(options=add_options)
 
+
+
+
 cli.add_command(convert_benchmark)
-
-
-
-
 cli.add_command(kwt_gen)
 cli.add_command(quick)
 cli.add_command(web)
