@@ -1,0 +1,197 @@
+from pathlib import Path
+from typing import List
+
+import subprocess
+import time
+import os
+import signal
+from omegaconf import DictConfig, OmegaConf
+
+
+def get_index_mutable_interface_options(options: list) -> dict:
+    """
+    Creates a mapping from each option in the provided list to its index.
+
+    Given a list of options, this function creates and returns a dictionary where the keys are the options
+    from the list, and the values are the corresponding index positions of those options in the list.
+
+    Args:
+        options (list): A list of options to be indexed.
+
+    Returns:
+        dict: A dictionary where the keys are the options from the input list, and the values are their
+              respective indices in the list.
+
+    Example:
+        >>> get_index_mutable_interface_options(['a', 'b', 'c'])
+        {'a': 0, 'b': 1, 'c': 2}
+
+    Notes:
+        - The function assumes that the elements in `options` are hashable (can be used as dictionary keys).
+        - If the list contains duplicate values, only the index of the first occurrence will be stored.
+    """
+    option_to_index_map = {}
+    for option in options:
+        option_to_index_map[options] = options.index(option) + 1  # plus one to get the next index where the value is inserted
+    return option_to_index_map
+
+
+def run_solver_with_timeout(command, timeout, output_file, time_flag=True):
+    if time_flag:
+        command = ["time", "-p"] + command  # Use `-p` for a more parsable format
+
+    result = {
+        "result_path": output_file,
+        "perfcounter_time": None,
+        "user_sys_time": None,
+        "timed_out": False,
+        "exit_with_error": False,
+        "error_code": None,
+    }
+
+    try:
+        # Start the process with a new process group
+        start_perf_time = time.perf_counter()  # Measure time with perfcounter
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            preexec_fn=os.setsid,  # Start in a new process group (Linux/macOS)
+        )
+
+        # Wait for the process to complete or timeout
+        stdout, stderr = process.communicate(timeout=timeout)
+        end_perf_time = time.perf_counter()
+        result["perfcounter_time"] = end_perf_time - start_perf_time
+
+        # Parse the `time` command output if time_flag is true
+        if time_flag:
+            try:
+                # Extract real time from `stderr` (output of `time` command)
+                time_output = stderr.strip().split("\n")
+                time_values = {}
+                for line in time_output:
+                    if line.startswith("real"):
+                        time_values["real"] = float(line.split()[1])
+                    elif line.startswith("user"):
+                        time_values["user"] = float(line.split()[1])
+                    elif line.startswith("sys"):
+                        time_values["sys"] = float(line.split()[1])
+                user_sys_time = time_values["user"] + time_values["sys"]
+                result["user_sys_time"] = user_sys_time
+            except Exception as e:
+                print("Failed to parse time output:", e)
+
+        # Write solver output to file
+        with open(output_file, "w") as file:
+            file.write(stdout)
+
+        # Set exit status and error code
+        result["exit_with_error"] = process.returncode != 0
+        result["error_code"] = process.returncode if process.returncode != 0 else None
+
+    except subprocess.TimeoutExpired:
+        # Timeout case: kill the process group
+        os.killpg(
+            os.getpgid(process.pid), signal.SIGTERM
+        )  # Terminate the process group
+        result["timed_out"] = True
+        result["user_sys_time"] = timeout
+        result["perfcounter_time"] = timeout
+
+    except Exception as e:
+        result["exit_with_error"] = True
+        result["error_code"] = e
+
+    print(result)
+    return result
+
+
+def need_additional_arguments(task: str):
+    if "DC-" in task or "DS-" in task:
+        return True
+    else:
+        return False
+
+
+def prepare_instances(cfg: DictConfig) -> List[str]:
+    """
+    Prepares a list of file paths based on the configuration provided in `cfg`.
+
+    This function retrieves files with a specific extension from a directory specified in the `cfg`.
+    The extension used for filtering is determined by the `solver.format` in `cfg`. If `solver.format`
+    is 'i23', it will use the `benchmark.format` as the file extension; otherwise, it uses `solver.format` directly.
+
+    Args:
+        cfg (DictConfig): Configuration object containing `solver` and `benchmark` attributes.
+                          Expected fields include:
+                          - `cfg.solver.format` (str): The format extension for the solver.
+                          - `cfg.benchmark.path` (str): The directory path for the benchmark files.
+                          - `cfg.benchmark.format` (str): The fallback format if `solver.format` is 'i23'.
+
+    Returns:
+        List[str]: A list of file paths matching the specified extension.
+    """
+    if cfg.solver.format == "i23":
+        return get_files_with_extension(cfg.benchmark.path,
+                                        cfg.benchmark.format)
+    else:
+        return get_files_with_extension(cfg.benchmark.path, cfg.solver.format)
+
+
+def get_files_with_extension(directory: str, extension: str) -> List[str]:
+    """
+    Retrieves all files with a specified extension within a given directory.
+
+    This function searches recursively within the specified directory and returns a list
+    of file paths that match the given extension.
+
+    Args:
+        directory (str): The directory path to search within.
+        extension (str): The file extension to filter by (e.g., 'txt', 'csv').
+
+    Returns:
+        List[str]: A list of file paths that have the specified extension.
+    """
+    return [
+        str(file) for file in Path(directory).rglob(f"*.{extension}")
+        if file.is_file()
+    ]
+
+
+def get_matching_format(solver_formats, benchmark_formats):
+    """
+    Determines the first matching format between two lists of formats: one from the solver and one from the benchmark.
+
+    This method compares two input arguments, `solver_formats` and `benchmark_formats`,which can either be a single string or a list of strings.
+    It returns the first common format between the two sets. If no match is found, it returns `None`.
+
+    Args:
+        solver_formats (str | list of str): A single format string or a list of format strings used by the solver.
+        benchmark_formats (str | list of str): A single format string or a list of format strings used by the benchmark.
+
+    Returns:
+        str | None: The first matching format found between the two sets, or `None` if no common format exists.
+
+    Example:
+        >>> get_matching_format(['pdf', 'txt'], ['txt', 'csv'])
+        'txt'
+
+        >>> get_matching_format('pdf', ['txt', 'csv'])
+        None
+
+    Notes:
+        - If either `solver_formats` or `benchmark_formats` is a single string, it is converted to a list for comparison.
+        - The method uses set intersection to find shared formats, ensuring that the matching format is selected from the intersection of both input sets.
+    """
+    if isinstance(solver_formats, str):
+        solver_formats = [solver_formats]
+    if isinstance(benchmark_formats, str):
+        benchmark_formats = [benchmark_formats]
+    _shared = list(set.intersection(set(solver_formats), set(benchmark_formats)))
+
+    if _shared:
+        return _shared[0]
+    else:
+        return None

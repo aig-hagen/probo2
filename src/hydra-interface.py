@@ -1,91 +1,81 @@
-
-
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from functions import solver_interfaces
+from utils import hydra_utils, config_validater
 
+from hydra.core.hydra_config import HydraConfig
+from hydra.utils import get_original_cwd
+from pathlib import Path
 
-import subprocess
-import time
 import os
-import signal
+
 import tqdm
 
-from pathlib import Path
-from collections import OrderedDict
 
-def get_files_with_extension(directory: str, extension: str):
-    # Use pathlib to get files with the given extension
-    return [str(file) for file in Path(directory).rglob(f'*.{extension}') if file.is_file()]
+# Method to run static enumeration task such as SE or EE
+def run_solver_static_enumeration(cfg: DictConfig) -> None:
 
-def run_binary_with_timeout(command, timeout, output_file):
-    start_time = time.time()  # Record start time
-    try:
-        # Start the process with a new process group
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            preexec_fn=os.setsid  # Start in a new process group (Linux/macOS)
+    matching_format = hydra_utils.get_matching_format(
+        cfg.solver.format, cfg.benchmark.format
+    )
+
+    if matching_format is None:
+        print(
+            f"No matching formats for {cfg.solver.format=} and {cfg.benchmark.format=}"
         )
-        
-        # Wait for the process to complete or timeout
-        stdout, stderr = process.communicate(timeout=timeout)
-        end_time = time.time()
-        time_taken = end_time - start_time
-        status = "Success" if process.returncode == 0 else "Failed"
-        
-        # Write results to file
-        with open(output_file, "w") as file:
-            file.write(stdout)
-            # file.write(f"Command: {' '.join(command)}\n")
-            # file.write(f"Status: {status}\n")
-            # file.write(f"Time taken: {time_taken:.2f} seconds\n")
-            # file.write("Output:\n")
-            # file.write(stdout)
-            # file.write("\nErrors:\n")
-            # file.write(stderr)
+        exit()
 
-    except subprocess.TimeoutExpired:
-        # Timeout case: kill the process group
-        os.killpg(os.getpgid(process.pid), signal.SIGTERM)  # Terminate the process group
-        
-        # Write timeout status to file
-        with open(output_file, "w") as file:
-            file.write('TIMEOUT')
-            
+    instances = hydra_utils.get_files_with_extension(
+        cfg.benchmark.path, cfg.solver.format
+    )
 
-# Example usage
-#run_binary_with_timeout(["your_binary", "arg1", "arg2"], timeout=5, output_file="output.txt")
+    solver_interface_command = solver_interfaces.interfaces_dict[cfg.solver.interface](
+        cfg
+    )
 
+    # Get the indicies of the options that change from solver call to solver call
+    if cfg.solver.interface == "legacy":
+        solver_interface_command[-1] = matching_format
 
-def need_additional_arguments(task: str):
-    if 'DC-' in task or 'DS-' in task:
-        return True
-    else:
-        return False
+    # Insert the file after '-f' flag
+    index_option_to_change = solver_interface_command.index("-f") + 1
 
+    desc = f"{cfg.solver.name}"
 
-def prepare_instances(cfg: DictConfig):
-    if cfg.solver.format == 'i23':
-        return get_files_with_extension(cfg.benchmark.path,cfg.benchmark.format)
-    else:
-        return get_files_with_extension(cfg.benchmark.path,cfg.solver.format)
+    # Access Hydra's runtime config (includes runtime paths like run dir)
+    hydra_config = HydraConfig.get()
 
-def run_solver(cfg: DictConfig) -> None:
-    instances = prepare_instances(cfg)
-    solver_interface_command = solver_interfaces.interfaces_dict[cfg.solver.interface](cfg)
+    # print(hydra_config.output_subdir)
 
-  
-        
-    
-    desc = f'{cfg.solver.name}'
+    # # Hydra's run directory (where the outputs and logs are stored)
+    # output_dir = run_dir  # In most cases, output_dir is the same as run_dir by default
 
-    for instance in tqdm.tqdm(instances,desc=desc):
+    # # Log file path (example, assuming logs are stored in the output directory)
+    # log_file_path = f"{output_dir}/logs/my_logfile.log"
 
-        continue
-        
+    # print(f"Run directory: {run_dir}")
+    # print(f"Output directory: {output_dir}")
+    # print(f"Log file path: {log_file_path}")
+
+    # Optional: If you need the original working directory (before Hydra changed it)
+
+    run_dir = hydra_config.runtime.output_dir
+    output_root_dir = os.path.join(run_dir, hydra_config.output_subdir)
+
+    for instance in tqdm.tqdm(instances, desc=desc):
+
+        # Set instance
+        solver_interface_command[index_option_to_change] = instance
+        instance_name = Path(instance).stem
+        current_output_file_path = os.path.join(output_root_dir,
+                                                f"{instance_name}.out")
+
+        hydra_utils.run_solver_with_timeout(
+            solver_interface_command, cfg.timeout, current_output_file_path
+        )
+
+        # hydra_utils.run_solver_with_timeout(command=solver_interface_command,)
+
         # result = solver_handler.run_solver(solver, task, config.timeout, instance, format, additional_arguments_lookup,dynamic_files_lookup,output_file_dir=solver_output_dir,repetition=rep,solver_options=solver_options)
         # result.update(benchmark_info)
         # result['repetition'] = rep
@@ -95,11 +85,27 @@ def run_solver(cfg: DictConfig) -> None:
         #     Status.increment_instances_counter(config,task,solver['id'])
 
 
+@hydra.main(
+    version_base=None, config_path="hydra_experiments_configs", config_name="config"
+)
+def my_app(cfg: DictConfig) -> None:
 
-@hydra.main(version_base=None, config_path="hydra_experiments_config", config_name="config")
-def my_app(cfg : DictConfig) -> None:
-    print(OmegaConf.to_yaml(cfg))
-    run_solver(cfg)
+    # Change the format string to a list
+    if isinstance(cfg.benchmark.format, str):
+        cfg.benchmark.format = [cfg.benchmark.format]  # Wrap single string in a list
+
+    if cfg.config_validation.validate_config:
+        config_valid = config_validater.validate_config(cfg)
+        if not config_valid:
+            print("Experiment aborted due to bad config.")
+            print(
+                "You can deactivate the config validater by setting validate_config: False in the config.yaml"
+            )
+            return
+        print("Config is valid. Start running experiment.")
+
+    run_solver_static_enumeration(cfg)
+
 
 if __name__ == "__main__":
     my_app()
