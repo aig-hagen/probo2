@@ -1,6 +1,12 @@
 from omegaconf import DictConfig
 from pathlib import Path
 from typing import Tuple, Dict, List
+from utils import hydra_utils
+
+from hydra.core.hydra_config import HydraConfig
+import os
+
+
 
 # ANSI escape codes for colors
 RESET = "\033[0m"
@@ -18,7 +24,7 @@ def validate_config(cfg: DictConfig):
     if cfg.config_validation.validate_benchmark:
         benchmark_res, benchmark_valid = check_benchmark_config(cfg.benchmark)
         all_validation_results.append(benchmark_valid)
-        print_benchmark_report(benchmark_res, benchmark_valid)
+        print_benchmark_report(benchmark_res, benchmark_valid,cfg)
     else:
         print(f"{YELLOW}WARNING: Validation of benchmark config disabeled!{RESET}")
 
@@ -33,16 +39,31 @@ def validate_config(cfg: DictConfig):
     if cfg.solver.format not in cfg.benchmark.format:
         all_validation_results.append(False)
         print(
-            f"{RED}✘ Solver and benchmark format do not match ({cfg.solver.format}{RESET}"
+            f"{RED}✘ Solver and benchmark format do not match ({cfg.solver.format}{RESET})"
         )
     else:
         print(
             f"{GREEN}✔ Solver and benchmark format match ({cfg.solver.format}){RESET}"
         )
 
+    # # Check if the experiment root directory already exists, if so add a number as suffix
+    # experiment_root_exists(cfg)
+    
     return all(all_validation_results)
 
+def experiment_root_exists(cfg: DictConfig) -> bool:
 
+    hydra_cfg = HydraConfig.get()
+    run_dir = hydra_cfg.runtime.output_dir
+    # Get parent directory
+    root_dir = os.path.dirname(run_dir)
+
+    if os.path.exists(root_dir):
+        root_dir = hydra_utils.get_unique_dir_name(root_dir)
+    
+    print(root_dir)
+
+    
 def check_solver_config(config) -> Tuple[dict, bool]:
     # Things for solver to check:
     # - config.path exists
@@ -125,7 +146,7 @@ def check_benchmark_config(config: Dict) -> Tuple[Dict[str, bool], bool]:
     return results, valid
 
 
-def print_benchmark_report(benchmark_validation_results: dict, is_valid: bool):
+def print_benchmark_report(benchmark_validation_results: dict, is_valid: bool, cfg: DictConfig):
     """
     Prints a detailed benchmark validation report based on the validation results.
 
@@ -133,8 +154,6 @@ def print_benchmark_report(benchmark_validation_results: dict, is_valid: bool):
         benchmark_validation_results (dict): The results dictionary from the benchmark validation.
         is_valid (bool): Indicates if the benchmark configuration is valid.
     """
-
-    print(benchmark_validation_results)
     if is_valid:
         print(f"{GREEN}✔ Benchmark configuration is valid.{RESET}")
     else:
@@ -144,7 +163,7 @@ def print_benchmark_report(benchmark_validation_results: dict, is_valid: bool):
     if benchmark_validation_results["directory_exists"]:
         print(f"    {GREEN}✔ Directory exists{RESET}")
     else:
-        print(f"    {RED}✘ Directory does not exist{RESET}")
+        print(f"    {RED}✘ Directory does not exist{RESET} ({cfg.benchmark.path})")
 
     if benchmark_validation_results["all_formats_present"]:
         print(f"    {GREEN}✔ Files with specified format exist{RESET}")

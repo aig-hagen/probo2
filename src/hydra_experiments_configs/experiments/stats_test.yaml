@@ -1,0 +1,21 @@
+# @package _global_
+
+defaults:
+  - override /callbacks:
+     - stats/coverage
+     - stats/mean_runtime
+     - general/agg_results
+    
+
+
+timeout: 1
+name: StatsTest
+hydra:
+  sweeper:
+    params:
+      benchmark: testset5_st_medium
+      solver: ICCMA19/pyglaf, ICCMA19/mu_toksia
+      task: SE-CO, SE-PR
+      
+  
+  

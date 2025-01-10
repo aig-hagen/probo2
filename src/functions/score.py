@@ -11,7 +11,7 @@ from math import log
 
 
 
-def _calculate_par_score(df: pd.DataFrame, penalty_factor, cutoff):
+def _calculate_par_score(df: pd.DataFrame, penalty_factor: int, cutoff: int):
     """
     Calculates the Penalized Average Runtime (PAR) score for solver runs.
     
@@ -24,10 +24,18 @@ def _calculate_par_score(df: pd.DataFrame, penalty_factor, cutoff):
     - The PAR score as a float.
     """
     # Apply penalty for timed-out runs
-    df['penalized_runtime'] = np.where(df['timed_out'], penalty_factor * cutoff, df['runtime'])
-    
-    # Calculate the average of the penalized runtimes
-    par_score = df['penalized_runtime'].mean()
+
+    cutoff = int(cutoff)
+    penalty_factor = int(penalty_factor)
+    df['runtime'] = pd.to_numeric(df['runtime'], errors='coerce')
+    df['penalized_runtime'] = np.where(
+    df['timed_out'] | df['exit_with_error'],  # Combine both conditions with OR
+    penalty_factor * cutoff,
+    df['runtime'])
+
+    par_score = round(df['penalized_runtime'].mean(),2)
+
+
 
     return (pd.Series({'solver_name': df.solver_name.iloc[0],
                     'solver_version': df.solver_version.iloc[0],
@@ -35,7 +43,9 @@ def _calculate_par_score(df: pd.DataFrame, penalty_factor, cutoff):
                     f'PAR{penalty_factor}':par_score}))
 
 def par10(df: pd.DataFrame):
-    df_clean = df[df.exit_with_error == False]
+    if isinstance(df.exit_with_error.iloc[0], str):
+        df['exit_with_error'] = df['exit_with_error'].apply(str_to_bool)
+    df_clean = df
     cut_off = df_clean.cut_off.iloc[0]
     df_clean.runtime = df_clean.runtime.fillna(cut_off)
     rep_avg_df = df_clean.groupby(['tag', 'task', 'benchmark_id', 'solver_id','instance'],as_index=False).apply(lambda _df: _get_avg_reps(_df))
@@ -43,8 +53,15 @@ def par10(df: pd.DataFrame):
     groups = rep_avg_df.groupby(grouping,as_index=False).apply(lambda _df: _calculate_par_score(_df,10,cut_off))
     return groups, True # indicates that this dataframe should be merged with other "mergable" dataframes
 
+
+def str_to_bool(s):
+    if isinstance(s, str):
+        return s.lower() in ('true', '1', 't', 'yes', 'y')
+    return False
 def par2(df: pd.DataFrame):
-    df_clean = df[(df.exit_with_error == False)]
+    if isinstance(df.exit_with_error.iloc[0], str):
+        df['exit_with_error'] = df['exit_with_error'].apply(str_to_bool)
+    df_clean = df
     cut_off = df_clean.cut_off.iloc[0]
     df_clean.runtime = df_clean.runtime.fillna(cut_off)
     rep_avg_df = df_clean.groupby(['tag', 'task', 'benchmark_id', 'solver_id','instance'],as_index=False).apply(lambda _df: _get_avg_reps(_df))

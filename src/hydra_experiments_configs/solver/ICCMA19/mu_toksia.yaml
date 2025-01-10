@@ -1,0 +1,8 @@
+name: mu-toksia
+version: ICCMA19
+path: /home/jklein/dev/solvers/ICCMA-Solvers/ICCMA19_solvers/mu-toksia/mu-toksia
+format: tgf
+interface: legacy
+argument: [paramA, paramB]
+
+

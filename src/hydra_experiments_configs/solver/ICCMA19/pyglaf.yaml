@@ -1,0 +1,7 @@
+name: pyglaf
+version: ICCMA19
+path: /home/jklein/dev/solvers/ICCMA-Solvers/ICCMA19_solvers/pyglaf/pyglaf.py
+format: tgf
+interface: legacy
+
+

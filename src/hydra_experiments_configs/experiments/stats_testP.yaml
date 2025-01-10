@@ -1,0 +1,29 @@
+# @package _global_
+
+defaults:
+  - override /callbacks:
+     - stats/coverage
+     - stats/mean_runtime
+     - general/agg_results
+  - override hydra/launcher: joblib 
+
+
+
+
+
+
+
+timeout: 10
+name: StatsTestParallel
+hydra:
+  sweeper:
+    params:
+      benchmark: testset5_st_medium
+      solver: ICCMA19/pyglaf, ICCMA19/mu_toksia
+      task: SE-CO, SE-PR
+  launcher:
+    _target_: hydra_plugins.hydra_joblib_launcher.JoblibLauncher
+    n_jobs: 2
+      
+  
+  

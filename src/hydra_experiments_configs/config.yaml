@@ -1,0 +1,32 @@
+# config.yaml
+defaults:
+  - _self_
+  - callbacks:
+    - general/agg_results  
+  - solver: ???   # Default solver
+  - benchmark: ICCMA21  # Default benchmark
+  - config_validation: validation # default options for the validation of the config
+  - override hydra/launcher: joblib
+task: DS-PR       # Default task
+timeout: 600
+runs: 1
+name: Test-Experiment
+root_dir: results/${name}_${now:%Y-%m-%d_%H-%M-%S}
+result_index_file:  ${root_dir}/result_file_index.txt
+combined_results_file:  ${root_dir}/combined_results.csv
+csv_stats_result_file: ${root_dir}/stats.csv
+json_stats_result_file: ${root_dir}/stats.json
+hydra:
+  sweep:
+    dir: ${root_dir}  # Top-level directory for all sweep outputs
+    subdir: ${solver.name}
+  output_subdir: ${benchmark.name}/${runs}/${task}  # Nested directories for each parameter combination
+  sweeper:
+    params:
+      solver: ICCMA19/pyglaf, ICCMA19/mu_toksia
+      benchmark: ICCMA15
+      task: SE-PR, SE-CO
+  launcher:
+    n_jobs: 4
+    backend: "threading"  # Can be overridden to "loky" or "multiprocessing"
+ 

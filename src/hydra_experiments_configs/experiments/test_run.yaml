@@ -1,0 +1,16 @@
+# @package _global_
+paramA: 1
+paramB: 1
+timeout: 1
+name: TestRun
+hydra:
+  sweeper:
+    params:
+      benchmark: testset5_st_medium
+      solver: ICCMA19/mu_toksia
+      paramA: 1, 2, 3
+      paramB: 4, 5, 6
+      task: SE-CO
+      
+  
+  

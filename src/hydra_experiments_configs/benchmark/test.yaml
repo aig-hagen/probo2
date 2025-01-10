@@ -1,0 +1,4 @@
+name: Test_Benchmark
+path: /mnt/d/iccma_benchmarks/test_benchmark/
+query_arg_format: af.arg
+format: af

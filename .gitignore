@@ -142,7 +142,7 @@ __pycache__/
 !default_config.yaml
 !example_config.yaml
 !pretty_latex_table_config.yaml
-!hydra_experiments_configs/**/*.yaml
+!src/hydra_experiments_configs/**/*.yaml
 
 *.csv
 *.db

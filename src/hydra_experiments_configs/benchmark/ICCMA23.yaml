@@ -1,0 +1,4 @@
+name: ICCMA23
+path: /mnt/d/iccma_benchmarks/benchmarks/main
+format: af
+query_arg_format: af.arg

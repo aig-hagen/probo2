@@ -176,6 +176,15 @@ def get_instances(benchmark_path,extension,without_extension=False,full_path=Fal
 def get_instances_count(benchmark_path,extension):
     return len(get_instances(benchmark_path=benchmark_path, extension=extension))
 
+
+def get_instances_count_by_id(benchmark_id):
+    benchmark = load_benchmark_by_identifier([benchmark_id])[0]
+    if isinstance(benchmark['format'], list):
+        extension = benchmark['format'][0]
+    elif isinstance(benchmark['format'],str):
+        extension = benchmark['format']
+    return len(get_instances(benchmark_path=benchmark['path'], extension=extension))
+
 def get_argument_files(benchmark_info, arg_files_format=None):
     if arg_files_format is None:
         return get_instances(benchmark_info['path'], benchmark_info['ext_additional'])

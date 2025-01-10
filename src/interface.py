@@ -519,9 +519,10 @@ def calculate(
         cfg = config_handler.load_config_via_name(name)
     elif raw is not None:
         result_df = pd.read_csv(raw)
-    elif config is not None:
+        #cfg = config_handler.load_config_via_name(result_df['tag'].iloc[0])
+    if config is not None:
         cfg = config_handler.load_config_yaml(config,as_obj=True)
-        result_df = experiment_handler.load_experiments_results(cfg)
+        #result_df = experiment_handler.load_experiments_results(cfg)
     else:
         print('Unable to load results')
         exit()

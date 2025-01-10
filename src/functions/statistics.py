@@ -1,6 +1,7 @@
 
 import src.functions.register as register
 import pandas as pd
+import src.handler.benchmark_handler as bh
 
 # preprocessing step implemntieren in dem folgende dinge gemacht werden:
 # - Instanzen die mit error beendet wurden entfernen
@@ -123,10 +124,18 @@ def _get_avg_solved(df: pd.DataFrame,avg_reps=True):
         num_reps = df.repetition.max()
     else:
         num_reps = 1
+
+    # Make sure the columns are really booleans
+    df['timed_out'] = df['timed_out'].map(lambda x: x == True or x == 'True')
+    df['exit_with_error'] = df['exit_with_error'].map(lambda x: x == True or x == 'True')
+    
     only_solved_mask = (df.timed_out == False) & (df.exit_with_error == False)
     solved =  df[only_solved_mask].shape[0] / num_reps
     result_dict['solved'] = solved
+    result_dict['total'] = len(df.instance.unique())
     result_dict.update(_get_basic_info(df,avg_reps))
+    # if result_dict['solver_name'] == 'ArgTools':
+    #     print(result_dict)
     return pd.Series(result_dict)
 
 
@@ -136,7 +145,6 @@ def solved(df: pd.DataFrame, avg_reps=True):
         result = df.groupby(['tag', 'task', 'benchmark_id', 'solver_id'],as_index=False).apply(lambda _df: _get_avg_solved(_df,avg_reps))
     else:
         result = df.groupby(['tag', 'task', 'benchmark_id', 'solver_id','repetition'],as_index=False).apply(lambda _df: _get_avg_solved(_df,avg_reps))
-
     return result,True
 
 def _get_avg_errors(df: pd.DataFrame,avg_reps=True):
@@ -157,6 +165,7 @@ def errors(df: pd.DataFrame,avg_reps=True):
         result = df.groupby(['tag', 'task', 'benchmark_id', 'solver_id'],as_index=False).apply(lambda _df: _get_avg_errors(_df,avg_reps))
     else:
         result = df.groupby(['tag', 'task', 'benchmark_id', 'solver_id','repetition'],as_index=False).apply(lambda _df: _get_avg_errors(_df,avg_reps))
+
 
     return result,True
 
@@ -181,19 +190,22 @@ def timeouts(df: pd.DataFrame,avg_reps=True):
         result = df.groupby(['tag', 'task', 'benchmark_id', 'solver_id','repetition'],as_index=False).apply(lambda _df: _get_avg_timeouts(_df,avg_reps))
 
     return result,True
-def _calculate_coverage(df: pd.DataFrame,avg_reps=True):
-    total = len(df.instance.unique())
-   
+def _calculate_coverage(df: pd.DataFrame,avg_reps=True, total=None):
+
+    if total is None:
+        total = bh.get_instances_count_by_id(df.benchmark_id.iloc[0])
     solved_instances = solved(df,avg_reps)[0] # dataframe is at position 0 in tuple
     solved_instances['coverage'] = (solved_instances.solved / total) * 100
     return solved_instances.drop('solved', axis=1)
 
 
-def coverage(df: pd.DataFrame,avg_reps=True):
+def coverage(df: pd.DataFrame,avg_reps=True):    
+    total = len(df.instance.unique())
+    print(total)
     if avg_reps:
-        result = df.groupby(['tag', 'task', 'benchmark_id', 'solver_id'],as_index=False).apply(lambda _df: _calculate_coverage(_df,avg_reps))
+        result = df.groupby(['tag', 'task', 'benchmark_id', 'solver_id'],as_index=False).apply(lambda _df: _calculate_coverage(_df,avg_reps,total=total))
     else:
-        result = df.groupby(['tag', 'task', 'benchmark_id', 'solver_id','repetition'],as_index=False).apply(lambda _df: _calculate_coverage(_df,avg_reps))
+        result = df.groupby(['tag', 'task', 'benchmark_id', 'solver_id','repetition'],as_index=False).apply(lambda _df: _calculate_coverage(_df,avg_reps,total=total))
     return result,True
 
 def par10(df: pd.DataFrame):

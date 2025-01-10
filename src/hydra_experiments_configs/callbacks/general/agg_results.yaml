@@ -1,0 +1,7 @@
+# @package _global_
+hydra:
+  callbacks:
+    agg_results:
+      _target_: src.callbacks.general_callbacks.AggregateResults
+      
+      

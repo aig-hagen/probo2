@@ -7,6 +7,37 @@ import os
 import signal
 from omegaconf import DictConfig, OmegaConf
 
+import csv
+import os
+
+def write_result_to_csv(path, data_dict):
+    """
+    Writes a dictionary to a CSV file at the specified path.
+
+    If the file already exists, the dictionary is appended to it.
+    If the file does not exist, it is created, and the dictionary is added.
+
+    Parameters:
+    - path (str): The file path of the CSV file.
+    - data_dict (dict): The dictionary to write to the CSV file.
+
+    Note:
+    The CSV file will have columns corresponding to the keys of the dictionary.
+    Ensure that all dictionaries written to the file have the same keys for consistency.
+    """
+    file_exists = os.path.isfile(path)
+    write_header = True
+    if file_exists and os.path.getsize(path) > 0:
+        write_header = False
+
+    with open(path, 'a', newline='', encoding='utf-8') as csvfile:
+        fieldnames = data_dict.keys()
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        if write_header:
+            writer.writeheader()
+        writer.writerow(data_dict)
+
+
 
 def get_index_mutable_interface_options(options: list) -> dict:
     """
@@ -103,8 +134,6 @@ def run_solver_with_timeout(command, timeout, output_file, time_flag=True):
     except Exception as e:
         result["exit_with_error"] = True
         result["error_code"] = e
-
-    print(result)
     return result
 
 
@@ -113,6 +142,63 @@ def need_additional_arguments(task: str):
         return True
     else:
         return False
+    
+
+def add_prefix_to_dict_keys(original_dict, prefix):
+    """
+    Returns a new dictionary with the specified prefix added to each key.
+
+    Parameters:
+    - original_dict (dict): The original dictionary whose keys you want to prefix.
+    - prefix (str): The prefix string to add to each key.
+
+    Returns:
+    - dict: A new dictionary with prefixed keys.
+    """
+    return {f"{prefix}{key}": value for key, value in original_dict.items()}
+
+def write_result_file_to_index(filepath, index_file="result_file_index.txt"):
+    """
+    Writes a file path to 'file_index.txt'. Creates the file if it doesn't exist,
+    and appends to it if it already exists.
+    
+    Args:
+        filepath (str): The file path to write.
+        index_file (str): The name of the index file (default is 'file_index.txt').
+    """
+    try:
+        with open(index_file, "a") as file:  # Open in append mode
+            file.write(filepath + "\n")  # Append the file path followed by a newline
+        #print(f"File path '{filepath}' added to '{index_file}'.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+def get_unique_dir_name(base_path):
+    """
+    Returns a unique directory name by adding a numbered suffix to the directory name
+    if it already exists.
+
+    Parameters:
+    - base_path (str): The full path of the directory to check.
+
+    Returns:
+    - str: A unique directory path with a numbered suffix if needed.
+    """
+    # Get the directory and base name from the path
+    dir_name, base_name = os.path.split(base_path)
+
+    # If the base path does not exist, return it
+    if not os.path.exists(base_path):
+        return base_path
+
+    # Start adding suffixes to find a unique name
+    counter = 1
+    while True:
+        new_base_name = f"{base_name}_{counter}"
+        new_path = os.path.join(dir_name, new_base_name)
+        if not os.path.exists(new_path):
+            return new_path
+        counter += 1
 
 
 def prepare_instances(cfg: DictConfig) -> List[str]:

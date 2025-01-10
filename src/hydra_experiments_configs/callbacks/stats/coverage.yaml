@@ -1,0 +1,5 @@
+# @package _global_
+hydra:
+  callbacks:
+    coverage:
+      _target_: src.callbacks.statistics_callbacks.Coverage

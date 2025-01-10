@@ -1,0 +1,4 @@
+name: ICCMA15
+path: /home/jklein/dev/benchmarks/ICCMA15
+query_arg_format: arg
+format: [apx,tgf]

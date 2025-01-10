@@ -1,0 +1,4 @@
+name: ICCMA23
+path: /path/to/benchmark
+query_arg_format: af.arg
+format: i23

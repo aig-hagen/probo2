@@ -1,0 +1,4 @@
+name: MyBenchmark # This is the unique name of the benchmark
+path: /path/to/MyBenchmark # This is the full path to the benchmark
+query_arg_format: af.arg # This is the format of the query argument file
+format: [tgf,apx,i23] # This is the format of the benchmark instances
