@@ -1,0 +1,4 @@
+validate_config: True
+validate_benchmark: True
+validate_solver: True
+validate_matching_formats: True # validate if solver and benchmark formats match

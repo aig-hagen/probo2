@@ -1,0 +1,6 @@
+name: mu-toksia
+version: ICCMA19
+path: /home/jklein/new_dev/aig-hagen/solvers/ICCMA-Solvers/ICCMA19_solvers/mu-toksia/mu-toksia
+format: tgf
+interface: legacy
+

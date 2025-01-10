@@ -142,7 +142,7 @@ def need_additional_arguments(task: str):
         return True
     else:
         return False
-    
+
 
 def add_prefix_to_dict_keys(original_dict, prefix):
     """
@@ -161,7 +161,23 @@ def write_result_file_to_index(filepath, index_file="result_file_index.txt"):
     """
     Writes a file path to 'file_index.txt'. Creates the file if it doesn't exist,
     and appends to it if it already exists.
-    
+
+    Args:
+        filepath (str): The file path to write.
+        index_file (str): The name of the index file (default is 'file_index.txt').
+    """
+    try:
+        with open(index_file, "a") as file:  # Open in append mode
+            file.write(filepath + "\n")  # Append the file path followed by a newline
+        #print(f"File path '{filepath}' added to '{index_file}'.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+def write_evaluation_file_to_index(filepath, index_file="evaluation_result_file_index.txt"):
+    """
+    Writes a file path to 'file_index.txt'. Creates the file if it doesn't exist,
+    and appends to it if it already exists.
+
     Args:
         filepath (str): The file path to write.
         index_file (str): The name of the index file (default is 'file_index.txt').

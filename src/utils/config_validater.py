@@ -48,7 +48,7 @@ def validate_config(cfg: DictConfig):
 
     # # Check if the experiment root directory already exists, if so add a number as suffix
     # experiment_root_exists(cfg)
-    
+
     return all(all_validation_results)
 
 def experiment_root_exists(cfg: DictConfig) -> bool:
@@ -60,13 +60,14 @@ def experiment_root_exists(cfg: DictConfig) -> bool:
 
     if os.path.exists(root_dir):
         root_dir = hydra_utils.get_unique_dir_name(root_dir)
-    
+
     print(root_dir)
 
-    
+
 def check_solver_config(config) -> Tuple[dict, bool]:
     # Things for solver to check:
     # - config.path exists
+    # - unique solver names
     return None, True
 
 

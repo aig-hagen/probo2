@@ -2,20 +2,26 @@
 defaults:
   - _self_
   - callbacks:
-    - general/agg_results  
+    - general/agg_results
   - solver: ???   # Default solver
-  - benchmark: ICCMA21  # Default benchmark
-  - config_validation: validation # default options for the validation of the config
+  - benchmark: ???  # Default benchmark
+  - config_validation: default # default options for the validation of the config
   - override hydra/launcher: joblib
+
+# +++++ Definition of the default paths for experiments +++++
+root_dir: results/${name}_${now:%Y-%m-%d_%H-%M-%S}
+result_index_file:  ${root_dir}/result_file_index.txt
+combined_results_file:  ${root_dir}/combined_results.csv
+
+evaluation_output_dir: ${root_dir}/evaluation_output/
+evaluation_result_index_file: ${evaluation_output_dir}/evaluation_result_file_index.txt
+evaluation_combined_results_file: ${evaluation_output_dir}/evaluation_combined_results.csv
+
 task: DS-PR       # Default task
 timeout: 600
 runs: 1
 name: Test-Experiment
-root_dir: results/${name}_${now:%Y-%m-%d_%H-%M-%S}
-result_index_file:  ${root_dir}/result_file_index.txt
-combined_results_file:  ${root_dir}/combined_results.csv
-csv_stats_result_file: ${root_dir}/stats.csv
-json_stats_result_file: ${root_dir}/stats.json
+
 hydra:
   sweep:
     dir: ${root_dir}  # Top-level directory for all sweep outputs
@@ -24,9 +30,8 @@ hydra:
   sweeper:
     params:
       solver: ICCMA19/pyglaf, ICCMA19/mu_toksia
-      benchmark: ICCMA15
+      benchmark: small_i23
       task: SE-PR, SE-CO
   launcher:
     n_jobs: 4
     backend: "threading"  # Can be overridden to "loky" or "multiprocessing"
- 

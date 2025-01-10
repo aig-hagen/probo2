@@ -1,0 +1,20 @@
+# @package _global_
+defaults:
+  - override /hydra/launcher: joblib
+
+timeout: 2
+name: Parallel-Test-Run
+
+
+
+
+hydra:
+  sweeper:
+    params:
+      benchmark: small_i23
+  launcher:
+    n_jobs: 4
+
+
+
+

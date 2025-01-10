@@ -1,7 +1,5 @@
 # @package _global_
 hydra:
   callbacks:
-    mean_runtime:
-      _target_: src.callbacks.statistics_callbacks.MeanRuntime
     coverage:
       _target_: src.callbacks.statistics_callbacks.Coverage

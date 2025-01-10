@@ -1,0 +1,5 @@
+# @package _global_
+hydra:
+  callbacks:
+    aggregate_evaluation_results:
+      _target_: src.callbacks.statistics_callbacks.AggreateEvaluationResults

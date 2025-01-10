@@ -15,6 +15,8 @@ import os
 import tqdm
 
 
+
+
 def run_solver_dynamic_accaptance(cfg:DictConfig) -> None:
     pass
 def run_solver_dynamic_enumeration(cfg:DictConfig) -> None:
@@ -24,7 +26,7 @@ def run_solver_dynamic_enumeration(cfg:DictConfig) -> None:
 def run_solver_static_accaptance(cfg:DictConfig) -> None:
     # - Basically the same as enumeration, but we need to create a lookup table for the query arguments
     # - create temp files for the look ups to save time: Check if present, load mapping, if not create
-    # - 
+    # -
 
 
     pass
@@ -83,12 +85,12 @@ def run_solver_static_enumeration(cfg: DictConfig) -> None:
         )
 
         # append additional info like solver, benchmark and general infos
-        solver_info = hydra_utils.add_prefix_to_dict_keys(cfg.solver,'solver_')
-        benchmark_info = hydra_utils.add_prefix_to_dict_keys(cfg.benchmark,'benchmark_')
-        result.update(solver_info)
-        result.update(benchmark_info)
+        prefixed_solver_info = hydra_utils.add_prefix_to_dict_keys(cfg.solver,'solver_')
+        prefixed_benchmark_info = hydra_utils.add_prefix_to_dict_keys(cfg.benchmark,'benchmark_')
+        result.update(prefixed_solver_info)
+        result.update(prefixed_benchmark_info)
         result.update({'experiment_name': cfg.name,'run': cfg.runs,'task': cfg.task,'timeout': cfg.timeout})
-        
+
         # Write results to file
         hydra_utils.write_result_to_csv(data_dict=result,path=result_file_path)
 
@@ -99,6 +101,9 @@ def run_solver_static_enumeration(cfg: DictConfig) -> None:
     version_base=None, config_path="hydra_experiments_configs", config_name="config"
 )
 def run_experiment(cfg: DictConfig) -> None:
+    # Generate custom directories
+    os.makedirs(cfg.evaluation_output_dir, exist_ok=True)
+
     # Change the format string to a list
     if isinstance(cfg.benchmark.format, str):
         cfg.benchmark.format = [cfg.benchmark.format]  # Wrap single string in a list
@@ -116,7 +121,7 @@ def run_experiment(cfg: DictConfig) -> None:
     # Check if the cfg.task string contains the prefix SE or EE
     if cfg.task.startswith("SE") or cfg.task.startswith("EE"):
         run_solver_static_enumeration(cfg)
-    # Check if the cfg.task string contains the prefix DC or DS 
+    # Check if the cfg.task string contains the prefix DC or DS
     elif cfg.task.startswith("DC") or cfg.task.startswith("DS"):
         run_solver_static_accaptance(cfg)
 

@@ -1,0 +1,6 @@
+name: mu-toksia
+version: ICCMA23
+path: /home/jklein/new_dev/aig-hagen/solvers/ICCMA-Solvers/mu-toksia/build/release/bin/mu-toksia
+format: i23
+interface: i23
+
