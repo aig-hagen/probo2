@@ -1,0 +1,6 @@
+# @package _global_
+hydra:
+  callbacks:
+    plain_text:
+      _target_: src.callbacks.table_export_callbacks.PlainTextTable
+      grouping: ['benchmark_name','task']

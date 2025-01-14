@@ -23,16 +23,16 @@ def get_iccma23_interface_call_static(config: DictConfig):
     cmd_params.extend([solver_path,
           "-p", task,
           "-f", ''])
-    
+
 
     # Check if there are any additional paramters specified in cfg.solver.arguments
     if 'argument' in config.solver:
-        # Check if the arguments are present in the experiment sweep params
+        # Check if the arguments are present in the experiment sweep params if so append them to the command
         for argument in config.solver.argument:
-            print(f'Argument: {argument=} {config[argument]=}')
+            #print(f'Argument: {argument=} {config[argument]=}')
             if argument in config:
                 cmd_params.extend([argument, config[argument]])
-    
+
     return cmd_params
 
 def get_legacy_interface_static(config: DictConfig):
@@ -47,7 +47,7 @@ def get_legacy_interface_static(config: DictConfig):
     """
     cmd_params = get_iccma23_interface_call_static(config)
 
-    cmd_params.extend(['-fo',config.solver.format]) 
+    cmd_params.extend(['-fo',config.solver.format])
 
     # Check if there are any additional paramters specified in cfg.solver.arguments
     if 'argument' in config.solver:

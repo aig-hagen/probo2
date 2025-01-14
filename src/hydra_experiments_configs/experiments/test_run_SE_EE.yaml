@@ -5,9 +5,11 @@ name: Test-Multiple-Runs
 
 defaults:
   - override /callbacks:
+    - tables/plain_text
     - stats/aggregate_results
-    - stats/my_stats
+    - stats/mean_runtime
     - general/agg_results
+
 
 hydra:
   sweeper:
@@ -15,7 +17,7 @@ hydra:
       benchmark: small_i23
       task: SE-PR, SE-CO, SE-ST
       solver: mu-toksia, mu-toksia-v2
-      runs: range(1,11)
+      #runs: range(1,11)
 
 
 

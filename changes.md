@@ -15,8 +15,9 @@ You can s
 
 # TODO
 
-- Wenn solver mit paramtern aufgerufen werden müssen die parameter an den solver namen angehängt werden
--  
+- Wenn solver mit paramtern aufgerufen werden müssen die parameter an den solver namen angehängt werden - done
+-  Table export pipline - done
+   -  Text
 
 
 

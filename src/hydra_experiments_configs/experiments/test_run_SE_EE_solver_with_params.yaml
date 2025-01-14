@@ -5,6 +5,7 @@ name: Test-Multiple-Runs-With-Params
 
 defaults:
   - override /callbacks:
+    - tables/plain_text
     - stats/aggregate_results
     - stats/my_stats
     - general/agg_results

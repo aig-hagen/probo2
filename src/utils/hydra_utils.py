@@ -159,7 +159,6 @@ def get_result_file_name(cfg: DictConfig) -> str:
         # Check if the arguments are present in the experiment sweep params
         result_file_name = 'results'
         for param in cfg.solver.parameters:
-            print(f'Argument: {param=} {cfg[param]=}')
             if param in cfg:
                 result_file_name += f"_{param}_{cfg[param]}"
         result_file_name += '.csv'
@@ -183,9 +182,9 @@ def add_prefix_to_dict_keys(original_dict, prefix):
     return {f"{prefix}{key}": value for key, value in original_dict.items()}
 
 def generate_solver_info(cfg: DictConfig ) -> dict:
+    solver_info = cfg.solver.copy()
     if 'parameters' in cfg.solver:
         # Check if the arguments are present in the experiment sweep params
-        solver_info = cfg.solver.copy()
         for param in cfg.solver.parameters:
             if param in cfg:
                 solver_info['name'] += f"_{param}_{cfg[param]}"
