@@ -68,7 +68,13 @@ def run_solver_static_enumeration(cfg: DictConfig) -> None:
     run_dir = hydra_config.runtime.output_dir
     output_root_dir = os.path.join(run_dir, hydra_config.output_subdir)
 
-    result_file_path = os.path.join(output_root_dir,'result.csv')
+
+    # Check if the solver is run with additional paramters, if so, append them to the result file name
+    result_file_name = hydra_utils.get_result_file_name(cfg)
+
+
+
+    result_file_path = os.path.join(output_root_dir,result_file_name)
 
     hydra_utils.write_result_file_to_index(result_file_path,index_file=cfg.result_index_file)
 
@@ -84,8 +90,10 @@ def run_solver_static_enumeration(cfg: DictConfig) -> None:
             solver_interface_command, cfg.timeout, current_output_file_path
         )
 
-        # append additional info like solver, benchmark and general infos
-        prefixed_solver_info = hydra_utils.add_prefix_to_dict_keys(cfg.solver,'solver_')
+        # Append additional info like solver, benchmark and general infos
+        prefixed_solver_info = hydra_utils.generate_solver_info(cfg)
+
+        # prefixed_benchmark_info
         prefixed_benchmark_info = hydra_utils.add_prefix_to_dict_keys(cfg.benchmark,'benchmark_')
         result.update(prefixed_solver_info)
         result.update(prefixed_benchmark_info)

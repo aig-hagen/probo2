@@ -8,4 +8,16 @@ At runtime it is check if the arguments are present and appended to the solver c
 A Evaluation folder is created.
 Each stat is written to its own csv file. The paths to this files are written to a index file. After all stats are calculated the dataframes are loaded and aggregated grouped by the benchmark and task. The combined dataframe is saved
 
-## Table printing
+## Table Exporting
+The results of the evaluation can be exported as tables of different formats.
+You can s
+
+
+# TODO
+
+- Wenn solver mit paramtern aufgerufen werden müssen die parameter an den solver namen angehängt werden
+-  
+
+
+
+

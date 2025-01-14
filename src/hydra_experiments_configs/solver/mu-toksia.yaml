@@ -4,3 +4,5 @@ path: /home/jklein/new_dev/aig-hagen/solvers/ICCMA-Solvers/mu-toksia/build/relea
 format: i23
 interface: i23
 
+parameters: [paramA, paramB]
+

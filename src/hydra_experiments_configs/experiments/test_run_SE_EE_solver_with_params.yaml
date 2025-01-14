@@ -1,0 +1,27 @@
+# @package _global_
+
+timeout: 2
+name: Test-Multiple-Runs-With-Params
+
+defaults:
+  - override /callbacks:
+    - stats/aggregate_results
+    - stats/my_stats
+    - general/agg_results
+
+paramA: ???
+paramB: ???
+
+hydra:
+  sweeper:
+    params:
+      benchmark: small_i23
+      task: SE-PR, SE-CO, SE-ST
+      solver: mu-toksia
+      runs: range(1,4)
+      paramA: A1,A2,A3
+      paramB: B1,B2
+
+
+
+

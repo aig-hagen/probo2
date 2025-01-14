@@ -143,6 +143,31 @@ def need_additional_arguments(task: str):
     else:
         return False
 
+def get_result_file_name(cfg: DictConfig) -> str:
+    """
+    Generates a result file name based on the configuration provided.
+
+    Args:
+        cfg (DictConfig): A configuration object that contains solver parameters.
+
+    Returns:
+        str: The generated result file name. If 'argument' is present in cfg.solver,
+             the file name will include the arguments and their values from the configuration.
+             Otherwise, it defaults to 'results.csv'.
+    """
+    if 'parameters' in cfg.solver:
+        # Check if the arguments are present in the experiment sweep params
+        result_file_name = 'results'
+        for param in cfg.solver.parameters:
+            print(f'Argument: {param=} {cfg[param]=}')
+            if param in cfg:
+                result_file_name += f"_{param}_{cfg[param]}"
+        result_file_name += '.csv'
+    else:
+        result_file_name = 'results.csv'
+
+    return result_file_name
+
 
 def add_prefix_to_dict_keys(original_dict, prefix):
     """
@@ -156,6 +181,19 @@ def add_prefix_to_dict_keys(original_dict, prefix):
     - dict: A new dictionary with prefixed keys.
     """
     return {f"{prefix}{key}": value for key, value in original_dict.items()}
+
+def generate_solver_info(cfg: DictConfig ) -> dict:
+    if 'parameters' in cfg.solver:
+        # Check if the arguments are present in the experiment sweep params
+        solver_info = cfg.solver.copy()
+        for param in cfg.solver.parameters:
+            if param in cfg:
+                solver_info['name'] += f"_{param}_{cfg[param]}"
+
+    return add_prefix_to_dict_keys(solver_info,'solver_')
+
+
+
 
 def write_result_file_to_index(filepath, index_file="result_file_index.txt"):
     """
