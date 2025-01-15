@@ -31,6 +31,10 @@ class All(Callback):
 class MeanRuntime(Callback):
     def on_multirun_end(self, config: DictConfig, **kwargs: Any) -> None:
         result_file = config['combined_results_file']
+        #Check if files exists before reading
+        if not os.path.exists(result_file):
+            print(f"File {result_file} does not exist")
+            return None
         df = pd.read_csv(result_file)
         # Filter out rows where 'exit_with_error' is True
         filtered_data = df[df['exit_with_error'] == False]
@@ -54,6 +58,11 @@ class MeanRuntime(Callback):
 class Coverage(Callback):
     def on_multirun_end(self, config: DictConfig, **kwargs: Any) -> None:
         result_file = config['combined_results_file']
+
+        if not os.path.exists(result_file):
+            print(f"File {result_file} does not exist")
+            return None
+
         df = pd.read_csv(result_file)
         # Filter out rows where 'exit_with_error' is True
         filtered_data = df[df['exit_with_error'] == False]

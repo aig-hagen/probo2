@@ -1,4 +1,4 @@
 name: Test_Benchmark
-path: /mnt/d/iccma_benchmarks/test_benchmark/
-query_arg_format: af.arg
-format: af
+path: /home/jklein/new_dev/aig-hagen/benchmarks/ICCMA15/testset5_st_medium
+query_arg_format: arg
+format: [apx,tgf]

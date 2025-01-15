@@ -1,0 +1,24 @@
+# @package _global_
+
+timeout: 1
+name: Test-DC-DS-SE-EE
+
+defaults:
+  - override /callbacks:
+    - tables/plain_text
+    - stats/aggregate_results
+    - stats/mean_runtime
+    - general/agg_results
+
+
+hydra:
+  sweeper:
+    params:
+      benchmark: testset5_st_medium, test
+      task: DC-PR, DC-CO, DC-ST, DS-PR, DS-CO, DS-ST, SE-PR, SE-CO, SE-ST, EE-PR, EE-CO, EE-ST
+      solver: fudge, fudge_2
+      runs: range(1,4)
+
+
+
+

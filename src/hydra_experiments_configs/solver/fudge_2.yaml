@@ -1,0 +1,7 @@
+name: fudge_2
+version: ICCMA21
+path: /home/jklein/new_dev/aig-hagen/solvers/ICCMA-Solvers/ICCMA21_solvers/taas-fudge-main/taas-fudge
+format: tgf
+interface: legacy
+
+

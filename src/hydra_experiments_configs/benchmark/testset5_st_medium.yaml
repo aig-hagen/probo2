@@ -1,4 +1,4 @@
 name: testset5_st_medium
-path: /home/jklein/dev/benchmarks/testset5_st_medium
+path: /home/jklein/new_dev/aig-hagen/benchmarks/ICCMA15/testset5_st_medium
 query_arg_format: arg
 format: [apx,tgf]
