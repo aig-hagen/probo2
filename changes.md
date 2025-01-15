@@ -21,9 +21,11 @@ The results of the evaluation can be exported as tables of different formats.
    -  Latex
 - Add suport for DC and DC tasks - Done
 
-- Before call backs are run, check if the path all exits
-
-- Check if for all instances query arguments are present in benchmark validation
+- Before call backs are run, check if the path all exits - DONE
+- Check if for all instances query arguments are present in benchmark validation - DONE
+- Implement solver config validation:
+  - Check if path exists
+  - Check if solver_names are unique
 - Check if output of solver is valid -> if not treat as exited_with error
 - Add a include errors options to the coverage callback
 
