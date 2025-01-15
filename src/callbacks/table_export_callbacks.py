@@ -6,29 +6,27 @@ from pathlib import Path
 import os
 import tabulate
 
+"""
+PlainTextTable Callback
 
-# def _save_as_text(df: pd.DataFrame, save_to):
-#     tag = df.tag.iloc[0]
-#     benchmark = df.benchmark_name.iloc[0]
-#     task = df.task.iloc[0]
+The PlainTextTable class is a custom Hydra callback designed to export grouped evaluation results
+from a CSV file into plain text files. It reads a results file, groups the data based on specified
+columns, and saves each group as a formatted text file. Additionally, it prints the grouped data
+to the console for quick visualization.
 
-#     tbl_text = tabulate.tabulate(df,headers='keys',tablefmt='pretty',showindex=False)
+### Features:
+- Reads evaluation results from a CSV file specified in the configuration.
+- Dynamically groups data by specified columns (`grouping`) or defaults to `['task', 'benchmark_name']`.
+- Exports each group as a plain text file in a specified output directory.
+- Prints grouped data to the console for immediate inspection.
 
-#     file_path = os.path.join(save_to,f'{tag}_{task}_{benchmark}.txt')
-#     with open(file_path,'w') as f:
-#         f.write(tbl_text)
-
-#     return file_path
-
-# def text(df: pd.DataFrame,config: config_handler.Config, grouping=None):
-#     if grouping is None:
-#         grouping = ['tag','task','benchmark_name']
-#     save_to = os.path.join(config.save_to, 'stats_tables')
-#     os.makedirs(save_to, exist_ok=True)
-
-#     saved_files = df.groupby(grouping).apply(lambda _df: _save_as_text(_df,save_to))
-#     return saved_files
-
+### Usage Example in Hydra Config:
+hydra:
+  callbacks:
+    plain_text:
+      _target_: src.callbacks.table_export_callbacks.PlainTextTable
+      grouping: ['task', 'benchmark']
+"""
 class PlainTextTable(Callback):
     def __init__(self, grouping: List[str] = None):
         """
@@ -40,17 +38,36 @@ class PlainTextTable(Callback):
 
 
     def on_multirun_end(self, config: DictConfig, **kwargs: Any) -> None:
-        # Read files from config.evaluation_combined_results_file if the file does not exits present, if not return None
+        """
+        Exports results as plain text.
+
+        Args:
+            config (DictConfig): Configuration object containing evaluation settings.
+            **kwargs (Any): Additional keyword arguments.
+
+        Returns:
+            None: If the evaluation_combined_results_file is not specified or does not exist.
+
+        The function performs the following steps:
+        1. Checks if the evaluation_combined_results_file is specified in the config. If not, returns None.
+        2. Validates if the specified file path exists. If not, prints a message and returns None.
+        3. Reads the evaluation results file into a pandas DataFrame.
+        4. If no grouping is specified, sets the default grouping to ['task', 'benchmark_name'].
+        5. Groups the DataFrame by the specified grouping and saves each group as a text file.
+        6. Iterates through the groups and prints each group along with its keys and the grouping used.
+        """
+        # Read the file from config.evaluation_combined_results_file if it exists, otherwise return None
         if config.evaluation_combined_results_file is None:
+            # Print a message to the console
+            print(f"Combined result File is None")
             return None
-        # Check if the file path is valid an the file exists
+        # Check if the file path is valid and the file exists
         if not Path(config.evaluation_combined_results_file).exists():
             # Print a message to the console
             print(f"File {config.evaluation_combined_results_file} does not exist")
             return None
         # Read the file into an pandas dataframe
         df = pd.read_csv(config.evaluation_combined_results_file)
-        #print(df.to_markdown(os.path.join(config.evaluation_combined_results_file,'table.md')))
 
         # Print the dataframe to the console
         if len(self.grouping) == 0:
@@ -61,15 +78,26 @@ class PlainTextTable(Callback):
         save_to = config.evaluation_output_dir
         grouped_df = df.groupby(self.grouping)
         grouped_df.apply(lambda _df: self._save_as_text(_df, save_to, self.grouping))
+
+
         # Iterate through groups and print them
         for group_keys, group_data in grouped_df:
             print(f"\nGroup: {group_keys}")
             print(group_data)
-            print(self.grouping)
-        return
 
+    def _save_as_text(self, df: pd.DataFrame, save_to, grouping, tablefmt='pretty'):
+        """
+        Save a pandas DataFrame as a text file with a specified table format.
 
-    def _save_as_text(self,df: pd.DataFrame, save_to,grouping,tablefmt='pretty'):
+        Parameters:
+        df (pd.DataFrame): The DataFrame to be saved.
+        save_to (str): The directory path where the file will be saved.
+        grouping (list): A list of column names used to generate the file name.
+        tablefmt (str, optional): The format of the table. Default is 'pretty'.
+
+        Returns:
+        str: The file path of the saved text file.
+        """
         # Extract all the keys from the grouping list to generate the file name
         keys = [df[key].iloc[0] for key in grouping]
         # Generate the file name from the keys

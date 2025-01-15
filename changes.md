@@ -10,15 +10,18 @@ Each stat is written to its own csv file. The paths to this files are written to
 
 ## Table Exporting
 The results of the evaluation can be exported as tables of different formats.
-You can s
+
 
 
 # TODO
 
 - Wenn solver mit paramtern aufgerufen werden müssen die parameter an den solver namen angehängt werden - done
 -  Table export pipline - done
-   -  Text
+   -  Text - done
+   -  Latex
+- Add suport for DC and DC tasks - Done
 
+- Before call backs are run, check if the path all exits
 
-
+- Check if for all instances query arguments are present in benchmark validation
 

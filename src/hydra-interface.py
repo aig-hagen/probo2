@@ -24,12 +24,87 @@ def run_solver_dynamic_enumeration(cfg:DictConfig) -> None:
 
 
 def run_solver_static_accaptance(cfg:DictConfig) -> None:
-    # - Basically the same as enumeration, but we need to create a lookup table for the query arguments
-    # - create temp files for the look ups to save time: Check if present, load mapping, if not create
-    # -
+
+    hydra_config = HydraConfig.get()
+    run_dir = hydra_config.runtime.output_dir
+    output_root_dir = os.path.join(run_dir, hydra_config.output_subdir)
+
+    matching_format = hydra_utils.get_matching_format(
+        cfg.solver.format, cfg.benchmark.format
+    )
+
+    if matching_format is None:
+        print(
+            f"No matching formats for {cfg.solver.format=} and {cfg.benchmark.format=}"
+        )
+        return None
+
+    instances = hydra_utils.get_files_with_extension(
+        cfg.benchmark.path, matching_format
+    )
 
 
-    pass
+
+    query_argument_instances = hydra_utils.get_files_with_extension(
+            cfg.benchmark.path, cfg.benchmark.query_arg_format
+        )
+
+
+    # Generate mapping from the instances name (without extension) to the query argument
+    # Save mapping to file if not present
+    mapping_file_path = os.path.join(run_dir,f'{cfg.benchmark.name}_query_arg_mapping.yaml')
+
+    hydra_utils.save_instance_to_query_arg_mapping(instances,query_argument_instances,cfg,mapping_file_path)
+    # Load mapping file
+    instance_to_query_arg_mapping = OmegaConf.load(mapping_file_path)
+
+    solver_interface_command = solver_interfaces.interfaces_dict[cfg.solver.interface](
+        cfg
+    )
+
+    # Get the indicies of the options that change from solver call to solver call
+    if cfg.solver.interface == "legacy":
+        index_file_format_flag = solver_interface_command.index("-fo")
+        solver_interface_command[index_file_format_flag + 1] = matching_format
+
+    # Insert the file after '-f' flag
+    index_option_to_change = solver_interface_command.index("-f") + 1
+
+    desc = f"{cfg.solver.name}"
+
+    # Check if the solver is run with additional paramters, if so, append them to the result file name
+    result_file_name = hydra_utils.get_result_file_name(cfg)
+
+    result_file_path = os.path.join(output_root_dir,result_file_name)
+
+    hydra_utils.write_result_file_to_index(result_file_path,index_file=cfg.result_index_file)
+
+    for instance in tqdm.tqdm(instances, desc=desc):
+
+        # Set instance
+        solver_interface_command[index_option_to_change] = instance
+        instance_name = Path(instance).stem
+        query_arg_command = ['-a', instance_to_query_arg_mapping[instance_name]]
+        solver_interface_command.extend(query_arg_command)
+        current_output_file_path = os.path.join(output_root_dir,
+                                                f"{instance_name}.out")
+
+        result = hydra_utils.run_solver_with_timeout(
+            solver_interface_command, cfg.timeout, current_output_file_path
+        )
+
+        # Append additional info like solver, benchmark and general infos
+        prefixed_solver_info = hydra_utils.generate_solver_info(cfg)
+
+        # prefixed_benchmark_info
+        prefixed_benchmark_info = hydra_utils.add_prefix_to_dict_keys(cfg.benchmark,'benchmark_')
+        result.update(prefixed_solver_info)
+        result.update(prefixed_benchmark_info)
+        result.update({'experiment_name': cfg.name,'run': cfg.runs,'task': cfg.task,'timeout': cfg.timeout})
+
+        # Write results to file
+        hydra_utils.write_result_to_csv(data_dict=result,path=result_file_path)
+
 
 # Method to run static enumeration task such as SE or EE
 def run_solver_static_enumeration(cfg: DictConfig) -> None:
@@ -117,6 +192,9 @@ def run_experiment(cfg: DictConfig) -> None:
         cfg.benchmark.format = [cfg.benchmark.format]  # Wrap single string in a list
 
     if cfg.config_validation.validate_config:
+        # check if the root directory
+
+
         config_valid = config_validater.validate_config(cfg)
         if not config_valid:
             print("Experiment aborted due to bad config.")

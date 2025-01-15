@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import List, Dict
 
 import subprocess
 import time
@@ -297,6 +297,71 @@ def get_files_with_extension(directory: str, extension: str) -> List[str]:
         str(file) for file in Path(directory).rglob(f"*.{extension}")
         if file.is_file()
     ]
+
+
+def save_instance_to_query_arg_mapping(instances: List[str], query_argument_instances: List[str], cfg: DictConfig, mapping_file_path: str) -> None:
+        """
+        Generates and saves a mapping from instance names to query argument contents if the mapping file does not already exist.
+
+        Args:
+            instances (List[str]): List of file paths to instance files.
+            query_argument_instances (List[str]): List of file paths to query argument instance files.
+            cfg (DictConfig): Configuration object containing benchmark attributes.
+            mapping_file_path (str): Path to save the mapping file.
+
+        Returns:
+            None
+        """
+        if not os.path.exists(mapping_file_path):
+            try:
+                instance_to_query_arg_mapping = generate_instance_to_query_arg_mapping(
+                    instances, query_argument_instances, cfg.benchmark.query_arg_format)
+            except ValueError as e:
+                print(e)
+                print("Please make sure the query argument files are present for all instances.")
+                return None
+
+            with open(mapping_file_path, 'w') as f:
+                f.write(OmegaConf.to_yaml(instance_to_query_arg_mapping))
+        else:
+            print(f"Mapping file already exists at {mapping_file_path}.")
+
+
+def strip_extension(filename: str, extension: str) -> str:
+    """
+    Removes the specified extension from a filename.
+    If the extension is not found, it removes all extensions.
+    """
+    if filename.endswith(extension):
+        return filename[: -len(extension) - 1] # Remove the extension and the dot
+    return os.path.splitext(filename)[0]
+
+def generate_instance_to_query_arg_mapping(instances: List[str], query_argument_instances: List[str], extension: str) -> Dict[str, str]:
+    """
+    Maps instance names (without extension) to the content of corresponding query argument instances,
+    splitting query_argument_instances on the specified extension.
+
+    :param instances: List of file paths to instance files.
+    :param query_argument_instances: List of file paths to query argument instance files.
+    :param extension: Extension to split query argument instances on (e.g., '.arg').
+    :return: Dictionary mapping instance names to query argument contents.
+    """
+    instance_names = {strip_extension(os.path.basename(path), extension): path for path in instances}
+    query_arg_names = {strip_extension(os.path.basename(path), extension): path for path in query_argument_instances}
+
+    if set(instance_names.keys()) != set(query_arg_names.keys()):
+        raise ValueError("Mismatch between instance files and query argument files.")
+
+    mapping = {}
+
+    for name, instance_path in instance_names.items():
+        query_arg_path = query_arg_names[name]
+        with open(query_arg_path, 'r') as f:
+            query_arg_content = f.read().strip()
+
+        mapping[name] = query_arg_content
+
+    return mapping
 
 
 def get_matching_format(solver_formats, benchmark_formats):

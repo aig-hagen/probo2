@@ -13,7 +13,7 @@ root_dir: results/${name}_${now:%Y-%m-%d_%H-%M-%S}
 result_index_file:  ${root_dir}/result_file_index.txt
 combined_results_file:  ${root_dir}/combined_results.csv
 
-evaluation_output_dir: ${root_dir}/evaluation_output/
+evaluation_output_dir: ${root_dir}/evaluation_output
 evaluation_result_index_file: ${evaluation_output_dir}/evaluation_result_file_index.txt
 evaluation_combined_results_file: ${evaluation_output_dir}/evaluation_combined_results.csv
 

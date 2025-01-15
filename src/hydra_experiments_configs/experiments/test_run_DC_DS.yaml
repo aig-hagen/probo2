@@ -1,0 +1,24 @@
+# @package _global_
+
+timeout: 2
+name: Test-DC-DS
+
+defaults:
+  - override /callbacks:
+    - tables/plain_text
+    - stats/aggregate_results
+    - stats/mean_runtime
+    - general/agg_results
+
+
+hydra:
+  sweeper:
+    params:
+      benchmark: small_i23
+      task: DC-PR, DC-CO, DC-ST, DS-PR, DS-CO, DS-ST
+      solver: mu-toksia, mu-toksia-v2
+      #runs: range(1,11)
+
+
+
+
