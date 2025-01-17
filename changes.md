@@ -23,9 +23,20 @@ The results of the evaluation can be exported as tables of different formats.
 
 - Before call backs are run, check if the path all exits - DONE
 - Check if for all instances query arguments are present in benchmark validation - DONE
-- Implement solver config validation:
-  - Check if path exists
-  - Check if solver_names are unique
-- Check if output of solver is valid -> if not treat as exited_with error
+- Implement solver config validation: - Done
+  - Check if path exists - Done
+
+- Check if output of solver is valid dependeing on the interface and Task -> if not treat as exited_with error and set time to 600
+
+
 - Add a include errors options to the coverage callback
 
+- ** Implementation of result validation **
+- Add a correct_solution flag, which is true until the validation changes it
+
+
+
+## Planned Feature
+
+- Pandasai integration to describe tables
+- Notification integration

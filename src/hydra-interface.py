@@ -29,6 +29,29 @@ def run_solver_static_accaptance(cfg:DictConfig) -> None:
     run_dir = hydra_config.runtime.output_dir
     output_root_dir = os.path.join(run_dir, hydra_config.output_subdir)
 
+    print(cfg.root_dir)
+
+    # Create directories to dump configs
+    solver_config_dump = os.path.join(cfg.root_dir, "solver_config")
+    os.makedirs(solver_config_dump, exist_ok=True)
+
+    solver_config_file_path = os.path.join(solver_config_dump,f'{cfg.solver.name}_config.yaml')
+    #check if the solver config file exists
+    if not os.path.exists(solver_config_file_path):
+        OmegaConf.save(config=cfg.solver, f=solver_config_file_path)
+        print(f"Solver config saved to {solver_config_file_path}")
+
+    benchmark_config_dump = os.path.join(cfg.root_dir, "benchmark_config")
+    os.makedirs(benchmark_config_dump, exist_ok=True)
+    benchmark_config_file_path = os.path.join(benchmark_config_dump,f'{cfg.benchmark.name}_config.yaml')
+    #check if the solver config file exists
+    if not os.path.exists(benchmark_config_file_path):
+        OmegaConf.save(config=cfg.benchmark, f=benchmark_config_file_path)
+        print(f" Benchmark config saved to {benchmark_config_file_path}")
+
+
+
+
     matching_format = hydra_utils.get_matching_format(
         cfg.solver.format, cfg.benchmark.format
     )

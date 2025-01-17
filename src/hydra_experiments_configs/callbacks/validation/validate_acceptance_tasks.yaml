@@ -1,0 +1,5 @@
+# @package _global_
+hydra:
+  callbacks:
+    validate_acceptance_tasks:
+      _target_: src.callbacks.validation_callbacks.ValidateSolutionsAccaptanceTasks

@@ -5,6 +5,7 @@ name: Test-DC-DS
 
 defaults:
   - override /callbacks:
+    - validation/validate_acceptance_tasks
     - tables/plain_text
     - stats/aggregate_results
     - stats/mean_runtime
@@ -15,7 +16,7 @@ hydra:
   sweeper:
     params:
       benchmark: small_i23
-      task: DC-PR, DC-CO, DC-ST, DS-PR, DS-CO, DS-ST
+      task: DC-PR # DC-CO # DC-ST, DS-PR, DS-CO, DS-ST
       solver: mu-toksia, mu-toksia-v2
       #runs: range(1,11)
 

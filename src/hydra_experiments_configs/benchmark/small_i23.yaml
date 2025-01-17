@@ -1,4 +1,5 @@
 name: small_i23
 path: /home/jklein/new_dev/aig-hagen/benchmarks/small_i23
+solution_path: /home/jklein/new_dev/aig-hagen/benchmarks/small_i23
 query_arg_format: af.arg
 format: i23
