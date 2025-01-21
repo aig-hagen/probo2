@@ -123,7 +123,7 @@ def run_solver_static_accaptance(cfg:DictConfig) -> None:
         prefixed_benchmark_info = hydra_utils.add_prefix_to_dict_keys(cfg.benchmark,'benchmark_')
         result.update(prefixed_solver_info)
         result.update(prefixed_benchmark_info)
-        result.update({'experiment_name': cfg.name,'run': cfg.runs,'task': cfg.task,'timeout': cfg.timeout})
+        result.update({'experiment_name': cfg.name,'run': cfg.runs,'task': cfg.task,'timeout': cfg.timeout, 'instance': instance})
 
         # Write results to file
         hydra_utils.write_result_to_csv(data_dict=result,path=result_file_path)
@@ -195,7 +195,7 @@ def run_solver_static_enumeration(cfg: DictConfig) -> None:
         prefixed_benchmark_info = hydra_utils.add_prefix_to_dict_keys(cfg.benchmark,'benchmark_')
         result.update(prefixed_solver_info)
         result.update(prefixed_benchmark_info)
-        result.update({'experiment_name': cfg.name,'run': cfg.runs,'task': cfg.task,'timeout': cfg.timeout})
+        result.update({'experiment_name': cfg.name,'run': cfg.runs,'task': cfg.task,'timeout': cfg.timeout, 'instance': instance})
 
         # Write results to file
         hydra_utils.write_result_to_csv(data_dict=result,path=result_file_path)

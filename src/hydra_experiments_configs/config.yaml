@@ -18,6 +18,10 @@ evaluation_output_dir: ${root_dir}/evaluation_output
 evaluation_result_index_file: ${evaluation_output_dir}/evaluation_result_file_index.txt
 evaluation_combined_results_file: ${evaluation_output_dir}/evaluation_combined_results.csv
 
+
+result_validation_output_dir: ${root_dir}/result_validation_output
+result_validation_combined_results_file: ${result_validation_output_dir}/result_validation_combined_results.csv
+
 task: DS-PR       # Default task
 timeout: 600
 runs: 1

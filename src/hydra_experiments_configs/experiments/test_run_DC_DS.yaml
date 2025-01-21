@@ -18,7 +18,7 @@ hydra:
       benchmark: small_i23
       task: DC-PR # DC-CO # DC-ST, DS-PR, DS-CO, DS-ST
       solver: mu-toksia, mu-toksia-v2
-      #runs: range(1,11)
+      runs: range(1,4)
 
 
 
